@@ -2,3 +2,8 @@
 	path = rocketgithub/l10n_gt_extra
 	url = git@github.com:rocketgithub/l10n_gt_extra.git
 	branch = 17.0
+
+[submodule "rocketgithub/fel_gt"]
+	path = rocketgithub/fel_gt
+	url = git@github.com:rocketgithub/fel_gt.git
+	branch = 17.0
