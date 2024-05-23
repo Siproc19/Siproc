@@ -7,3 +7,8 @@
 	path = rocketgithub/fel_gt
 	url = git@github.com:rocketgithub/fel_gt.git
 	branch = 17.0
+
+[submodule "rocketgithub/fel_infile"]
+	path = rocketgithub/fel_infile
+	url = git@github.com:rocketgithub/fel_infile.git
+	branch = 17.0
