@@ -1,0 +1,4 @@
+[submodule "rocketgithub/l10n_gt_extra"]
+	path = rocketgithub/l10n_gt_extra
+	url = git@github.com:rocketgithub/l10n_gt_extra.git
+	branch = 17.0
