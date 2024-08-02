@@ -27,3 +27,8 @@
 	path = aquih/rrhh
 	url = git@github.com:aquih/rrhh.git
 	branch = 17.0
+
+[submodule "aquih/fel_gt"]
+	path = aquih/fel_gt
+	url = git@github.com:aquih/fel_gt.git
+	branch = 17.0
