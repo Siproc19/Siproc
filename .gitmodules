@@ -22,3 +22,8 @@
 	path = aquih/l10n_gt_extra
 	url = git@github.com:aquih/l10n_gt_extra.git
 	branch = 17.0
+
+[submodule "aquih/rrhh"]
+	path = aquih/rrhh
+	url = git@github.com:aquih/rrhh.git
+	branch = 17.0
