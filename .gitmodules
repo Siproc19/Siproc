@@ -37,3 +37,8 @@
 	path = aquih/fel_infile
 	url = git@github.com:aquih/fel_infile.git
 	branch = 17.0
+
+[submodule "aquih/kardex"]
+	path = aquih/kardex
+	url = git@github.com:aquih/kardex.git
+	branch = 17.0
