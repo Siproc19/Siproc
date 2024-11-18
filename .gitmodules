@@ -57,3 +57,8 @@
 	path = aquih/fel_infile
 	url = git@github.com:aquih/fel_infile.git
 	branch = 17.0
+
+[submodule "aquih/rrhh"]
+	path = aquih/rrhh
+	url = git@github.com:aquih/rrhh.git
+	branch = 17.0
