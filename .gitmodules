@@ -42,3 +42,8 @@
 	path = aquih/kardex
 	url = git@github.com:aquih/kardex.git
 	branch = 17.0
+
+[submodule "aquih/l10n_gt_extra"]
+	path = aquih/l10n_gt_extra
+	url = git@github.com:aquih/l10n_gt_extra.git
+	branch = 17.0
