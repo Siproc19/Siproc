@@ -67,3 +67,8 @@
 	path = aquih/pos_fel
 	url = git@github.com:aquih/pos_fel.git
 	branch = 17.0
+
+[submodule "aquih/chequerechazado"]
+	path = aquih/chequerechazado
+	url = git@github.com:aquih/chequerechazado.git
+	branch = 17.0
