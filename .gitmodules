@@ -7,3 +7,8 @@
 	path = aquih/l10n_gt_extra
 	url = git@github.com:aquih/l10n_gt_extra.git
 	branch = 17.0
+
+[submodule "aquih/pos_gt"]
+	path = aquih/pos_gt
+	url = git@github.com:aquih/pos_gt.git
+	branch = 17.0
