@@ -1,0 +1,4 @@
+[submodule "aquih/limite_credito"]
+	path = aquih/limite_credito
+	url = git@github.com:aquih/limite_credito.git
+	branch = 17.0
