@@ -62,3 +62,8 @@
 	path = aquih/rrhh
 	url = git@github.com:aquih/rrhh.git
 	branch = 17.0
+
+[submodule "aquih/pos_fel"]
+	path = aquih/pos_fel
+	url = git@github.com:aquih/pos_fel.git
+	branch = 17.0
