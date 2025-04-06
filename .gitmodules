@@ -87,3 +87,8 @@
 	path = aquih/l10n_gt_extra
 	url = git@github.com:aquih/l10n_gt_extra.git
 	branch = 17.0
+
+[submodule "DiederichSolis/Facturacion"]
+	path = DiederichSolis/Facturacion
+	url = git@github.com:DiederichSolis/Facturacion.git
+	branch = main
