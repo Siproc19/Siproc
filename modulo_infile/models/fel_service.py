@@ -367,126 +367,114 @@ class FelService(models.AbstractModel):
         return xml_final
 
     # ============================================================
-    # FIRMA ELECTRÓNICA
+    # PROCESO UNIFICADO - FIRMA Y CERTIFICACIÓN
     # ============================================================
     
-    def _firmar_xml(self, xml_data):
-        """Firma el XML usando el servicio de firma de INFILE
+    def _certificar_documento(self, xml_data, es_anulacion=False):
+        """Certifica un documento usando el Web Service Unificado de INFILE
         
-        Según documentación INFILE, el endpoint correcto es:
-        https://signer-emisores.feel.com.gt/sign_request_emisor/fel_sign
+        Según documentación INFILE (Web Service Unificado):
+        URL: https://certificador.feel.com.gt/fel/procesounificado/transaccion/v2/xml
+        Tipo: POST
+        Headers: UsuarioFirma, LlaveFirma, UsuarioApi, LlaveApi, identificador
+        Body: XML raw del DTE
+        
+        Este endpoint hace FIRMA + CERTIFICACIÓN en un solo paso.
         """
         if not xml_data:
-            raise UserError(_("No hay XML para firmar."))
+            raise UserError(_("No hay XML para certificar."))
         
         config = self._get_config()
         
-        # URL del servicio de firma según documentación oficial INFILE
-        url = f"{config['url_firma']}/sign_request_emisor/fel_sign"
+        # URL del proceso unificado según documentación oficial INFILE
+        url = "https://certificador.feel.com.gt/fel/procesounificado/transaccion/v2/xml"
         
-        # Codificar XML en base64
-        xml_base64 = base64.b64encode(xml_data.encode('utf-8')).decode('utf-8')
+        # Generar identificador único para esta transacción
+        identificador = f"ODOO_{datetime.now().strftime('%Y%m%d%H%M%S')}_{uuid.uuid4().hex[:8]}"
         
-        payload = {
-            'llave': config['llave_firma'] or config['llave_api'],
-            'archivo': xml_base64,
-            'codigo': config['nit_emisor'],
-            'alias': config['usuario_firma'] or config['usuario_api'],
-            'es_anulacion': 'N',
-        }
-        
+        # Headers según documentación INFILE (Imagen 1)
         headers = {
-            'Content-Type': 'application/json',
+            'UsuarioFirma': config['usuario_firma'] or config['usuario_api'],
+            'LlaveFirma': config['llave_firma'] or config['llave_api'],
+            'UsuarioApi': config['usuario_api'],
+            'LlaveApi': config['llave_api'],
+            'identificador': identificador,
+            'Content-Type': 'application/xml',
         }
         
         try:
-            _logger.info(f"FEL: Enviando XML para firma a {url}")
-            response = requests.post(url, json=payload, headers=headers, timeout=60)
+            _logger.info(f"FEL: Enviando documento para certificación a {url}")
+            _logger.info(f"FEL: Identificador: {identificador}")
+            
+            # El body es el XML en formato raw (no base64, no JSON)
+            response = requests.post(
+                url, 
+                data=xml_data.encode('utf-8'), 
+                headers=headers, 
+                timeout=60
+            )
             response.raise_for_status()
             
             data = response.json()
-            _logger.info(f"FEL: Respuesta firma: {data.get('resultado', 'sin resultado')}")
+            _logger.info(f"FEL: Respuesta certificación: resultado={data.get('resultado')}, uuid={data.get('uuid')}")
             
-            if data.get('resultado'):
-                # Decodificar XML firmado
-                xml_firmado_base64 = data.get('archivo')
-                if xml_firmado_base64:
-                    xml_firmado = base64.b64decode(xml_firmado_base64).decode('utf-8')
-                    return xml_firmado
-                else:
-                    raise UserError(_("El servicio de firma no devolvió el XML firmado."))
+            # Procesar respuesta según documentación INFILE
+            if data.get('resultado') == True:
+                resultado = {
+                    'resultado': True,
+                    'uuid': data.get('uuid', ''),
+                    'serie': data.get('serie', ''),
+                    'numero': str(data.get('numero', '')),
+                    'fecha_certificacion': data.get('fecha', ''),
+                    'xml_certificado': '',
+                    'mensaje': data.get('descripcion', 'Validado y Certificado Exitosamente'),
+                    'alertas_infile': data.get('descripcion_alertas_infile', []),
+                    'alertas_sat': data.get('descripcion_alertas_sat', []),
+                }
+                
+                # Decodificar XML certificado si viene en base64
+                if data.get('xml_certificado'):
+                    try:
+                        resultado['xml_certificado'] = base64.b64decode(data['xml_certificado']).decode('utf-8')
+                    except Exception:
+                        resultado['xml_certificado'] = data['xml_certificado']
+                
+                return resultado
             else:
-                error_msg = data.get('descripcion') or data.get('mensaje') or 'Error desconocido'
-                raise UserError(_("Error al firmar XML: %s") % error_msg)
+                # Manejar errores según documentación
+                errores = data.get('descripcion_errores', [])
+                if errores:
+                    mensajes_error = []
+                    for error in errores:
+                        msg = error.get('mensaje_error', '') or error.get('descripcion', '')
+                        if msg:
+                            mensajes_error.append(msg)
+                    error_msg = '; '.join(mensajes_error) if mensajes_error else data.get('descripcion', 'Error desconocido')
+                else:
+                    error_msg = data.get('descripcion', 'Error en la certificación')
+                
+                raise UserError(_("Error FEL: %s") % error_msg)
                 
         except requests.exceptions.RequestException as e:
-            _logger.error(f"FEL: Error de conexión al servicio de firma: {e}")
-            raise UserError(_("Error de conexión al servicio de firma: %s") % str(e))
+            _logger.error(f"FEL: Error de conexión: {e}")
+            raise UserError(_("Error de conexión al servicio FEL: %s") % str(e))
 
-    # ============================================================
-    # ENVÍO DE DTE
-    # ============================================================
-    
-    def _enviar_dte(self, xml_firmado):
-        """Envía el DTE firmado a INFILE para certificación"""
-        if not xml_firmado:
-            raise UserError(_("No hay XML firmado para enviar."))
+    def _firmar_xml(self, xml_data):
+        """Método de compatibilidad - redirige al proceso unificado
         
-        config = self._get_config()
-        token = self._get_token()
+        NOTA: El proceso unificado de INFILE hace firma + certificación
+        en un solo paso. Este método se mantiene por compatibilidad.
+        """
+        # Retornamos el XML sin cambios, la firma se hace en _certificar_documento
+        return xml_data
+
+    def _enviar_dte(self, xml_data):
+        """Envía el DTE usando el proceso unificado de INFILE
         
-        # URL de certificación
-        url = f"{config['url_base']}/feel/certificacion/v2/dte"
-        
-        # Codificar XML en base64
-        xml_base64 = base64.b64encode(xml_firmado.encode('utf-8')).decode('utf-8')
-        
-        payload = {
-            'xml': xml_base64,
-        }
-        
-        headers = {
-            'Authorization': f'Bearer {token}',
-            'Content-Type': 'application/json',
-        }
-        
-        try:
-            _logger.info(f"FEL: Enviando DTE para certificación a {url}")
-            response = requests.post(url, json=payload, headers=headers, timeout=60)
-            response.raise_for_status()
-            
-            data = response.json()
-            _logger.info(f"FEL: Respuesta certificación: {data}")
-            
-            # Procesar respuesta según estructura de INFILE
-            resultado = {
-                'resultado': data.get('resultado', False),
-                'uuid': data.get('uuid', ''),
-                'serie': data.get('serie', ''),
-                'numero': data.get('numero', ''),
-                'numero_acceso': data.get('numero_acceso', ''),
-                'fecha_certificacion': data.get('fecha', ''),
-                'xml_certificado': '',
-                'url_pdf': '',
-                'mensaje': data.get('descripcion', '') or data.get('mensaje', ''),
-            }
-            
-            # Decodificar XML certificado si viene en base64
-            if data.get('xml_certificado'):
-                try:
-                    resultado['xml_certificado'] = base64.b64decode(data['xml_certificado']).decode('utf-8')
-                except Exception:
-                    resultado['xml_certificado'] = data['xml_certificado']
-            
-            # URL del PDF
-            if data.get('url_pdf'):
-                resultado['url_pdf'] = data['url_pdf']
-            
-            return resultado
-            
-        except requests.exceptions.RequestException as e:
-            _logger.error(f"FEL: Error al enviar DTE: {e}")
-            raise UserError(_("Error de conexión al certificar DTE: %s") % str(e))
+        Según documentación INFILE, el Web Service Unificado hace
+        firma y certificación en un solo paso.
+        """
+        return self._certificar_documento(xml_data, es_anulacion=False)
 
     # ============================================================
     # ANULACIÓN DE DTE
@@ -513,42 +501,62 @@ class FelService(models.AbstractModel):
         
         return xml
 
-    def _enviar_anulacion(self, xml_firmado, uuid_dte):
-        """Envía la anulación del DTE a INFILE"""
-        if not xml_firmado:
-            raise UserError(_("No hay XML de anulación firmado."))
+    def _enviar_anulacion(self, xml_anulacion, uuid_dte):
+        """Envía la anulación del DTE usando el proceso unificado de INFILE
+        
+        Según documentación INFILE, el mismo endpoint se usa para
+        certificación y anulación de documentos.
+        """
+        if not xml_anulacion:
+            raise UserError(_("No hay XML de anulación."))
         
         config = self._get_config()
-        token = self._get_token()
         
-        # URL de anulación
-        url = f"{config['url_base']}/feel/cancelarDocumento/v2/dte"
+        # URL del proceso unificado (mismo para certificación y anulación)
+        url = "https://certificador.feel.com.gt/fel/procesounificado/transaccion/v2/xml"
         
-        # Codificar XML en base64
-        xml_base64 = base64.b64encode(xml_firmado.encode('utf-8')).decode('utf-8')
+        # Generar identificador único para esta transacción
+        identificador = f"ANUL_{datetime.now().strftime('%Y%m%d%H%M%S')}_{uuid.uuid4().hex[:8]}"
         
-        payload = {
-            'xml': xml_base64,
-        }
-        
+        # Headers según documentación INFILE
         headers = {
-            'Authorization': f'Bearer {token}',
-            'Content-Type': 'application/json',
+            'UsuarioFirma': config['usuario_firma'] or config['usuario_api'],
+            'LlaveFirma': config['llave_firma'] or config['llave_api'],
+            'UsuarioApi': config['usuario_api'],
+            'LlaveApi': config['llave_api'],
+            'identificador': identificador,
+            'Content-Type': 'application/xml',
         }
         
         try:
             _logger.info(f"FEL: Enviando anulación para UUID {uuid_dte}")
-            response = requests.post(url, json=payload, headers=headers, timeout=60)
+            _logger.info(f"FEL: Identificador anulación: {identificador}")
+            
+            response = requests.post(
+                url, 
+                data=xml_anulacion.encode('utf-8'), 
+                headers=headers, 
+                timeout=60
+            )
             response.raise_for_status()
             
             data = response.json()
-            _logger.info(f"FEL: Respuesta anulación: {data}")
+            _logger.info(f"FEL: Respuesta anulación: resultado={data.get('resultado')}")
             
-            return {
-                'resultado': data.get('resultado', False),
-                'mensaje': data.get('descripcion', '') or data.get('mensaje', ''),
-                'xml_respuesta': str(data),
-            }
+            if data.get('resultado') == True:
+                return {
+                    'resultado': True,
+                    'mensaje': data.get('descripcion', 'Documento anulado exitosamente'),
+                    'uuid': data.get('uuid', ''),
+                }
+            else:
+                error_msg = data.get('descripcion', 'Error al anular documento')
+                errores = data.get('descripcion_errores', [])
+                if errores:
+                    mensajes = [e.get('mensaje_error', '') for e in errores if e.get('mensaje_error')]
+                    if mensajes:
+                        error_msg = '; '.join(mensajes)
+                raise UserError(_("Error FEL Anulación: %s") % error_msg)
             
         except requests.exceptions.RequestException as e:
             _logger.error(f"FEL: Error al anular DTE: {e}")
