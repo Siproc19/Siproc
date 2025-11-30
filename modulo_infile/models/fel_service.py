@@ -245,7 +245,7 @@ class FelService(models.AbstractModel):
         
         # Datos de Emisión
         xml_lines.append('      <dte:DatosEmision ID="DatosEmision">')
-        
+         ## cambios 
         # Datos Generales
         exp_value = 'SI' if tipo_documento in ('FACT', 'FCAM') and nit_receptor == 'CF' else ''
         exp_attr = ' Exp="SI"' if exp_value else ''
