@@ -243,7 +243,8 @@ class FelService(models.AbstractModel):
         
         # Datos Generales
         exp_value = 'SI' if tipo_documento in ('FACT', 'FCAM') and nit_receptor == 'CF' else ''
-        xml_lines.append(f'        <dte:DatosGenerales CodigoMoneda="{codigo_moneda}" FechaHoraEmision="{fecha_emision}" Tipo="{tipo_documento}"{" Exp=\"SI\"" if exp_value else ""}/>')
+        exp_attr = ' Exp="SI"' if exp_value else ''
+        xml_lines.append(f'        <dte:DatosGenerales CodigoMoneda="{codigo_moneda}" FechaHoraEmision="{fecha_emision}" Tipo="{tipo_documento}"{exp_attr}/>')
         
         # Emisor
         xml_lines.append(f'        <dte:Emisor AfiliacionIVA="{config["afiliacion_iva"]}" CodigoEstablecimiento="{config["codigo_establecimiento"]}" CorreoEmisor="{company.email or ""}" NITEmisor="{nit_emisor}" NombreComercial="{company.name}" NombreEmisor="{company.name}">')
