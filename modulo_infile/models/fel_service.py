@@ -281,11 +281,20 @@ class FelService(models.AbstractModel):
         xml_lines.append(f'          <dte:Frase CodigoEscenario="1" TipoFrase="1"/>')
         xml_lines.append(f'        </dte:Frases>')
         
-        # Items
+        # Items - filtrar solo líneas con productos (no secciones ni notas)
         xml_lines.append(f'        <dte:Items>')
         
+        # Filtrar líneas válidas (con cantidad y precio)
+        lineas_factura = move.invoice_line_ids.filtered(
+            lambda l: l.display_type not in ('line_section', 'line_note') and l.quantity != 0
+        )
+        
+        # Validar que haya al menos una línea
+        if not lineas_factura:
+            raise UserError(_("La factura no tiene líneas de producto válidas para certificar."))
+        
         numero_linea = 0
-        for line in move.invoice_line_ids.filtered(lambda l: not l.display_type):
+        for line in lineas_factura:
             numero_linea += 1
             
             cantidad = abs(line.quantity)
