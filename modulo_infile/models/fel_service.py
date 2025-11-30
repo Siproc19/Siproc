@@ -204,9 +204,14 @@ class FelService(models.AbstractModel):
             return 'CF'
         return re.sub(r'[^0-9kK]', '', str(nit)).upper()
 
-    def _formatear_monto(self, monto):
-        """Formatea un monto a 6 decimales"""
-        return "{:.6f}".format(float(monto or 0))
+    def _formatear_monto(self, monto, decimales=6):
+        """Formatea un monto con precisión específica
+        
+        SAT Guatemala acepta hasta 6 decimales, pero los cálculos
+        deben cuadrar. Usamos redondeo bancario para precisión.
+        """
+        valor = round(float(monto or 0), decimales)
+        return f"{valor:.{decimales}f}"
 
     def _generar_xml_dte(self, move):
         """Genera el XML del DTE según esquema SAT Guatemala"""
@@ -293,42 +298,68 @@ class FelService(models.AbstractModel):
         if not lineas_factura:
             raise UserError(_("La factura no tiene líneas de producto válidas para certificar."))
         
+        # Acumuladores para totales (deben coincidir con suma de líneas)
+        suma_monto_gravable = 0
+        suma_monto_impuesto = 0
+        suma_total = 0
+        
         numero_linea = 0
         for line in lineas_factura:
             numero_linea += 1
             
             cantidad = abs(line.quantity)
+            if cantidad == 0:
+                continue
+                
+            # ============================================================
+            # CÁLCULOS SEGÚN FÓRMULAS FEL DE SAT GUATEMALA
+            # ============================================================
+            # Fórmula SAT:
+            # - Precio = Cantidad × PrecioUnitario (sin IVA, antes de descuento)
+            # - MontoGravable = Precio - Descuento (base para calcular IVA)
+            # - MontoImpuesto = MontoGravable × 0.12
+            # - Total = MontoGravable + MontoImpuesto
+            # ============================================================
             
-            # Usar los valores que Odoo ya calculó correctamente
-            # price_subtotal = monto sin IVA (después de descuentos)
-            # price_total = monto con IVA (después de descuentos)
-            subtotal_linea = abs(line.price_subtotal)  # Sin IVA, con descuento aplicado
-            total_linea = abs(line.price_total)  # Con IVA
+            # Obtener el precio unitario de Odoo (puede incluir o no IVA)
+            precio_unitario_odoo = abs(line.price_unit)
             
-            # Calcular IVA de la línea
-            monto_iva = total_linea - subtotal_linea
+            # Verificar si el precio incluye IVA
+            precio_incluye_iva = any(tax.price_include for tax in line.tax_ids if tax.amount > 0)
             
-            # Precio unitario sin IVA
-            precio_unitario_sin_iva = subtotal_linea / cantidad if cantidad else 0
+            # Calcular precio unitario SIN IVA
+            if precio_incluye_iva:
+                precio_unitario = round(precio_unitario_odoo / 1.12, 6)
+            else:
+                precio_unitario = round(precio_unitario_odoo, 6)
             
-            # Precio bruto (antes de descuento) = precio unitario sin IVA
-            precio_bruto = abs(line.price_unit)
-            
-            # Verificar si el precio incluye IVA (depende de la configuración de impuestos)
-            tiene_iva = any(tax.amount == 12 for tax in line.tax_ids)
-            if tiene_iva and line.tax_ids.filtered(lambda t: t.price_include):
-                # Si el precio incluye IVA, extraerlo
-                precio_bruto = precio_bruto / 1.12
+            # Precio = Cantidad × PrecioUnitario (antes de descuento)
+            precio = round(cantidad * precio_unitario, 6)
             
             # Calcular descuento
-            precio_sin_descuento = cantidad * precio_bruto
-            descuento_monto = precio_sin_descuento - subtotal_linea if precio_sin_descuento > subtotal_linea else 0
+            descuento_porcentaje = abs(line.discount or 0)
+            descuento = round(precio * (descuento_porcentaje / 100), 6)
             
-            # Descripción del producto
+            # MontoGravable = Precio - Descuento (esto es la base imponible)
+            monto_gravable = round(precio - descuento, 6)
+            
+            # MontoImpuesto = MontoGravable × 12%
+            monto_impuesto = round(monto_gravable * 0.12, 6)
+            
+            # Total = MontoGravable + MontoImpuesto
+            total_linea = round(monto_gravable + monto_impuesto, 6)
+            
+            # Acumular para totales
+            suma_monto_gravable += monto_gravable
+            suma_monto_impuesto += monto_impuesto
+            suma_total += total_linea
+            
+            # Descripción del producto (limpiar caracteres especiales XML)
             descripcion = (line.name or line.product_id.name or 'Producto')[:500]
             descripcion = descripcion.replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;').replace('"', '&quot;').replace("'", '&apos;')
             
-            unidad_medida = line.product_uom_id.name[:3] if line.product_uom_id else 'UND'
+            # Unidad de medida (máximo 3 caracteres)
+            unidad_medida = (line.product_uom_id.name[:3] if line.product_uom_id else 'UND').upper()
             
             # Determinar si es Bien o Servicio
             tipo_item = 'S'  # Por defecto servicio
@@ -339,17 +370,17 @@ class FelService(models.AbstractModel):
             xml_lines.append(f'            <dte:Cantidad>{self._formatear_monto(cantidad)}</dte:Cantidad>')
             xml_lines.append(f'            <dte:UnidadMedida>{unidad_medida}</dte:UnidadMedida>')
             xml_lines.append(f'            <dte:Descripcion>{descripcion}</dte:Descripcion>')
-            xml_lines.append(f'            <dte:PrecioUnitario>{self._formatear_monto(precio_bruto)}</dte:PrecioUnitario>')
-            xml_lines.append(f'            <dte:Precio>{self._formatear_monto(precio_sin_descuento)}</dte:Precio>')
-            xml_lines.append(f'            <dte:Descuento>{self._formatear_monto(descuento_monto)}</dte:Descuento>')
+            xml_lines.append(f'            <dte:PrecioUnitario>{self._formatear_monto(precio_unitario)}</dte:PrecioUnitario>')
+            xml_lines.append(f'            <dte:Precio>{self._formatear_monto(precio)}</dte:Precio>')
+            xml_lines.append(f'            <dte:Descuento>{self._formatear_monto(descuento)}</dte:Descuento>')
             
             # Impuestos
             xml_lines.append(f'            <dte:Impuestos>')
             xml_lines.append(f'              <dte:Impuesto>')
             xml_lines.append(f'                <dte:NombreCorto>IVA</dte:NombreCorto>')
             xml_lines.append(f'                <dte:CodigoUnidadGravable>1</dte:CodigoUnidadGravable>')
-            xml_lines.append(f'                <dte:MontoGravable>{self._formatear_monto(subtotal_linea)}</dte:MontoGravable>')
-            xml_lines.append(f'                <dte:MontoImpuesto>{self._formatear_monto(monto_iva)}</dte:MontoImpuesto>')
+            xml_lines.append(f'                <dte:MontoGravable>{self._formatear_monto(monto_gravable)}</dte:MontoGravable>')
+            xml_lines.append(f'                <dte:MontoImpuesto>{self._formatear_monto(monto_impuesto)}</dte:MontoImpuesto>')
             xml_lines.append(f'              </dte:Impuesto>')
             xml_lines.append(f'            </dte:Impuestos>')
             
@@ -358,9 +389,9 @@ class FelService(models.AbstractModel):
         
         xml_lines.append(f'        </dte:Items>')
         
-        # Totales
-        gran_total = abs(move.amount_total)
-        total_impuestos = abs(move.amount_tax) if hasattr(move, 'amount_tax') else gran_total - (gran_total / 1.12)
+        # Totales (calculados desde las líneas para que coincidan)
+        total_impuestos = round(suma_monto_impuesto, 6)
+        gran_total = round(suma_total, 6)
         
         xml_lines.append(f'        <dte:Totales>')
         xml_lines.append(f'          <dte:TotalImpuestos>')
