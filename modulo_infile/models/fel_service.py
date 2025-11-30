@@ -96,10 +96,14 @@ class FelService(models.AbstractModel):
         
         Según documentación INFILE:
         URL: https://consultareceptores.feel.com.gt/rest/action
-        Body: XML <ConsultaNIT><nit>...</nit></ConsultaNIT>
+        Tipo: POST
+        Interfaz: raw (JSON)
+        Parámetros: {emisor_codigo, emisor_clave, nit_consulta}
         """
         if not nit:
             raise UserError(_("Debe proporcionar un NIT para consultar."))
+        
+        config = self._get_config()
         
         # Limpiar NIT (solo números y K)
         nit_limpio = re.sub(r'[^0-9kK]', '', str(nit)).upper()
@@ -107,29 +111,30 @@ class FelService(models.AbstractModel):
         # URL según manual oficial INFILE
         url = "https://consultareceptores.feel.com.gt/rest/action"
         
-        # XML de consulta según manual INFILE
-        xml_consulta = f"""<?xml version="1.0" encoding="UTF-8"?>
-<ConsultaNIT>
-    <nit>{nit_limpio}</nit>
-</ConsultaNIT>"""
+        # JSON de consulta según documentación INFILE (Imagen 1)
+        payload = {
+            'emisor_codigo': config['usuario_api'],  # PREFIJO
+            'emisor_clave': config['llave_api'],
+            'nit_consulta': nit_limpio
+        }
         
         headers = {
-            'Content-Type': 'application/xml; charset=utf-8',
+            'Content-Type': 'application/json',
         }
         
         try:
             _logger.info(f"FEL: Consultando NIT {nit_limpio}")
-            response = requests.post(url, data=xml_consulta.encode('utf-8'), headers=headers, timeout=30)
+            response = requests.post(url, json=payload, headers=headers, timeout=30)
             response.raise_for_status()
             
-            # Parsear respuesta XML
-            root = ET.fromstring(response.text)
+            data = response.json()
+            _logger.info(f"FEL: Respuesta consulta NIT: {data}")
             
+            # Respuesta según documentación: {nit, nombre, mensaje}
             return {
-                'nit': nit_limpio,
-                'nombre': root.find('.//nombre').text if root.find('.//nombre') is not None else '',
-                'mensaje': root.find('.//mensaje').text if root.find('.//mensaje') is not None else '',
-                'xml_respuesta': response.text,
+                'nit': data.get('nit', nit_limpio),
+                'nombre': data.get('nombre', ''),
+                'mensaje': data.get('mensaje', ''),
             }
             
         except Exception as e:
@@ -366,24 +371,27 @@ class FelService(models.AbstractModel):
     # ============================================================
     
     def _firmar_xml(self, xml_data):
-        """Firma el XML usando el servicio de firma de INFILE"""
+        """Firma el XML usando el servicio de firma de INFILE
+        
+        Según documentación INFILE, el endpoint correcto es:
+        https://signer-emisores.feel.com.gt/sign_request_emisor/fel_sign
+        """
         if not xml_data:
             raise UserError(_("No hay XML para firmar."))
         
         config = self._get_config()
         
-        # URL del servicio de firma
-        url = f"{config['url_firma']}/sign_fel/api/sign"
+        # URL del servicio de firma según documentación oficial INFILE
+        url = f"{config['url_firma']}/sign_request_emisor/fel_sign"
         
         # Codificar XML en base64
         xml_base64 = base64.b64encode(xml_data.encode('utf-8')).decode('utf-8')
         
         payload = {
-            'usuario': config['usuario_firma'] or config['usuario_api'],
             'llave': config['llave_firma'] or config['llave_api'],
-            'identificador': f"ODOO_{datetime.now().strftime('%Y%m%d%H%M%S')}_{uuid.uuid4().hex[:8]}",
             'archivo': xml_base64,
             'codigo': config['nit_emisor'],
+            'alias': config['usuario_firma'] or config['usuario_api'],
             'es_anulacion': 'N',
         }
         
