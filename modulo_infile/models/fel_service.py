@@ -298,35 +298,57 @@ class FelService(models.AbstractModel):
             numero_linea += 1
             
             cantidad = abs(line.quantity)
-            precio_unitario = abs(line.price_unit)
-            descuento = abs(line.discount or 0)
             
-            # Calcular precio sin IVA (el IVA en Guatemala es 12%)
-            precio_sin_iva = precio_unitario / 1.12 if config['afiliacion_iva'] == 'GEN' else precio_unitario
-            monto_gravable = cantidad * precio_sin_iva * (1 - descuento / 100)
-            monto_iva = monto_gravable * 0.12 if config['afiliacion_iva'] == 'GEN' else 0
-            total_linea = monto_gravable + monto_iva
+            # Usar los valores que Odoo ya calculó correctamente
+            # price_subtotal = monto sin IVA (después de descuentos)
+            # price_total = monto con IVA (después de descuentos)
+            subtotal_linea = abs(line.price_subtotal)  # Sin IVA, con descuento aplicado
+            total_linea = abs(line.price_total)  # Con IVA
+            
+            # Calcular IVA de la línea
+            monto_iva = total_linea - subtotal_linea
+            
+            # Precio unitario sin IVA
+            precio_unitario_sin_iva = subtotal_linea / cantidad if cantidad else 0
+            
+            # Precio bruto (antes de descuento) = precio unitario sin IVA
+            precio_bruto = abs(line.price_unit)
+            
+            # Verificar si el precio incluye IVA (depende de la configuración de impuestos)
+            tiene_iva = any(tax.amount == 12 for tax in line.tax_ids)
+            if tiene_iva and line.tax_ids.filtered(lambda t: t.price_include):
+                # Si el precio incluye IVA, extraerlo
+                precio_bruto = precio_bruto / 1.12
+            
+            # Calcular descuento
+            precio_sin_descuento = cantidad * precio_bruto
+            descuento_monto = precio_sin_descuento - subtotal_linea if precio_sin_descuento > subtotal_linea else 0
             
             # Descripción del producto
             descripcion = (line.name or line.product_id.name or 'Producto')[:500]
-            descripcion = descripcion.replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;').replace('"', '&quot;')
+            descripcion = descripcion.replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;').replace('"', '&quot;').replace("'", '&apos;')
             
             unidad_medida = line.product_uom_id.name[:3] if line.product_uom_id else 'UND'
             
-            xml_lines.append(f'          <dte:Item BienOServicio="{"B" if line.product_id.type == "product" else "S"}" NumeroLinea="{numero_linea}">')
+            # Determinar si es Bien o Servicio
+            tipo_item = 'S'  # Por defecto servicio
+            if line.product_id and line.product_id.type in ('product', 'consu'):
+                tipo_item = 'B'
+            
+            xml_lines.append(f'          <dte:Item BienOServicio="{tipo_item}" NumeroLinea="{numero_linea}">')
             xml_lines.append(f'            <dte:Cantidad>{self._formatear_monto(cantidad)}</dte:Cantidad>')
             xml_lines.append(f'            <dte:UnidadMedida>{unidad_medida}</dte:UnidadMedida>')
             xml_lines.append(f'            <dte:Descripcion>{descripcion}</dte:Descripcion>')
-            xml_lines.append(f'            <dte:PrecioUnitario>{self._formatear_monto(precio_sin_iva)}</dte:PrecioUnitario>')
-            xml_lines.append(f'            <dte:Precio>{self._formatear_monto(cantidad * precio_sin_iva)}</dte:Precio>')
-            xml_lines.append(f'            <dte:Descuento>{self._formatear_monto(cantidad * precio_sin_iva * descuento / 100)}</dte:Descuento>')
+            xml_lines.append(f'            <dte:PrecioUnitario>{self._formatear_monto(precio_bruto)}</dte:PrecioUnitario>')
+            xml_lines.append(f'            <dte:Precio>{self._formatear_monto(precio_sin_descuento)}</dte:Precio>')
+            xml_lines.append(f'            <dte:Descuento>{self._formatear_monto(descuento_monto)}</dte:Descuento>')
             
             # Impuestos
             xml_lines.append(f'            <dte:Impuestos>')
             xml_lines.append(f'              <dte:Impuesto>')
             xml_lines.append(f'                <dte:NombreCorto>IVA</dte:NombreCorto>')
             xml_lines.append(f'                <dte:CodigoUnidadGravable>1</dte:CodigoUnidadGravable>')
-            xml_lines.append(f'                <dte:MontoGravable>{self._formatear_monto(monto_gravable)}</dte:MontoGravable>')
+            xml_lines.append(f'                <dte:MontoGravable>{self._formatear_monto(subtotal_linea)}</dte:MontoGravable>')
             xml_lines.append(f'                <dte:MontoImpuesto>{self._formatear_monto(monto_iva)}</dte:MontoImpuesto>')
             xml_lines.append(f'              </dte:Impuesto>')
             xml_lines.append(f'            </dte:Impuestos>')
