@@ -315,37 +315,44 @@ class FelService(models.AbstractModel):
             # ============================================================
             # USAR VALORES EXACTOS DE ODOO (price_subtotal, price_total)
             # ============================================================
-            # IMPORTANTE: NO recalcular. Usar los valores que Odoo ya calculó
-            # para que FEL no rechace por diferencias de redondeo.
+            # FEL valida que: Precio - Descuento = MontoGravable
+            # Y que: MontoGravable + MontoImpuesto = Total
+            # Por eso TODOS los valores deben ser consistentes.
             # ============================================================
             
             # Valores EXACTOS de Odoo (ya incluyen descuentos y redondeos)
-            monto_gravable = float_round(abs(line.price_subtotal), precision_digits=2)  # Sin IVA
-            total_linea = float_round(abs(line.price_total), precision_digits=2)        # Con IVA
-            monto_impuesto = float_round(total_linea - monto_gravable, precision_digits=2)  # IVA real
+            monto_gravable = round(abs(line.price_subtotal), 2)  # Sin IVA
+            total_linea = round(abs(line.price_total), 2)        # Con IVA
+            monto_impuesto = round(total_linea - monto_gravable, 2)  # IVA real
             
-            # Validación: Total debe ser MontoGravable + MontoImpuesto
-            total_verificado = float_round(monto_gravable + monto_impuesto, precision_digits=2)
+            # Validación estricta: Total = MontoGravable + MontoImpuesto
+            total_verificado = round(monto_gravable + monto_impuesto, 2)
             if total_linea != total_verificado:
-                _logger.warning(f"FEL: Ajustando total línea {numero_linea}: {total_linea} -> {total_verificado}")
-                total_linea = total_verificado
+                raise UserError(_(
+                    "Error de cálculo en línea %s: Los valores no cuadran.\n"
+                    "MontoGravable: %s + MontoImpuesto: %s = %s (esperado: %s)"
+                ) % (numero_linea, monto_gravable, monto_impuesto, total_verificado, total_linea))
             
-            # Precio unitario y descuento para el XML
-            precio_unitario = abs(line.price_unit)
+            # ============================================================
+            # CALCULAR Precio y Descuento CONSISTENTES con MontoGravable
+            # ============================================================
+            # FEL valida: Precio - Descuento = MontoGravable
+            # Por eso calculamos Precio y Descuento a partir de MontoGravable
+            # ============================================================
+            
             descuento_porcentaje = abs(line.discount or 0)
             
-            # Si el precio incluye IVA, extraerlo para el XML
-            precio_incluye_iva = any(tax.price_include for tax in line.tax_ids if tax.amount > 0)
-            if precio_incluye_iva:
-                precio_unitario_xml = float_round(precio_unitario / 1.12, precision_digits=2)
+            if descuento_porcentaje > 0:
+                # Si hay descuento: Precio = MontoGravable / (1 - descuento%)
+                precio_xml = round(monto_gravable / (1 - descuento_porcentaje / 100.0), 2)
+                descuento_xml = round(precio_xml - monto_gravable, 2)
             else:
-                precio_unitario_xml = float_round(precio_unitario, precision_digits=2)
+                # Sin descuento: Precio = MontoGravable
+                precio_xml = monto_gravable
+                descuento_xml = 0.0
             
-            # Precio (cantidad * precio_unitario sin IVA)
-            precio_xml = float_round(cantidad * precio_unitario_xml, precision_digits=2)
-            
-            # Descuento sobre precio sin IVA
-            descuento_xml = float_round(precio_xml * (descuento_porcentaje / 100.0), precision_digits=2)
+            # Precio unitario = Precio / Cantidad
+            precio_unitario_xml = round(precio_xml / cantidad, 2) if cantidad else 0
             
             # Acumular para totales
             suma_monto_gravable += monto_gravable
