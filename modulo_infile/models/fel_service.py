@@ -311,69 +311,40 @@ class FelService(models.AbstractModel):
             cantidad = abs(line.quantity)
             if cantidad == 0:
                 continue
-                
+            
             # ============================================================
-            # CÁLCULOS USANDO EL MOTOR DE IMPUESTOS DE ODOO (compute_all)
+            # USAR VALORES EXACTOS DE ODOO (price_subtotal, price_total)
             # ============================================================
-            # Esto garantiza que los valores coincidan EXACTAMENTE con lo
-            # que FEL espera, ya que usamos los mismos cálculos internos.
+            # IMPORTANTE: NO recalcular. Usar los valores que Odoo ya calculó
+            # para que FEL no rechace por diferencias de redondeo.
             # ============================================================
             
-            precio_unitario = abs(line.price_unit)
-            
-            # 1) Precio bruto = Cantidad × PrecioUnitario (sin descuento)
-            precio_bruto = float_round(cantidad * precio_unitario, precision_digits=2)
-            
-            # 2) Calcular descuento sobre el precio bruto
-            descuento_porcentaje = abs(line.discount or 0)
-            descuento = float_round(precio_bruto * (descuento_porcentaje / 100.0), precision_digits=2)
-            
-            # 3) Usar compute_all de Odoo para obtener los valores exactos
-            #    Esto calcula impuestos considerando el descuento automáticamente
-            tax_data = line.tax_ids.compute_all(
-                precio_unitario * (1 - descuento_porcentaje / 100.0),  # precio con descuento aplicado
-                currency=move.currency_id,
-                quantity=cantidad,
-                product=line.product_id,
-                partner=move.partner_id,
-            )
-            
-            # Valores calculados por Odoo
-            base_sin_iva = tax_data['total_excluded']      # Base sin IVA (MontoGravable)
-            total_con_iva = tax_data['total_included']     # Total con IVA
-            
-            # Buscar el monto del IVA específicamente
-            iva_amount = 0.0
-            for t in tax_data['taxes']:
-                # Buscar impuestos tipo IVA (12%)
-                if 'IVA' in (t.get('name', '') or '').upper() or abs(t.get('amount', 0) - (base_sin_iva * 0.12)) < 0.01:
-                    iva_amount += t['amount']
-            
-            # Si no encontró IVA explícito, calcularlo (por si el impuesto tiene otro nombre)
-            if iva_amount == 0 and base_sin_iva > 0:
-                iva_amount = base_sin_iva * 0.12
-            
-            # 4) Redondeos finales para FEL (SIEMPRE 2 decimales)
-            monto_gravable = float_round(base_sin_iva, precision_digits=2)
-            monto_impuesto = float_round(iva_amount, precision_digits=2)
-            total_linea = float_round(total_con_iva, precision_digits=2)
+            # Valores EXACTOS de Odoo (ya incluyen descuentos y redondeos)
+            monto_gravable = float_round(abs(line.price_subtotal), precision_digits=2)  # Sin IVA
+            total_linea = float_round(abs(line.price_total), precision_digits=2)        # Con IVA
+            monto_impuesto = float_round(total_linea - monto_gravable, precision_digits=2)  # IVA real
             
             # Validación: Total debe ser MontoGravable + MontoImpuesto
-            total_calculado = float_round(monto_gravable + monto_impuesto, precision_digits=2)
-            if total_linea != total_calculado:
-                total_linea = total_calculado  # Usar el valor calculado para consistencia
+            total_verificado = float_round(monto_gravable + monto_impuesto, precision_digits=2)
+            if total_linea != total_verificado:
+                _logger.warning(f"FEL: Ajustando total línea {numero_linea}: {total_linea} -> {total_verificado}")
+                total_linea = total_verificado
             
-            # Precio para el XML (bruto sin descuento, sin IVA)
-            # Si precio incluye IVA, extraerlo
+            # Precio unitario y descuento para el XML
+            precio_unitario = abs(line.price_unit)
+            descuento_porcentaje = abs(line.discount or 0)
+            
+            # Si el precio incluye IVA, extraerlo para el XML
             precio_incluye_iva = any(tax.price_include for tax in line.tax_ids if tax.amount > 0)
             if precio_incluye_iva:
                 precio_unitario_xml = float_round(precio_unitario / 1.12, precision_digits=2)
-                precio_xml = float_round(cantidad * precio_unitario_xml, precision_digits=2)
             else:
                 precio_unitario_xml = float_round(precio_unitario, precision_digits=2)
-                precio_xml = float_round(cantidad * precio_unitario_xml, precision_digits=2)
             
-            # Recalcular descuento sobre precio sin IVA
+            # Precio (cantidad * precio_unitario sin IVA)
+            precio_xml = float_round(cantidad * precio_unitario_xml, precision_digits=2)
+            
+            # Descuento sobre precio sin IVA
             descuento_xml = float_round(precio_xml * (descuento_porcentaje / 100.0), precision_digits=2)
             
             # Acumular para totales
@@ -382,7 +353,7 @@ class FelService(models.AbstractModel):
             suma_total += total_linea
             
             # Descripción del producto (limpiar caracteres especiales XML)
-            descripcion = (line.name or line.product_id.name or 'Producto')[:500]
+            descripcion = (line.name or (line.product_id.name if line.product_id else '') or 'Producto')[:500]
             descripcion = descripcion.replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;').replace('"', '&quot;').replace("'", '&apos;')
             
             # Unidad de medida (máximo 3 caracteres)
