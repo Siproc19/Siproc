@@ -576,44 +576,71 @@ class FelService(models.AbstractModel):
     # ============================================================
     
     def _generar_xml_anulacion(self, move):
-        """Genera el XML de anulación de un DTE"""
+        """Genera el XML de anulación de un DTE
+        
+        Según PHP de referencia, el XML de anulación tiene esta estructura:
+        - xmlns:dte="http://www.sat.gob.gt/dte/fel/0.1.0" (versión 0.1.0 para anulación)
+        - Los atributos de DatosGenerales en orden específico
+        """
         config = self._get_config()
         company = move.company_id
         
+        # Fecha de anulación en formato ISO 8601
         fecha_anulacion = datetime.now().strftime('%Y-%m-%dT%H:%M:%S')
-        fecha_emision = move.fel_fecha_certificacion.strftime('%Y-%m-%dT%H:%M:%S') if move.fel_fecha_certificacion else ''
+        
+        # Fecha de emisión del documento original
+        if move.fel_fecha_certificacion:
+            fecha_emision = move.fel_fecha_certificacion.strftime('%Y-%m-%dT%H:%M:%S')
+        elif move.invoice_date:
+            fecha_emision = move.invoice_date.strftime('%Y-%m-%dT%H:%M:%S')
+        else:
+            fecha_emision = datetime.now().strftime('%Y-%m-%dT%H:%M:%S')
         
         nit_emisor = self._limpiar_nit(company.vat)
+        nit_receptor = self._limpiar_nit(move.partner_id.vat)
         
+        # Motivo de anulación (limpiar caracteres especiales XML)
+        motivo = (move.ref or 'Anulación de documento')[:255]
+        motivo = motivo.replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;').replace('"', '&quot;').replace("'", '&apos;')
+        
+        # Construir XML según estructura del PHP
+        # El PHP usa los atributos en este orden específico
         xml = f"""<?xml version="1.0" encoding="UTF-8"?>
-<dte:GTAnulacionDocumento xmlns:dte="http://www.sat.gob.gt/dte/fel/0.1.0" Version="0.1">
+<dte:GTAnulacionDocumento xmlns:dte="http://www.sat.gob.gt/dte/fel/0.1.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" Version="0.1">
   <dte:SAT>
     <dte:AnulacionDTE ID="DatosCertificados">
-      <dte:DatosGenerales ID="DatosAnulacion" NumeroDocumentoAAnular="{move.fel_uuid}" NITEmisor="{nit_emisor}" IDReceptor="{self._limpiar_nit(move.partner_id.vat)}" FechaEmisionDocumentoAnular="{fecha_emision}" FechaHoraAnulacion="{fecha_anulacion}" MotivoAnulacion="{move.ref or 'Anulación de documento'}"/>
+      <dte:DatosGenerales FechaEmisionDocumentoAnular="{fecha_emision}" FechaHoraAnulacion="{fecha_anulacion}" ID="DatosAnulacion" IDReceptor="{nit_receptor}" MotivoAnulacion="{motivo}" NITEmisor="{nit_emisor}" NumeroDocumentoAAnular="{move.fel_uuid}"/>
     </dte:AnulacionDTE>
   </dte:SAT>
 </dte:GTAnulacionDocumento>"""
         
+        _logger.info(f"FEL: XML de anulación generado para UUID {move.fel_uuid}")
         return xml
 
     def _enviar_anulacion(self, xml_anulacion, uuid_dte):
-        """Envía la anulación del DTE usando el proceso unificado de INFILE
+        """Envía la anulación del DTE
         
-        Según documentación INFILE, el mismo endpoint se usa para
-        certificación y anulación de documentos.
+        Según el código PHP de referencia:
+        1. Primero se firma el XML (signXML con es_anulacion='S')
+        2. Luego se envía al endpoint de anulación
+        
+        El PHP usa el endpoint: https://certificador.feel.com.gt/fel/anulacion/v2/dte
+        Con el body: {nit, correo_copia, xml_base64}
+        
+        Sin embargo, el proceso unificado también soporta anulaciones.
+        Probamos primero con el proceso unificado.
         """
         if not xml_anulacion:
             raise UserError(_("No hay XML de anulación."))
         
         config = self._get_config()
         
-        # URL del proceso unificado (mismo para certificación y anulación)
-        url = "https://certificador.feel.com.gt/fel/procesounificado/transaccion/v2/xml"
-        
         # Generar identificador único para esta transacción
         identificador = f"ANUL_{datetime.now().strftime('%Y%m%d%H%M%S')}_{uuid.uuid4().hex[:8]}"
         
-        # Headers según documentación INFILE
+        # Intentar primero con el proceso unificado (firma + certificación en un paso)
+        url = "https://certificador.feel.com.gt/fel/procesounificado/transaccion/v2/xml"
+        
         headers = {
             'UsuarioFirma': config['usuario_firma'] or config['usuario_api'],
             'LlaveFirma': config['llave_firma'] or config['llave_api'],
@@ -626,6 +653,7 @@ class FelService(models.AbstractModel):
         try:
             _logger.info(f"FEL: Enviando anulación para UUID {uuid_dte}")
             _logger.info(f"FEL: Identificador anulación: {identificador}")
+            _logger.info(f"FEL: XML anulación: {xml_anulacion[:500]}...")
             
             response = requests.post(
                 url, 
@@ -636,13 +664,14 @@ class FelService(models.AbstractModel):
             response.raise_for_status()
             
             data = response.json()
-            _logger.info(f"FEL: Respuesta anulación: resultado={data.get('resultado')}")
+            _logger.info(f"FEL: Respuesta anulación: {data}")
             
             if data.get('resultado') == True:
                 return {
                     'resultado': True,
                     'mensaje': data.get('descripcion', 'Documento anulado exitosamente'),
                     'uuid': data.get('uuid', ''),
+                    'fecha': data.get('fecha', ''),
                 }
             else:
                 error_msg = data.get('descripcion', 'Error al anular documento')
@@ -655,6 +684,109 @@ class FelService(models.AbstractModel):
             
         except requests.exceptions.RequestException as e:
             _logger.error(f"FEL: Error al anular DTE: {e}")
+            raise UserError(_("Error de conexión al anular DTE: %s") % str(e))
+
+    def _enviar_anulacion_v2(self, xml_anulacion, uuid_dte):
+        """Envía la anulación del DTE siguiendo exactamente el flujo del PHP
+        
+        Flujo del PHP:
+        1. Firma el XML de anulación (signXML con es_anulacion='S')
+        2. Envía al endpoint: https://certificador.feel.com.gt/fel/anulacion/v2/dte
+        3. Body JSON: {nit, correo_copia, xml_base64}
+        
+        Este método es alternativo al proceso unificado.
+        """
+        import base64
+        
+        if not xml_anulacion:
+            raise UserError(_("No hay XML de anulación."))
+        
+        config = self._get_config()
+        company = self.env.company
+        nit_emisor = self._limpiar_nit(company.vat)
+        
+        # PASO 1: Firmar el XML de anulación
+        url_firma = "https://signer-emisores.feel.com.gt/sign_solicitud_firmas/firma_xml"
+        
+        headers_firma = {
+            'usuario': config['usuario_firma'] or config['usuario_api'],
+            'llave': config['llave_firma'] or config['llave_api'],
+            'identificador': f"FIRMA_ANUL_{datetime.now().strftime('%Y%m%d%H%M%S')}",
+            'es_anulacion': 'S',  # Indicar que es anulación (como en PHP)
+            'Content-Type': 'application/xml',
+        }
+        
+        try:
+            _logger.info(f"FEL: Firmando XML de anulación para UUID {uuid_dte}")
+            
+            response_firma = requests.post(
+                url_firma,
+                data=xml_anulacion.encode('utf-8'),
+                headers=headers_firma,
+                timeout=30
+            )
+            response_firma.raise_for_status()
+            
+            data_firma = response_firma.json()
+            _logger.info(f"FEL: Respuesta firma anulación: {data_firma.get('resultado', False)}")
+            
+            if not data_firma.get('resultado'):
+                error_msg = data_firma.get('descripcion', 'Error al firmar XML de anulación')
+                raise UserError(_("Error al firmar anulación: %s") % error_msg)
+            
+            xml_firmado = data_firma.get('archivo', '')
+            if not xml_firmado:
+                raise UserError(_("No se recibió XML firmado para anulación"))
+            
+            # PASO 2: Enviar al endpoint de anulación
+            url_anulacion = "https://certificador.feel.com.gt/fel/anulacion/v2/dte"
+            
+            headers_anulacion = {
+                'UsuarioApi': config['usuario_api'],
+                'LlaveApi': config['llave_api'],
+                'Content-Type': 'application/json',
+            }
+            
+            # Convertir XML firmado a base64 (como hace el PHP)
+            xml_base64 = base64.b64encode(xml_firmado.encode('utf-8')).decode('utf-8')
+            
+            body = {
+                'nit': nit_emisor,
+                'correo_copia': company.email or config.get('correo_copia', ''),
+                'xml_base64': xml_base64,
+            }
+            
+            _logger.info(f"FEL: Enviando anulación al endpoint específico")
+            
+            response = requests.post(
+                url_anulacion,
+                json=body,
+                headers=headers_anulacion,
+                timeout=60
+            )
+            response.raise_for_status()
+            
+            data = response.json()
+            _logger.info(f"FEL: Respuesta anulación: {data}")
+            
+            if data.get('resultado') == True:
+                return {
+                    'resultado': True,
+                    'mensaje': data.get('descripcion', 'Documento anulado exitosamente'),
+                    'uuid': data.get('uuid', ''),
+                    'fecha': data.get('fecha', ''),
+                }
+            else:
+                error_msg = data.get('descripcion', 'Error al anular documento')
+                errores = data.get('descripcion_errores', [])
+                if errores:
+                    mensajes = [e.get('mensaje_error', '') for e in errores if e.get('mensaje_error')]
+                    if mensajes:
+                        error_msg = '; '.join(mensajes)
+                raise UserError(_("Error FEL Anulación v2: %s") % error_msg)
+            
+        except requests.exceptions.RequestException as e:
+            _logger.error(f"FEL: Error al anular DTE (v2): {e}")
             raise UserError(_("Error de conexión al anular DTE: %s") % str(e))
 
     # ============================================================

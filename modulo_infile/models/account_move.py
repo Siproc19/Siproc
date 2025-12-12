@@ -243,7 +243,14 @@ class AccountMove(models.Model):
         return True
 
     def action_anular_fel(self):
-        """Anula el documento certificado en FEL"""
+        """Anula el documento certificado en FEL
+        
+        Según el código PHP de referencia, hay dos formas de anular:
+        1. Proceso unificado (firma + certificación en un paso)
+        2. Firma separada + endpoint de anulación
+        
+        Usamos primero el proceso unificado, y si falla, el método alternativo.
+        """
         for move in self:
             if move.fel_estado != 'certified':
                 raise UserError(_("Solo se pueden anular documentos certificados."))
@@ -257,11 +264,14 @@ class AccountMove(models.Model):
                 # Generar XML de anulación
                 xml_anulacion = fel_service._generar_xml_anulacion(move)
                 
-                # Firmar XML
-                xml_firmado = fel_service._firmar_xml(xml_anulacion)
-                
-                # Enviar anulación
-                respuesta = fel_service._enviar_anulacion(xml_firmado, move.fel_uuid)
+                # Intentar primero con proceso unificado (no requiere firma previa)
+                # El proceso unificado firma y certifica en un solo paso
+                try:
+                    respuesta = fel_service._enviar_anulacion(xml_anulacion, move.fel_uuid)
+                except UserError as e:
+                    # Si falla, intentar con el método alternativo (firma separada)
+                    _logger.warning(f"FEL: Proceso unificado falló, intentando método v2: {e}")
+                    respuesta = fel_service._enviar_anulacion_v2(xml_anulacion, move.fel_uuid)
                 
                 if respuesta.get('resultado'):
                     move.write({
