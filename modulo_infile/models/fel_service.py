@@ -322,21 +322,27 @@ class FelService(models.AbstractModel):
                 continue
             
             # ============================================================
-            # CÁLCULO EN ORDEN EXACTO QUE FEL VALIDA
+            # CÁLCULO SEGÚN LÓGICA PHP DE REFERENCIA (PRECIOS CON IVA)
             # ============================================================
-            # FEL calcula y valida en este orden EXACTO:
-            #   1. Precio = Cantidad × PrecioUnitario
-            #   2. MontoGravable = Precio - Descuento
-            #   3. MontoImpuesto = MontoGravable × TasaImpuesto
-            #   4. Total = MontoGravable + MontoImpuesto
+            # En Guatemala los precios generalmente INCLUYEN IVA.
+            # La lógica del PHP es:
+            #   Total = Cantidad × PrecioUnitario - Descuento (con IVA incluido)
+            #   MontoGravable = Total / 1.12
+            #   MontoImpuesto = Total - MontoGravable
             #
-            # IMPORTANTE: No redondear hasta el paso final de cada campo
+            # Precio y PrecioUnitario en el XML son CON IVA incluido.
             # ============================================================
             
+            # Obtener precio unitario original de Odoo
             precio_unitario_original = abs(line.price_unit)
-            descuento_porcentaje = abs(line.discount or 0)
+            descuento_monto = 0.0
             
-            # Verificar si tiene IVA y si el precio lo incluye
+            # Calcular descuento en monto (no porcentaje)
+            if line.discount and line.discount > 0:
+                # Descuento = (Cantidad × PrecioUnitario) × %descuento / 100
+                descuento_monto = round(cantidad * precio_unitario_original * line.discount / 100.0, 2)
+            
+            # Verificar si tiene IVA
             tiene_iva = False
             precio_incluye_iva = False
             for tax in line.tax_ids:
@@ -346,35 +352,47 @@ class FelService(models.AbstractModel):
                         precio_incluye_iva = True
                     break
             
-            # 1) PrecioUnitario SIN IVA (6 decimales para precisión, redondear al final)
-            if precio_incluye_iva:
-                precio_unitario_sin_iva = precio_unitario_original / 1.12
-            else:
-                precio_unitario_sin_iva = precio_unitario_original
+            # PrecioUnitario para el XML
+            precio_unitario_xml = round(precio_unitario_original, 2)
             
-            # Redondear PrecioUnitario a 2 decimales (como se envía al XML)
-            precio_unitario_xml = round(precio_unitario_sin_iva, 2)
-            
-            # 2) Precio = Cantidad × PrecioUnitario (usar el valor redondeado)
+            # Precio = Cantidad × PrecioUnitario
             precio_xml = round(cantidad * precio_unitario_xml, 2)
             
-            # 3) Descuento = Precio × %descuento / 100
-            if descuento_porcentaje > 0:
-                descuento_xml = round(precio_xml * descuento_porcentaje / 100.0, 2)
+            # Descuento
+            descuento_xml = round(descuento_monto, 2)
+            
+            # Total de la línea (con IVA) = Precio - Descuento
+            # Si el precio NO incluye IVA, hay que agregarlo
+            if precio_incluye_iva:
+                # Precio ya incluye IVA
+                total_linea = round(precio_xml - descuento_xml, 2)
             else:
-                descuento_xml = 0.0
+                # Precio no incluye IVA, calculamos el total con IVA
+                base_sin_iva = round(precio_xml - descuento_xml, 2)
+                if tiene_iva:
+                    total_linea = round(base_sin_iva * 1.12, 2)
+                else:
+                    total_linea = base_sin_iva
             
-            # 4) MontoGravable = Precio - Descuento (FEL calcula esto)
-            monto_gravable = round(precio_xml - descuento_xml, 2)
-            
-            # 5) MontoImpuesto = MontoGravable × 0.12
+            # Ahora calculamos MontoGravable y MontoImpuesto desde Total
+            # Esta es la lógica clave del PHP: MontoGravable = Total / 1.12
             if tiene_iva:
-                monto_impuesto = round(monto_gravable * 0.12, 2)
+                # MontoGravable = Total / 1.12 (redondear a 6 decimales como en PHP, luego a 2)
+                monto_gravable = round(round(total_linea / 1.12, 6), 2)
+                # MontoImpuesto = Total - MontoGravable
+                monto_impuesto = round(total_linea - monto_gravable, 2)
             else:
+                monto_gravable = total_linea
                 monto_impuesto = 0.0
             
-            # 6) Total = MontoGravable + MontoImpuesto
-            total_linea = round(monto_gravable + monto_impuesto, 2)
+            # Ajustar Precio y Descuento para que cuadren con MontoGravable
+            # Si el precio original no incluía IVA, necesitamos enviar el precio CON IVA
+            if not precio_incluye_iva and tiene_iva:
+                precio_unitario_xml = round(precio_unitario_original * 1.12, 2)
+                precio_xml = round(cantidad * precio_unitario_xml, 2)
+                descuento_xml = round(precio_xml - total_linea, 2)
+                if descuento_xml < 0:
+                    descuento_xml = 0.0
             
             # Acumular para totales
             suma_monto_gravable += monto_gravable
