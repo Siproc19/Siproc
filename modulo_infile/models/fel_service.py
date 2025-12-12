@@ -313,46 +313,52 @@ class FelService(models.AbstractModel):
                 continue
             
             # ============================================================
-            # USAR VALORES EXACTOS DE ODOO (price_subtotal, price_total)
+            # CÁLCULO SEGÚN FÓRMULAS EXACTAS DE FEL GUATEMALA
             # ============================================================
-            # FEL valida que: Precio - Descuento = MontoGravable
-            # Y que: MontoGravable + MontoImpuesto = Total
-            # Por eso TODOS los valores deben ser consistentes.
-            # ============================================================
-            
-            # Valores EXACTOS de Odoo (ya incluyen descuentos y redondeos)
-            monto_gravable = round(abs(line.price_subtotal), 2)  # Sin IVA
-            total_linea = round(abs(line.price_total), 2)        # Con IVA
-            monto_impuesto = round(total_linea - monto_gravable, 2)  # IVA real
-            
-            # Validación estricta: Total = MontoGravable + MontoImpuesto
-            total_verificado = round(monto_gravable + monto_impuesto, 2)
-            if total_linea != total_verificado:
-                raise UserError(_(
-                    "Error de cálculo en línea %s: Los valores no cuadran.\n"
-                    "MontoGravable: %s + MontoImpuesto: %s = %s (esperado: %s)"
-                ) % (numero_linea, monto_gravable, monto_impuesto, total_verificado, total_linea))
-            
-            # ============================================================
-            # CALCULAR Precio y Descuento CONSISTENTES con MontoGravable
-            # ============================================================
-            # FEL valida: Precio - Descuento = MontoGravable
-            # Por eso calculamos Precio y Descuento a partir de MontoGravable
+            # FEL valida EXACTAMENTE estas operaciones:
+            #   Precio = Cantidad × PrecioUnitario
+            #   Descuento = Precio × %descuento
+            #   MontoGravable = Precio - Descuento
+            #   MontoImpuesto = MontoGravable × 0.12 (si tiene IVA)
+            #   Total = MontoGravable + MontoImpuesto
             # ============================================================
             
+            precio_unitario_original = abs(line.price_unit)
             descuento_porcentaje = abs(line.discount or 0)
             
-            if descuento_porcentaje > 0:
-                # Si hay descuento: Precio = MontoGravable / (1 - descuento%)
-                precio_xml = round(monto_gravable / (1 - descuento_porcentaje / 100.0), 2)
-                descuento_xml = round(precio_xml - monto_gravable, 2)
-            else:
-                # Sin descuento: Precio = MontoGravable
-                precio_xml = monto_gravable
-                descuento_xml = 0.0
+            # Verificar si el precio incluye IVA
+            tiene_iva = False
+            precio_incluye_iva = False
+            for tax in line.tax_ids:
+                if tax.amount == 12 or 'IVA' in (tax.name or '').upper():
+                    tiene_iva = True
+                    if tax.price_include:
+                        precio_incluye_iva = True
+                    break
             
-            # Precio unitario = Precio / Cantidad
-            precio_unitario_xml = round(precio_xml / cantidad, 2) if cantidad else 0
+            # 1) PrecioUnitario (SIEMPRE sin IVA para el XML)
+            if precio_incluye_iva:
+                precio_unitario_xml = round(precio_unitario_original / 1.12, 2)
+            else:
+                precio_unitario_xml = round(precio_unitario_original, 2)
+            
+            # 2) Precio = Cantidad × PrecioUnitario
+            precio_xml = round(cantidad * precio_unitario_xml, 2)
+            
+            # 3) Descuento = Precio × %descuento
+            descuento_xml = round(precio_xml * descuento_porcentaje / 100.0, 2)
+            
+            # 4) MontoGravable = Precio - Descuento
+            monto_gravable = round(precio_xml - descuento_xml, 2)
+            
+            # 5) MontoImpuesto = MontoGravable × 0.12 (si tiene IVA)
+            if tiene_iva:
+                monto_impuesto = round(monto_gravable * 0.12, 2)
+            else:
+                monto_impuesto = 0.0
+            
+            # 6) Total = MontoGravable + MontoImpuesto
+            total_linea = round(monto_gravable + monto_impuesto, 2)
             
             # Acumular para totales
             suma_monto_gravable += monto_gravable
@@ -394,7 +400,7 @@ class FelService(models.AbstractModel):
         
         xml_lines.append(f'        </dte:Items>')
         
-        # Totales (calculados desde las líneas para que coincidan, 2 decimales)
+        # Totales (sumados desde las líneas para que coincidan exactamente)
         total_impuestos = round(suma_monto_impuesto, 2)
         gran_total = round(suma_total, 2)
         
