@@ -322,77 +322,63 @@ class FelService(models.AbstractModel):
                 continue
             
             # ============================================================
-            # CÁLCULO SEGÚN LÓGICA PHP DE REFERENCIA (PRECIOS CON IVA)
+            # CÁLCULO EXACTO SEGÚN PHP DE REFERENCIA
             # ============================================================
-            # En Guatemala los precios generalmente INCLUYEN IVA.
-            # La lógica del PHP es:
-            #   Total = Cantidad × PrecioUnitario - Descuento (con IVA incluido)
-            #   MontoGravable = Total / 1.12
-            #   MontoImpuesto = Total - MontoGravable
+            # El PHP hace exactamente esto:
+            #   PrecioUnitario = precio con IVA
+            #   Precio = Cantidad × PrecioUnitario
+            #   Total = Precio - Descuento (con IVA)
+            #   MontoGravable = round(Total / 1.12, 6)
+            #   MontoImpuesto = round(Total - round(Total/1.12, 6), 6)
             #
-            # Precio y PrecioUnitario en el XML son CON IVA incluido.
+            # IMPORTANTE: Usamos price_total de Odoo que ya tiene el total
+            # correcto de la línea (con impuestos incluidos).
             # ============================================================
-            
-            # Obtener precio unitario original de Odoo
-            precio_unitario_original = abs(line.price_unit)
-            descuento_monto = 0.0
-            
-            # Calcular descuento en monto (no porcentaje)
-            if line.discount and line.discount > 0:
-                # Descuento = (Cantidad × PrecioUnitario) × %descuento / 100
-                descuento_monto = round(cantidad * precio_unitario_original * line.discount / 100.0, 2)
             
             # Verificar si tiene IVA
             tiene_iva = False
-            precio_incluye_iva = False
             for tax in line.tax_ids:
                 if abs(tax.amount - 12) < 0.01 or 'IVA' in (tax.name or '').upper():
                     tiene_iva = True
-                    if tax.price_include:
-                        precio_incluye_iva = True
                     break
             
-            # PrecioUnitario para el XML
-            precio_unitario_xml = round(precio_unitario_original, 2)
+            # Total de la línea = price_total de Odoo (ya incluye IVA si aplica)
+            total_linea = abs(line.price_total)
             
-            # Precio = Cantidad × PrecioUnitario
-            precio_xml = round(cantidad * precio_unitario_xml, 2)
-            
-            # Descuento
-            descuento_xml = round(descuento_monto, 2)
-            
-            # Total de la línea (con IVA) = Precio - Descuento
-            # Si el precio NO incluye IVA, hay que agregarlo
-            if precio_incluye_iva:
-                # Precio ya incluye IVA
-                total_linea = round(precio_xml - descuento_xml, 2)
-            else:
-                # Precio no incluye IVA, calculamos el total con IVA
-                base_sin_iva = round(precio_xml - descuento_xml, 2)
-                if tiene_iva:
-                    total_linea = round(base_sin_iva * 1.12, 2)
-                else:
-                    total_linea = base_sin_iva
-            
-            # Ahora calculamos MontoGravable y MontoImpuesto desde Total
-            # Esta es la lógica clave del PHP: MontoGravable = Total / 1.12
-            if tiene_iva:
-                # MontoGravable = Total / 1.12 (redondear a 6 decimales como en PHP, luego a 2)
-                monto_gravable = round(round(total_linea / 1.12, 6), 2)
-                # MontoImpuesto = Total - MontoGravable
-                monto_impuesto = round(total_linea - monto_gravable, 2)
+            # Calcular MontoGravable y MontoImpuesto EXACTAMENTE como el PHP
+            if tiene_iva and total_linea > 0:
+                # MontoGravable = round(Total / 1.12, 6) - exactamente como PHP
+                monto_gravable = round(total_linea / 1.12, 6)
+                # MontoImpuesto = round(Total - MontoGravable, 6) - exactamente como PHP
+                monto_impuesto = round(total_linea - monto_gravable, 6)
             else:
                 monto_gravable = total_linea
                 monto_impuesto = 0.0
             
-            # Ajustar Precio y Descuento para que cuadren con MontoGravable
-            # Si el precio original no incluía IVA, necesitamos enviar el precio CON IVA
-            if not precio_incluye_iva and tiene_iva:
-                precio_unitario_xml = round(precio_unitario_original * 1.12, 2)
+            # Para Precio, PrecioUnitario y Descuento, calculamos hacia atrás
+            # desde el total para que sean consistentes
+            # El precio unitario con IVA
+            if cantidad > 0:
+                # Si hay descuento, calcular el precio bruto
+                if line.discount and line.discount > 0:
+                    # Precio bruto = Total / (1 - %descuento/100)
+                    precio_xml = round(total_linea / (1 - line.discount / 100.0), 2)
+                    descuento_xml = round(precio_xml - total_linea, 2)
+                else:
+                    precio_xml = round(total_linea, 2)
+                    descuento_xml = 0.0
+                
+                precio_unitario_xml = round(precio_xml / cantidad, 2)
+                # Recalcular precio para que sea exacto
                 precio_xml = round(cantidad * precio_unitario_xml, 2)
+                # Recalcular descuento para que total sea exacto
                 descuento_xml = round(precio_xml - total_linea, 2)
                 if descuento_xml < 0:
                     descuento_xml = 0.0
+            else:
+                precio_unitario_xml = 0.0
+                precio_xml = 0.0
+                descuento_xml = 0.0
             
             # Acumular para totales
             suma_monto_gravable += monto_gravable
@@ -411,6 +397,7 @@ class FelService(models.AbstractModel):
             if line.product_id and line.product_id.type in ('product', 'consu'):
                 tipo_item = 'B'
             
+            # Formatear montos - usar 6 decimales para MontoGravable y MontoImpuesto como PHP
             xml_lines.append(f'          <dte:Item BienOServicio="{tipo_item}" NumeroLinea="{numero_linea}">')
             xml_lines.append(f'            <dte:Cantidad>{self._formatear_monto(cantidad)}</dte:Cantidad>')
             xml_lines.append(f'            <dte:UnidadMedida>{unidad_medida}</dte:UnidadMedida>')
@@ -419,13 +406,13 @@ class FelService(models.AbstractModel):
             xml_lines.append(f'            <dte:Precio>{self._formatear_monto(precio_xml)}</dte:Precio>')
             xml_lines.append(f'            <dte:Descuento>{self._formatear_monto(descuento_xml)}</dte:Descuento>')
             
-            # Impuestos
+            # Impuestos - usar 6 decimales como el PHP
             xml_lines.append(f'            <dte:Impuestos>')
             xml_lines.append(f'              <dte:Impuesto>')
             xml_lines.append(f'                <dte:NombreCorto>IVA</dte:NombreCorto>')
             xml_lines.append(f'                <dte:CodigoUnidadGravable>1</dte:CodigoUnidadGravable>')
-            xml_lines.append(f'                <dte:MontoGravable>{self._formatear_monto(monto_gravable)}</dte:MontoGravable>')
-            xml_lines.append(f'                <dte:MontoImpuesto>{self._formatear_monto(monto_impuesto)}</dte:MontoImpuesto>')
+            xml_lines.append(f'                <dte:MontoGravable>{round(monto_gravable, 6)}</dte:MontoGravable>')
+            xml_lines.append(f'                <dte:MontoImpuesto>{round(monto_impuesto, 6)}</dte:MontoImpuesto>')
             xml_lines.append(f'              </dte:Impuesto>')
             xml_lines.append(f'            </dte:Impuestos>')
             
@@ -434,13 +421,14 @@ class FelService(models.AbstractModel):
         
         xml_lines.append(f'        </dte:Items>')
         
-        # Totales (sumados desde las líneas para que coincidan exactamente)
-        total_impuestos = round(suma_monto_impuesto, 2)
+        # Totales - usar 6 decimales para TotalMontoImpuesto como en PHP
+        # PHP: round($data->total - round($data->total/1.12,6),6)
+        total_impuestos = round(suma_monto_impuesto, 6)
         gran_total = round(suma_total, 2)
         
         xml_lines.append(f'        <dte:Totales>')
         xml_lines.append(f'          <dte:TotalImpuestos>')
-        xml_lines.append(f'            <dte:TotalImpuesto NombreCorto="IVA" TotalMontoImpuesto="{self._formatear_monto(total_impuestos)}"/>')
+        xml_lines.append(f'            <dte:TotalImpuesto NombreCorto="IVA" TotalMontoImpuesto="{round(total_impuestos, 6)}"/>')
         xml_lines.append(f'          </dte:TotalImpuestos>')
         xml_lines.append(f'          <dte:GranTotal>{self._formatear_monto(gran_total)}</dte:GranTotal>')
         xml_lines.append(f'        </dte:Totales>')
