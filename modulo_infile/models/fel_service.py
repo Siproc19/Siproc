@@ -322,52 +322,63 @@ class FelService(models.AbstractModel):
                 continue
             
             # ============================================================
-            # CÁLCULO SEGÚN FÓRMULAS EXACTAS DE FEL GUATEMALA
+            # CÁLCULO BASADO EN price_subtotal DE ODOO
             # ============================================================
-            # FEL valida EXACTAMENTE estas operaciones:
-            #   Precio = Cantidad × PrecioUnitario
-            #   Descuento = Precio × %descuento
-            #   MontoGravable = Precio - Descuento
-            #   MontoImpuesto = MontoGravable × 0.12 (si tiene IVA)
+            # Odoo calcula price_subtotal = base imponible (sin IVA, con descuento)
+            # Este es exactamente el MontoGravable que FEL necesita.
+            # 
+            # Luego calculamos hacia atrás:
+            #   MontoGravable = price_subtotal (Odoo ya lo tiene correcto)
+            #   MontoImpuesto = MontoGravable × 0.12
             #   Total = MontoGravable + MontoImpuesto
+            #   
+            # Para Precio y Descuento usamos los valores que dan el MontoGravable correcto
             # ============================================================
             
-            precio_unitario_original = abs(line.price_unit)
-            descuento_porcentaje = abs(line.discount or 0)
+            # MontoGravable = price_subtotal de Odoo (base imponible sin IVA)
+            monto_gravable = round(abs(line.price_subtotal), 2)
             
-            # Verificar si el precio incluye IVA
+            # Verificar si tiene IVA
             tiene_iva = False
-            precio_incluye_iva = False
             for tax in line.tax_ids:
                 if tax.amount == 12 or 'IVA' in (tax.name or '').upper():
                     tiene_iva = True
-                    if tax.price_include:
-                        precio_incluye_iva = True
                     break
             
-            # 1) PrecioUnitario (SIEMPRE sin IVA para el XML)
-            if precio_incluye_iva:
-                precio_unitario_xml = round(precio_unitario_original / 1.12, 2)
-            else:
-                precio_unitario_xml = round(precio_unitario_original, 2)
-            
-            # 2) Precio = Cantidad × PrecioUnitario
-            precio_xml = round(cantidad * precio_unitario_xml, 2)
-            
-            # 3) Descuento = Precio × %descuento
-            descuento_xml = round(precio_xml * descuento_porcentaje / 100.0, 2)
-            
-            # 4) MontoGravable = Precio - Descuento
-            monto_gravable = round(precio_xml - descuento_xml, 2)
-            
-            # 5) MontoImpuesto = MontoGravable × 0.12 (si tiene IVA)
+            # MontoImpuesto = MontoGravable × 0.12
             if tiene_iva:
                 monto_impuesto = round(monto_gravable * 0.12, 2)
             else:
                 monto_impuesto = 0.0
             
-            # 6) Total = MontoGravable + MontoImpuesto
+            # Total = MontoGravable + MontoImpuesto
             total_linea = round(monto_gravable + monto_impuesto, 2)
+            
+            # Para Precio y PrecioUnitario, calculamos desde MontoGravable
+            descuento_porcentaje = abs(line.discount or 0)
+            
+            if descuento_porcentaje > 0 and descuento_porcentaje < 100:
+                # Si hay descuento: Precio = MontoGravable / (1 - %desc/100)
+                precio_xml = round(monto_gravable / (1 - descuento_porcentaje / 100.0), 2)
+                descuento_xml = round(precio_xml - monto_gravable, 2)
+            else:
+                # Sin descuento: Precio = MontoGravable
+                precio_xml = monto_gravable
+                descuento_xml = 0.0
+            
+            # PrecioUnitario = Precio / Cantidad
+            if cantidad > 0:
+                precio_unitario_xml = round(precio_xml / cantidad, 2)
+            else:
+                precio_unitario_xml = 0.0
+            
+            # Recalcular Precio para que sea EXACTAMENTE Cantidad × PrecioUnitario
+            precio_xml = round(cantidad * precio_unitario_xml, 2)
+            
+            # Recalcular Descuento para que MontoGravable sea EXACTO
+            descuento_xml = round(precio_xml - monto_gravable, 2)
+            if descuento_xml < 0:
+                descuento_xml = 0.0
             
             # Acumular para totales
             suma_monto_gravable += monto_gravable
