@@ -200,10 +200,19 @@ class FelService(models.AbstractModel):
     # ============================================================
     
     def _limpiar_nit(self, nit):
-        """Limpia el NIT removiendo caracteres especiales"""
+        """Limpia el NIT removiendo caracteres especiales
+        
+        Si el NIT está vacío o solo contiene caracteres especiales,
+        retorna 'CF' (Consumidor Final) como valor por defecto.
+        """
         if not nit:
             return 'CF'
-        return re.sub(r'[^0-9kK]', '', str(nit)).upper()
+        # Limpiar caracteres especiales, dejar solo números y K
+        nit_limpio = re.sub(r'[^0-9kK]', '', str(nit)).upper()
+        # Si después de limpiar queda vacío, es Consumidor Final
+        if not nit_limpio:
+            return 'CF'
+        return nit_limpio
 
     def _formatear_monto(self, monto, decimales=2):
         """Formatea un monto con precisión de 2 decimales
