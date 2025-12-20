@@ -1,5 +1,6 @@
 from odoo import models, fields, api, _
 from odoo.exceptions import UserError
+from xml.dom import minidom
 import logging
 
 _logger = logging.getLogger(__name__)
@@ -72,6 +73,18 @@ class AccountMove(models.Model):
         copy=False,
     )
     
+    # Campos computados para mostrar XML formateado
+    fel_xml_enviado_formatted = fields.Html(
+        string="XML Enviado (Formateado)",
+        compute="_compute_fel_xml_formatted",
+        sanitize=False,
+    )
+    fel_xml_respuesta_formatted = fields.Html(
+        string="XML Respuesta (Formateado)",
+        compute="_compute_fel_xml_formatted",
+        sanitize=False,
+    )
+    
     # ========== Tipo de documento FEL ==========
     fel_tipo_documento = fields.Selection(
         selection=[
@@ -114,6 +127,90 @@ class AccountMove(models.Model):
                 move.fel_tipo_documento = 'NCRE'
             else:
                 move.fel_tipo_documento = False
+
+    @api.depends('fel_xml_enviado', 'fel_xml_respuesta')
+    def _compute_fel_xml_formatted(self):
+        """Formatea el XML para visualización con indentación y colores"""
+        for move in self:
+            move.fel_xml_enviado_formatted = move._format_xml_for_display(move.fel_xml_enviado)
+            move.fel_xml_respuesta_formatted = move._format_xml_for_display(move.fel_xml_respuesta)
+    
+    def _format_xml_for_display(self, xml_string):
+        """Formatea un string XML para mostrarlo de forma legible en HTML"""
+        if not xml_string:
+            return False
+        
+        try:
+            # Parsear y formatear el XML con indentación
+            dom = minidom.parseString(xml_string.encode('utf-8'))
+            xml_formatted = dom.toprettyxml(indent="  ")
+            
+            # Remover la primera línea (declaración XML duplicada si existe)
+            lines = xml_formatted.split('\n')
+            if lines and lines[0].startswith('<?xml'):
+                # Mantener la declaración pero limpiar líneas vacías extras
+                xml_formatted = '\n'.join(line for line in lines if line.strip())
+            
+            # Escapar caracteres HTML y añadir formato con colores
+            import html
+            xml_escaped = html.escape(xml_formatted)
+            
+            # Aplicar colores para mejor visualización
+            # Tags en azul
+            import re
+            xml_colored = re.sub(
+                r'&lt;(/?)([a-zA-Z0-9:_]+)',
+                r'<span style="color: #0066cc;">&lt;\1\2</span>',
+                xml_escaped
+            )
+            # Atributos en verde
+            xml_colored = re.sub(
+                r'([a-zA-Z0-9:_]+)=&quot;([^&]*)&quot;',
+                r'<span style="color: #009933;">\1</span>=<span style="color: #cc6600;">&quot;\2&quot;</span>',
+                xml_colored
+            )
+            
+            # Envolver en un contenedor con estilo de código
+            html_result = f'''
+                <div style="
+                    background-color: #f5f5f5; 
+                    border: 1px solid #ddd; 
+                    border-radius: 4px; 
+                    padding: 15px; 
+                    overflow-x: auto; 
+                    font-family: 'Courier New', Courier, monospace; 
+                    font-size: 12px; 
+                    line-height: 1.4;
+                    white-space: pre-wrap;
+                    word-wrap: break-word;
+                    max-height: 500px;
+                    overflow-y: auto;
+                ">
+                    {xml_colored}
+                </div>
+            '''
+            return html_result
+            
+        except Exception as e:
+            _logger.warning(f"Error al formatear XML: {e}")
+            # Si falla el formateo, mostrar el XML original en un contenedor simple
+            import html
+            xml_escaped = html.escape(xml_string)
+            return f'''
+                <div style="
+                    background-color: #f5f5f5; 
+                    border: 1px solid #ddd; 
+                    border-radius: 4px; 
+                    padding: 15px; 
+                    overflow-x: auto; 
+                    font-family: 'Courier New', Courier, monospace; 
+                    font-size: 12px; 
+                    white-space: pre-wrap;
+                    word-wrap: break-word;
+                ">
+                    {xml_escaped}
+                </div>
+            '''
 
     @api.depends('state', 'move_type', 'fel_estado')
     def _compute_fel_puede_certificar(self):

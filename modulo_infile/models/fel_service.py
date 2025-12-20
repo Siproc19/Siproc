@@ -27,18 +27,30 @@ class FelService(models.AbstractModel):
         """Obtiene la configuración FEL desde parámetros del sistema"""
         ICP = self.env['ir.config_parameter'].sudo()
         
+        # Obtener valores base
+        usuario_api = ICP.get_param('fel.usuario_api', '') or ''
+        llave_api = ICP.get_param('fel.llave_api', '') or ''
+        usuario_firma = ICP.get_param('fel.usuario_firma', '') or ''
+        llave_firma = ICP.get_param('fel.llave_firma', '') or ''
+        
         config = {
-            'nit_emisor': ICP.get_param('fel.nit_emisor', ''),
-            'usuario_api': ICP.get_param('fel.usuario_api', ''),
-            'llave_api': ICP.get_param('fel.llave_api', ''),
-            'usuario_firma': ICP.get_param('fel.usuario_firma', ''),
-            'llave_firma': ICP.get_param('fel.llave_firma', ''),
-            'modo': ICP.get_param('fel.modo', 'test'),
-            'url_base': ICP.get_param('fel.url_base', 'https://certificador.feel.com.gt'),
-            'url_firma': ICP.get_param('fel.url_firma', 'https://signer-emisores.feel.com.gt'),
-            'afiliacion_iva': ICP.get_param('fel.afiliacion_iva', 'GEN'),
-            'codigo_establecimiento': ICP.get_param('fel.codigo_establecimiento', '1'),
+            'nit_emisor': ICP.get_param('fel.nit_emisor', '') or '',
+            'usuario_api': usuario_api.strip() if usuario_api else '',
+            'llave_api': llave_api.strip() if llave_api else '',
+            # Para firma, usar credenciales específicas o fallback a las de API
+            'usuario_firma': (usuario_firma.strip() if usuario_firma else '') or (usuario_api.strip() if usuario_api else ''),
+            'llave_firma': (llave_firma.strip() if llave_firma else '') or (llave_api.strip() if llave_api else ''),
+            'modo': ICP.get_param('fel.modo', 'test') or 'test',
+            'url_base': ICP.get_param('fel.url_base', 'https://certificador.feel.com.gt') or 'https://certificador.feel.com.gt',
+            'url_firma': ICP.get_param('fel.url_firma', 'https://signer-emisores.feel.com.gt') or 'https://signer-emisores.feel.com.gt',
+            'afiliacion_iva': ICP.get_param('fel.afiliacion_iva', 'GEN') or 'GEN',
+            'codigo_establecimiento': ICP.get_param('fel.codigo_establecimiento', '1') or '1',
         }
+        
+        # Log de configuración (sin exponer llaves completas)
+        _logger.info(f"FEL Config: usuario_api={config['usuario_api'][:10] if config['usuario_api'] else 'VACIO'}...")
+        _logger.info(f"FEL Config: usuario_firma={config['usuario_firma'][:10] if config['usuario_firma'] else 'VACIO'}...")
+        _logger.info(f"FEL Config: llave_firma={'***configurada***' if config['llave_firma'] else 'VACIO'}")
         
         # Validar credenciales obligatorias
         if not config['usuario_api'] or not config['llave_api']:
@@ -618,42 +630,49 @@ class FelService(models.AbstractModel):
         return xml
 
     def _enviar_anulacion(self, xml_anulacion, uuid_dte):
-        """Envía la anulación del DTE
+        """Envía la anulación del DTE usando el proceso unificado de INFILE
         
-        Según el código PHP de referencia:
-        1. Primero se firma el XML (signXML con es_anulacion='S')
-        2. Luego se envía al endpoint de anulación
+        El proceso unificado hace FIRMA + CERTIFICACIÓN en un solo paso.
+        URL: https://certificador.feel.com.gt/fel/procesounificado/transaccion/v2/xml
         
-        El PHP usa el endpoint: https://certificador.feel.com.gt/fel/anulacion/v2/dte
-        Con el body: {nit, correo_copia, xml_base64}
-        
-        Sin embargo, el proceso unificado también soporta anulaciones.
-        Probamos primero con el proceso unificado.
+        NOTA: Este proceso funciona tanto para DTEs como para anulaciones.
+        Si este método falla, se debe usar _enviar_anulacion_v2 con firma separada.
         """
         if not xml_anulacion:
             raise UserError(_("No hay XML de anulación."))
         
         config = self._get_config()
         
+        # Validar credenciales de firma
+        usuario_firma = config.get('usuario_firma') or config.get('usuario_api')
+        llave_firma = config.get('llave_firma') or config.get('llave_api')
+        
+        if not usuario_firma or not llave_firma:
+            raise UserError(_("Faltan credenciales de firma. Configure usuario_firma y llave_firma en la configuración FEL."))
+        
         # Generar identificador único para esta transacción
         identificador = f"ANUL_{datetime.now().strftime('%Y%m%d%H%M%S')}_{uuid.uuid4().hex[:8]}"
         
-        # Intentar primero con el proceso unificado (firma + certificación en un paso)
+        # URL del proceso unificado según documentación oficial INFILE
         url = "https://certificador.feel.com.gt/fel/procesounificado/transaccion/v2/xml"
         
+        # Headers según documentación INFILE
         headers = {
-            'UsuarioFirma': config['usuario_firma'] or config['usuario_api'],
-            'LlaveFirma': config['llave_firma'] or config['llave_api'],
+            'UsuarioFirma': usuario_firma,
+            'LlaveFirma': llave_firma,
             'UsuarioApi': config['usuario_api'],
             'LlaveApi': config['llave_api'],
             'identificador': identificador,
             'Content-Type': 'application/xml',
         }
         
+        _logger.info(f"FEL Anulación Unificado: UUID a anular: {uuid_dte}")
+        _logger.info(f"FEL Anulación Unificado: Identificador: {identificador}")
+        _logger.info(f"FEL Anulación Unificado: UsuarioFirma: {usuario_firma}")
+        
         try:
-            _logger.info(f"FEL: Enviando anulación para UUID {uuid_dte}")
-            _logger.info(f"FEL: Identificador anulación: {identificador}")
-            _logger.info(f"FEL: XML anulación: {xml_anulacion[:500]}...")
+            _logger.info(f"FEL: Enviando anulación por proceso unificado para UUID {uuid_dte}")
+            _logger.info(f"FEL: XML anulación:\n{xml_anulacion}")
             
             response = requests.post(
                 url, 
@@ -661,10 +680,14 @@ class FelService(models.AbstractModel):
                 headers=headers, 
                 timeout=60
             )
+            
+            _logger.info(f"FEL: Status respuesta: {response.status_code}")
+            _logger.info(f"FEL: Respuesta raw: {response.text[:1000] if response.text else 'vacío'}")
+            
             response.raise_for_status()
             
             data = response.json()
-            _logger.info(f"FEL: Respuesta anulación: {data}")
+            _logger.info(f"FEL: Respuesta anulación JSON: {data}")
             
             if data.get('resultado') == True:
                 return {
@@ -672,6 +695,7 @@ class FelService(models.AbstractModel):
                     'mensaje': data.get('descripcion', 'Documento anulado exitosamente'),
                     'uuid': data.get('uuid', ''),
                     'fecha': data.get('fecha', ''),
+                    'xml_respuesta': data.get('xml_certificado', ''),
                 }
             else:
                 error_msg = data.get('descripcion', 'Error al anular documento')
@@ -687,14 +711,14 @@ class FelService(models.AbstractModel):
             raise UserError(_("Error de conexión al anular DTE: %s") % str(e))
 
     def _enviar_anulacion_v2(self, xml_anulacion, uuid_dte):
-        """Envía la anulación del DTE siguiendo exactamente el flujo del PHP
+        """Envía la anulación del DTE siguiendo el flujo correcto de INFILE
         
-        Flujo del PHP:
-        1. Firma el XML de anulación (signXML con es_anulacion='S')
-        2. Envía al endpoint: https://certificador.feel.com.gt/fel/anulacion/v2/dte
-        3. Body JSON: {nit, correo_copia, xml_base64}
+        Flujo correcto según documentación INFILE:
+        1. Firmar el XML de anulación usando el endpoint de firma
+        2. Enviar al endpoint de anulación: https://certificador.feel.com.gt/fel/anulacion/v2/dte/
+        3. Body JSON: {nit, correo_copia, xml_dte}
         
-        Este método es alternativo al proceso unificado.
+        IMPORTANTE: Los headers de firma deben ser exactamente como los espera el servicio.
         """
         import base64
         
@@ -705,16 +729,32 @@ class FelService(models.AbstractModel):
         company = self.env.company
         nit_emisor = self._limpiar_nit(company.vat)
         
+        # Validar que tenemos las credenciales de firma
+        usuario_firma = config.get('usuario_firma') or config.get('usuario_api')
+        llave_firma = config.get('llave_firma') or config.get('llave_api')
+        
+        if not usuario_firma or not llave_firma:
+            raise UserError(_("Faltan credenciales de firma. Configure usuario_firma y llave_firma en la configuración FEL."))
+        
         # PASO 1: Firmar el XML de anulación
+        # URL del servicio de firma de INFILE
         url_firma = "https://signer-emisores.feel.com.gt/sign_solicitud_firmas/firma_xml"
         
+        # Headers EXACTOS según documentación INFILE para firma de anulación
+        # El error indica que 'llave' está llegando como nil, debemos asegurar que se envíe correctamente
+        identificador_firma = f"ANUL_{datetime.now().strftime('%Y%m%d%H%M%S')}_{uuid.uuid4().hex[:8]}"
+        
         headers_firma = {
-            'usuario': config['usuario_firma'] or config['usuario_api'],
-            'llave': config['llave_firma'] or config['llave_api'],
-            'identificador': f"FIRMA_ANUL_{datetime.now().strftime('%Y%m%d%H%M%S')}",
-            'es_anulacion': 'S',  # Indicar que es anulación (como en PHP)
+            'usuario': usuario_firma,
+            'llave': llave_firma,
+            'identificador': identificador_firma,
+            'es_anulacion': 'S',
             'Content-Type': 'application/xml',
         }
+        
+        _logger.info(f"FEL Anulación: Usuario firma: {usuario_firma}")
+        _logger.info(f"FEL Anulación: Identificador: {identificador_firma}")
+        _logger.info(f"FEL Anulación: XML a firmar:\n{xml_anulacion}")
         
         try:
             _logger.info(f"FEL: Firmando XML de anulación para UUID {uuid_dte}")
@@ -725,10 +765,14 @@ class FelService(models.AbstractModel):
                 headers=headers_firma,
                 timeout=30
             )
+            
+            _logger.info(f"FEL: Status firma: {response_firma.status_code}")
+            _logger.info(f"FEL: Respuesta firma raw: {response_firma.text[:1000] if response_firma.text else 'vacío'}")
+            
             response_firma.raise_for_status()
             
             data_firma = response_firma.json()
-            _logger.info(f"FEL: Respuesta firma anulación: {data_firma.get('resultado', False)}")
+            _logger.info(f"FEL: Respuesta firma anulación: {data_firma}")
             
             if not data_firma.get('resultado'):
                 error_msg = data_firma.get('descripcion', 'Error al firmar XML de anulación')
@@ -738,8 +782,11 @@ class FelService(models.AbstractModel):
             if not xml_firmado:
                 raise UserError(_("No se recibió XML firmado para anulación"))
             
+            _logger.info(f"FEL: XML firmado recibido, longitud: {len(xml_firmado)}")
+            
             # PASO 2: Enviar al endpoint de anulación
-            url_anulacion = "https://certificador.feel.com.gt/fel/anulacion/v2/dte"
+            # URL correcta con slash al final según la documentación proporcionada
+            url_anulacion = "https://certificador.feel.com.gt/fel/anulacion/v2/dte/"
             
             headers_anulacion = {
                 'UsuarioApi': config['usuario_api'],
@@ -747,16 +794,18 @@ class FelService(models.AbstractModel):
                 'Content-Type': 'application/json',
             }
             
-            # Convertir XML firmado a base64 (como hace el PHP)
+            # El body debe contener el XML firmado en base64 según documentación
+            # El PHP usa 'xml_dte' como nombre del campo, no 'xml_base64'
             xml_base64 = base64.b64encode(xml_firmado.encode('utf-8')).decode('utf-8')
             
             body = {
                 'nit': nit_emisor,
-                'correo_copia': company.email or config.get('correo_copia', ''),
-                'xml_base64': xml_base64,
+                'correo_copia': company.email or '',
+                'xml_dte': xml_base64,
             }
             
-            _logger.info(f"FEL: Enviando anulación al endpoint específico")
+            _logger.info(f"FEL: Enviando anulación al endpoint: {url_anulacion}")
+            _logger.info(f"FEL: Body anulación: nit={nit_emisor}")
             
             response = requests.post(
                 url_anulacion,
@@ -764,10 +813,14 @@ class FelService(models.AbstractModel):
                 headers=headers_anulacion,
                 timeout=60
             )
+            
+            _logger.info(f"FEL: Status anulación: {response.status_code}")
+            _logger.info(f"FEL: Respuesta anulación raw: {response.text[:1000] if response.text else 'vacío'}")
+            
             response.raise_for_status()
             
             data = response.json()
-            _logger.info(f"FEL: Respuesta anulación: {data}")
+            _logger.info(f"FEL: Respuesta anulación JSON: {data}")
             
             if data.get('resultado') == True:
                 return {
@@ -775,6 +828,7 @@ class FelService(models.AbstractModel):
                     'mensaje': data.get('descripcion', 'Documento anulado exitosamente'),
                     'uuid': data.get('uuid', ''),
                     'fecha': data.get('fecha', ''),
+                    'xml_respuesta': data.get('xml_certificado', ''),
                 }
             else:
                 error_msg = data.get('descripcion', 'Error al anular documento')
@@ -783,7 +837,7 @@ class FelService(models.AbstractModel):
                     mensajes = [e.get('mensaje_error', '') for e in errores if e.get('mensaje_error')]
                     if mensajes:
                         error_msg = '; '.join(mensajes)
-                raise UserError(_("Error FEL Anulación v2: %s") % error_msg)
+                raise UserError(_("Error FEL Anulación: %s") % error_msg)
             
         except requests.exceptions.RequestException as e:
             _logger.error(f"FEL: Error al anular DTE (v2): {e}")

@@ -58,12 +58,28 @@
                             <field name="fel_error_mensaje" invisible="not fel_error_mensaje"/>
                         </group>
                     </group>
-                    <group string="XML Enviado" invisible="not fel_xml_enviado">
-                        <field name="fel_xml_enviado" nolabel="1" readonly="1"/>
-                    </group>
-                    <group string="XML Respuesta" invisible="not fel_xml_respuesta">
-                        <field name="fel_xml_respuesta" nolabel="1" readonly="1"/>
-                    </group>
+                    
+                    <!-- XML Enviado con formato visual -->
+                    <div invisible="not fel_xml_enviado" class="mt-3">
+                        <h4>
+                            <i class="fa fa-code mr-2"/>
+                            XML Enviado
+                        </h4>
+                        <field name="fel_xml_enviado_formatted" nolabel="1" readonly="1"/>
+                    </div>
+                    
+                    <!-- XML Respuesta con formato visual -->
+                    <div invisible="not fel_xml_respuesta" class="mt-3">
+                        <h4>
+                            <i class="fa fa-code mr-2"/>
+                            XML Respuesta
+                        </h4>
+                        <field name="fel_xml_respuesta_formatted" nolabel="1" readonly="1"/>
+                    </div>
+                    
+                    <!-- Campos ocultos para mantener los datos originales -->
+                    <field name="fel_xml_enviado" invisible="1"/>
+                    <field name="fel_xml_respuesta" invisible="1"/>
                 </page>
             </xpath>
 
