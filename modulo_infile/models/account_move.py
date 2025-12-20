@@ -342,11 +342,8 @@ class AccountMove(models.Model):
     def action_anular_fel(self):
         """Anula el documento certificado en FEL
         
-        Según el código PHP de referencia, hay dos formas de anular:
-        1. Proceso unificado (firma + certificación en un paso)
-        2. Firma separada + endpoint de anulación
-        
-        Usamos primero el proceso unificado, y si falla, el método alternativo.
+        Intenta primero con el proceso unificado (firma + certificación en un paso).
+        Si falla, intenta con el endpoint directo de anulación.
         """
         for move in self:
             if move.fel_estado != 'certified':
@@ -361,16 +358,33 @@ class AccountMove(models.Model):
                 # Generar XML de anulación
                 xml_anulacion = fel_service._generar_xml_anulacion(move)
                 
-                # Intentar primero con proceso unificado (no requiere firma previa)
-                # El proceso unificado firma y certifica en un solo paso
+                # Guardar el XML de anulación enviado para referencia
+                move.fel_xml_enviado = xml_anulacion
+                
+                respuesta = None
+                ultimo_error = None
+                
+                # Intento 1: Proceso unificado (el mismo que funciona para facturas)
                 try:
+                    _logger.info("FEL: Intentando anulación con proceso unificado...")
                     respuesta = fel_service._enviar_anulacion(xml_anulacion, move.fel_uuid)
                 except UserError as e:
-                    # Si falla, intentar con el método alternativo (firma separada)
-                    _logger.warning(f"FEL: Proceso unificado falló, intentando método v2: {e}")
-                    respuesta = fel_service._enviar_anulacion_v2(xml_anulacion, move.fel_uuid)
+                    _logger.warning(f"FEL: Proceso unificado falló: {e}")
+                    ultimo_error = str(e)
                 
-                if respuesta.get('resultado'):
+                # Intento 2: Endpoint directo de anulación (sin firma previa)
+                if not respuesta or not respuesta.get('resultado'):
+                    try:
+                        _logger.info("FEL: Intentando anulación con endpoint directo...")
+                        respuesta = fel_service._enviar_anulacion_v2(xml_anulacion, move.fel_uuid)
+                    except UserError as e:
+                        _logger.warning(f"FEL: Endpoint directo falló: {e}")
+                        # Si ambos fallan, lanzar el último error
+                        if ultimo_error:
+                            raise UserError(_("Error al anular FEL.\nProceso unificado: %s\nEndpoint directo: %s") % (ultimo_error, str(e)))
+                        raise
+                
+                if respuesta and respuesta.get('resultado'):
                     move.write({
                         'fel_estado': 'cancelled',
                         'fel_xml_respuesta': respuesta.get('xml_respuesta', ''),
@@ -384,7 +398,7 @@ class AccountMove(models.Model):
                         ) % (move.fel_uuid, fields.Datetime.now())
                     )
                 else:
-                    raise UserError(_("Error al anular: %s") % respuesta.get('mensaje', ''))
+                    raise UserError(_("Error al anular: %s") % (respuesta.get('mensaje', '') if respuesta else ultimo_error))
                     
             except UserError:
                 raise
