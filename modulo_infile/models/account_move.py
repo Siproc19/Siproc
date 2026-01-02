@@ -449,3 +449,115 @@ class AccountMove(models.Model):
             move.fel_error_mensaje = False
         
         return self.action_certificar_fel()
+
+    def action_imprimir_dte(self):
+        """Imprime el DTE en formato PDF"""
+        self.ensure_one()
+        if self.fel_estado != 'certified':
+            raise UserError(_("Solo se pueden imprimir documentos certificados."))
+        
+        return self.env.ref('modulo_infile.action_report_fel_dte').report_action(self)
+
+    def _fel_monto_en_letras(self):
+        """Convierte el monto total a letras en español para Guatemala"""
+        self.ensure_one()
+        
+        monto = self.amount_total
+        moneda = self.currency_id.name or 'GTQ'
+        
+        # Diccionarios para conversión
+        UNIDADES = (
+            '', 'UN', 'DOS', 'TRES', 'CUATRO', 'CINCO', 'SEIS', 'SIETE', 'OCHO', 'NUEVE',
+            'DIEZ', 'ONCE', 'DOCE', 'TRECE', 'CATORCE', 'QUINCE', 'DIECISÉIS', 'DIECISIETE',
+            'DIECIOCHO', 'DIECINUEVE', 'VEINTE'
+        )
+        DECENAS = (
+            '', '', '', 'TREINTA', 'CUARENTA', 'CINCUENTA', 'SESENTA', 'SETENTA', 'OCHENTA', 'NOVENTA'
+        )
+        CENTENAS = (
+            '', 'CIENTO', 'DOSCIENTOS', 'TRESCIENTOS', 'CUATROCIENTOS', 'QUINIENTOS',
+            'SEISCIENTOS', 'SETECIENTOS', 'OCHOCIENTOS', 'NOVECIENTOS'
+        )
+        
+        def _numero_a_letras(n):
+            """Convierte un número entero a letras"""
+            if n == 0:
+                return 'CERO'
+            if n == 100:
+                return 'CIEN'
+            
+            resultado = ''
+            
+            # Millones
+            if n >= 1000000:
+                millones = n // 1000000
+                if millones == 1:
+                    resultado += 'UN MILLÓN '
+                else:
+                    resultado += _numero_a_letras(millones) + ' MILLONES '
+                n = n % 1000000
+            
+            # Miles
+            if n >= 1000:
+                miles = n // 1000
+                if miles == 1:
+                    resultado += 'MIL '
+                else:
+                    resultado += _numero_a_letras(miles) + ' MIL '
+                n = n % 1000
+            
+            # Centenas
+            if n >= 100:
+                if n == 100:
+                    resultado += 'CIEN '
+                else:
+                    resultado += CENTENAS[n // 100] + ' '
+                n = n % 100
+            
+            # Decenas y unidades
+            if n > 0:
+                if n <= 20:
+                    resultado += UNIDADES[n]
+                elif n < 30:
+                    resultado += 'VEINTI' + UNIDADES[n - 20]
+                else:
+                    decena = n // 10
+                    unidad = n % 10
+                    resultado += DECENAS[decena]
+                    if unidad > 0:
+                        resultado += ' Y ' + UNIDADES[unidad]
+            
+            return resultado.strip()
+        
+        # Separar parte entera y decimal
+        parte_entera = int(monto)
+        parte_decimal = int(round((monto - parte_entera) * 100))
+        
+        # Convertir a letras
+        letras = _numero_a_letras(parte_entera)
+        
+        # Agregar moneda
+        if moneda == 'GTQ':
+            if parte_entera == 1:
+                letras += ' QUETZAL'
+            else:
+                letras += ' QUETZALES'
+            
+            if parte_decimal > 0:
+                letras += ' CON %02d/100' % parte_decimal
+            else:
+                letras += ' EXACTOS'
+        elif moneda == 'USD':
+            if parte_entera == 1:
+                letras += ' DÓLAR'
+            else:
+                letras += ' DÓLARES'
+            
+            if parte_decimal > 0:
+                letras += ' CON %02d/100' % parte_decimal
+        else:
+            letras += ' ' + moneda
+            if parte_decimal > 0:
+                letras += ' CON %02d/100' % parte_decimal
+        
+        return letras

@@ -57,6 +57,7 @@ y el esquema FEL 0.2.0 de SAT Guatemala.
         "data/ir_config_parameter.xml",
         "views/res_config_settings_view.xml",
         "views/account_move_view.xml",
+        "report/fel_dte_report.xml",
     ],
     "assets": {},
     "installable": True,

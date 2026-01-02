@@ -1,0 +1,283 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<odoo>
+    <!-- Acción de reporte para imprimir DTE FEL -->
+    <record id="action_report_fel_dte" model="ir.actions.report">
+        <field name="name">DTE FEL Guatemala</field>
+        <field name="model">account.move</field>
+        <field name="report_type">qweb-pdf</field>
+        <field name="report_name">modulo_infile.report_fel_dte</field>
+        <field name="report_file">modulo_infile.report_fel_dte</field>
+        <field name="print_report_name">'DTE_FEL_%s_%s' % (object.fel_serie or 'SIN', object.fel_numero or object.name)</field>
+        <field name="binding_model_id" ref="account.model_account_move"/>
+        <field name="binding_type">report</field>
+    </record>
+
+    <!-- Template principal del reporte -->
+    <template id="report_fel_dte">
+        <t t-call="web.html_container">
+            <t t-foreach="docs" t-as="o">
+                <t t-call="modulo_infile.report_fel_dte_document"/>
+            </t>
+        </t>
+    </template>
+
+    <!-- Documento del DTE -->
+    <template id="report_fel_dte_document">
+        <t t-call="web.external_layout">
+            <t t-set="o" t-value="o"/>
+            <t t-set="company" t-value="o.company_id"/>
+            
+            <div class="page">
+                <!-- Encabezado del DTE -->
+                <div class="row mb-4">
+                    <div class="col-6">
+                        <!-- Logo y datos del emisor -->
+                        <div class="company-info">
+                            <h3 class="mb-1" style="color: #2c3e50;">
+                                <strong t-field="company.name"/>
+                            </h3>
+                            <p class="mb-0" style="font-size: 12px;">
+                                <strong>NIT:</strong> <span t-field="company.vat"/><br/>
+                                <strong>Dirección:</strong> <span t-field="company.street"/><br/>
+                                <t t-if="company.city">
+                                    <span t-field="company.city"/>, 
+                                </t>
+                                <t t-if="company.state_id">
+                                    <span t-field="company.state_id.name"/>
+                                </t>
+                                <br/>
+                                <t t-if="company.phone">
+                                    <strong>Tel:</strong> <span t-field="company.phone"/><br/>
+                                </t>
+                                <t t-if="company.email">
+                                    <strong>Email:</strong> <span t-field="company.email"/>
+                                </t>
+                            </p>
+                        </div>
+                    </div>
+                    <div class="col-6 text-end">
+                        <!-- Información del DTE -->
+                        <div class="dte-info p-3" style="background-color: #f8f9fa; border: 2px solid #2c3e50; border-radius: 8px;">
+                            <h4 class="mb-2" style="color: #2c3e50;">
+                                <strong>DOCUMENTO TRIBUTARIO ELECTRÓNICO</strong>
+                            </h4>
+                            <table class="table table-sm table-borderless mb-0" style="font-size: 12px;">
+                                <tr>
+                                    <td class="text-start"><strong>Tipo:</strong></td>
+                                    <td class="text-end">
+                                        <t t-if="o.fel_tipo_documento == 'FACT'">FACTURA</t>
+                                        <t t-elif="o.fel_tipo_documento == 'FCAM'">FACTURA CAMBIARIA</t>
+                                        <t t-elif="o.fel_tipo_documento == 'FPEQ'">FACTURA PEQUEÑO CONTRIBUYENTE</t>
+                                        <t t-elif="o.fel_tipo_documento == 'NCRE'">NOTA DE CRÉDITO</t>
+                                        <t t-elif="o.fel_tipo_documento == 'NDEB'">NOTA DE DÉBITO</t>
+                                        <t t-else=""><span t-field="o.fel_tipo_documento"/></t>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td class="text-start"><strong>Serie:</strong></td>
+                                    <td class="text-end"><span t-field="o.fel_serie"/></td>
+                                </tr>
+                                <tr>
+                                    <td class="text-start"><strong>Número:</strong></td>
+                                    <td class="text-end"><span t-field="o.fel_numero"/></td>
+                                </tr>
+                                <tr>
+                                    <td class="text-start"><strong>Fecha:</strong></td>
+                                    <td class="text-end"><span t-field="o.invoice_date"/></td>
+                                </tr>
+                                <tr t-if="o.fel_fecha_certificacion">
+                                    <td class="text-start"><strong>Certificación:</strong></td>
+                                    <td class="text-end"><span t-field="o.fel_fecha_certificacion" t-options='{"format": "dd/MM/yyyy HH:mm"}'/></td>
+                                </tr>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- UUID/Número de Autorización -->
+                <div class="row mb-3" t-if="o.fel_uuid">
+                    <div class="col-12">
+                        <div class="p-2 text-center" style="background-color: #e8f4f8; border: 1px solid #17a2b8; border-radius: 4px;">
+                            <strong style="color: #17a2b8;">NÚMERO DE AUTORIZACIÓN (UUID):</strong><br/>
+                            <span style="font-family: monospace; font-size: 14px; letter-spacing: 1px;" t-field="o.fel_uuid"/>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Datos del Receptor -->
+                <div class="row mb-4">
+                    <div class="col-12">
+                        <div class="p-3" style="background-color: #fff; border: 1px solid #dee2e6; border-radius: 8px;">
+                            <h5 style="color: #2c3e50; border-bottom: 2px solid #2c3e50; padding-bottom: 8px;">
+                                <strong>DATOS DEL RECEPTOR</strong>
+                            </h5>
+                            <div class="row">
+                                <div class="col-6">
+                                    <p class="mb-1" style="font-size: 13px;">
+                                        <strong>Nombre/Razón Social:</strong><br/>
+                                        <span t-field="o.partner_id.name" style="font-size: 15px;"/>
+                                    </p>
+                                </div>
+                                <div class="col-6">
+                                    <p class="mb-1" style="font-size: 13px;">
+                                        <strong>NIT:</strong><br/>
+                                        <span style="font-size: 15px;">
+                                            <t t-if="o.partner_id.vat">
+                                                <span t-field="o.partner_id.vat"/>
+                                            </t>
+                                            <t t-else="">CF (Consumidor Final)</t>
+                                        </span>
+                                    </p>
+                                </div>
+                            </div>
+                            <div class="row mt-2">
+                                <div class="col-6">
+                                    <p class="mb-0" style="font-size: 13px;">
+                                        <strong>Dirección:</strong><br/>
+                                        <t t-if="o.partner_id.street">
+                                            <span t-field="o.partner_id.street"/>
+                                        </t>
+                                        <t t-else="">Ciudad</t>
+                                    </p>
+                                </div>
+                                <div class="col-6">
+                                    <p class="mb-0" style="font-size: 13px;">
+                                        <strong>Email:</strong><br/>
+                                        <t t-if="o.partner_id.email">
+                                            <span t-field="o.partner_id.email"/>
+                                        </t>
+                                        <t t-else="">-</t>
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Tabla de Items/Productos -->
+                <div class="row mb-4">
+                    <div class="col-12">
+                        <table class="table table-sm" style="font-size: 12px;">
+                            <thead>
+                                <tr style="background-color: #2c3e50; color: white;">
+                                    <th class="text-center" style="width: 5%;">No.</th>
+                                    <th class="text-center" style="width: 10%;">Cantidad</th>
+                                    <th class="text-center" style="width: 8%;">Unidad</th>
+                                    <th style="width: 42%;">Descripción</th>
+                                    <th class="text-end" style="width: 12%;">P. Unitario</th>
+                                    <th class="text-end" style="width: 10%;">Descuento</th>
+                                    <th class="text-end" style="width: 13%;">Total</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <t t-set="line_num" t-value="0"/>
+                                <t t-foreach="o.invoice_line_ids.filtered(lambda l: l.display_type not in ('line_section', 'line_note') and l.quantity != 0)" t-as="line">
+                                    <t t-set="line_num" t-value="line_num + 1"/>
+                                    <tr>
+                                        <td class="text-center"><t t-esc="line_num"/></td>
+                                        <td class="text-center"><span t-field="line.quantity" t-options='{"precision": 2}'/></td>
+                                        <td class="text-center">
+                                            <t t-if="line.product_uom_id">
+                                                <span t-esc="line.product_uom_id.name[:3].upper()"/>
+                                            </t>
+                                            <t t-else="">UND</t>
+                                        </td>
+                                        <td>
+                                            <span t-field="line.name"/>
+                                        </td>
+                                        <td class="text-end">
+                                            <span t-field="line.price_unit" t-options='{"widget": "monetary", "display_currency": o.currency_id}'/>
+                                        </td>
+                                        <td class="text-end">
+                                            <t t-if="line.discount">
+                                                <span t-field="line.discount"/>%
+                                            </t>
+                                            <t t-else="">-</t>
+                                        </td>
+                                        <td class="text-end">
+                                            <span t-field="line.price_total" t-options='{"widget": "monetary", "display_currency": o.currency_id}'/>
+                                        </td>
+                                    </tr>
+                                </t>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Totales -->
+                <div class="row mb-4">
+                    <div class="col-7">
+                        <!-- Espacio para observaciones o texto legal -->
+                        <div class="p-2" style="background-color: #f8f9fa; border-radius: 4px; font-size: 11px;">
+                            <strong>Moneda:</strong> <span t-field="o.currency_id.name"/><br/>
+                            <t t-if="o.narration">
+                                <strong>Observaciones:</strong> <span t-field="o.narration"/>
+                            </t>
+                        </div>
+                    </div>
+                    <div class="col-5">
+                        <table class="table table-sm" style="font-size: 13px;">
+                            <tr>
+                                <td class="text-end"><strong>Subtotal:</strong></td>
+                                <td class="text-end" style="width: 40%;">
+                                    <span t-field="o.amount_untaxed" t-options='{"widget": "monetary", "display_currency": o.currency_id}'/>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td class="text-end"><strong>IVA (12%):</strong></td>
+                                <td class="text-end">
+                                    <span t-field="o.amount_tax" t-options='{"widget": "monetary", "display_currency": o.currency_id}'/>
+                                </td>
+                            </tr>
+                            <tr style="background-color: #2c3e50; color: white;">
+                                <td class="text-end"><strong>TOTAL:</strong></td>
+                                <td class="text-end">
+                                    <strong><span t-field="o.amount_total" t-options='{"widget": "monetary", "display_currency": o.currency_id}'/></strong>
+                                </td>
+                            </tr>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Total en Letras -->
+                <div class="row mb-4">
+                    <div class="col-12">
+                        <div class="p-2" style="background-color: #e8f4f8; border: 1px solid #17a2b8; border-radius: 4px;">
+                            <strong>Total en Letras:</strong> 
+                            <span t-esc="o._fel_monto_en_letras()"/>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Pie de página con información FEL -->
+                <div class="row mt-4">
+                    <div class="col-12 text-center" style="font-size: 10px; color: #6c757d;">
+                        <hr style="border-top: 1px dashed #ccc;"/>
+                        <p class="mb-1">
+                            <strong>DOCUMENTO TRIBUTARIO ELECTRÓNICO - FEL</strong><br/>
+                            Certificado por INFILE S.A. - Proveedor autorizado por SAT Guatemala
+                        </p>
+                        <p class="mb-1" t-if="o.fel_uuid">
+                            <strong>UUID:</strong> <span t-field="o.fel_uuid"/><br/>
+                            <strong>Fecha de Certificación:</strong> <span t-field="o.fel_fecha_certificacion" t-options='{"format": "dd/MM/yyyy HH:mm:ss"}'/>
+                        </p>
+                        <p class="mb-0">
+                            Documento generado electrónicamente. 
+                            Consulte en: <strong>https://report.feel.com.gt/ingfacereloviewer/</strong>
+                        </p>
+                    </div>
+                </div>
+
+                <!-- Estado de Anulación si aplica -->
+                <t t-if="o.fel_estado == 'cancelled'">
+                    <div class="position-absolute" style="top: 40%; left: 10%; transform: rotate(-30deg); z-index: 1000;">
+                        <h1 style="font-size: 100px; color: rgba(255, 0, 0, 0.3); font-weight: bold;">
+                            ANULADO
+                        </h1>
+                    </div>
+                </t>
+            </div>
+        </t>
+    </template>
+
+</odoo>
