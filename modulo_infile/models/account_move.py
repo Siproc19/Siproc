@@ -269,6 +269,10 @@ class AccountMove(models.Model):
         
         return True
 
+    def certificar(self):
+        """Alias para compatibilidad con vistas heredadas de Studio"""
+        return self.action_certificar_fel()
+
     def action_certificar_fel(self):
         """Certifica el documento en FEL"""
         for move in self:
