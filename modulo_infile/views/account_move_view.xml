@@ -8,6 +8,12 @@
 
             <!-- Botones FEL en el header -->
             <xpath expr="//button[@name='action_post']" position="after">
+                <button name="action_imprimir_dte"
+                        string="Imprimir DTE"
+                        type="object"
+                        class="btn-success"
+                        icon="fa-print"
+                        invisible="state != 'posted' or move_type not in ('out_invoice', 'out_refund')"/>
                 <button name="action_certificar_fel"
                         string="Certificar FEL"
                         type="object"
@@ -24,12 +30,6 @@
                         type="object"
                         class="btn-warning"
                         invisible="fel_estado != 'error'"/>
-                <button name="action_imprimir_dte"
-                        string="Imprimir DTE"
-                        type="object"
-                        class="btn-success"
-                        icon="fa-print"
-                        invisible="fel_estado != 'certified'"/>
                 <button name="action_ver_pdf_fel"
                         string="Ver PDF FEL"
                         type="object"

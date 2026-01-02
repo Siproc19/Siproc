@@ -451,10 +451,21 @@ class AccountMove(models.Model):
         return self.action_certificar_fel()
 
     def action_imprimir_dte(self):
-        """Imprime el DTE en formato PDF"""
+        """Imprime el DTE en formato PDF
+        
+        Este botón funciona tanto antes como después de certificar:
+        - Antes de certificar: Muestra una vista previa del DTE
+        - Después de certificar: Muestra el DTE con los datos de certificación
+        """
         self.ensure_one()
-        if self.fel_estado != 'certified':
-            raise UserError(_("Solo se pueden imprimir documentos certificados."))
+        
+        # Validar que la factura esté publicada
+        if self.state != 'posted':
+            raise UserError(_("Debe publicar la factura antes de imprimir el DTE."))
+        
+        # Validar que sea una factura de cliente o nota de crédito
+        if self.move_type not in ('out_invoice', 'out_refund'):
+            raise UserError(_("Solo se pueden imprimir DTEs de facturas de cliente o notas de crédito."))
         
         return self.env.ref('modulo_infile.action_report_fel_dte').report_action(self)
 

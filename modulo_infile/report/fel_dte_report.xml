@@ -7,7 +7,7 @@
         <field name="report_type">qweb-pdf</field>
         <field name="report_name">modulo_infile.report_fel_dte</field>
         <field name="report_file">modulo_infile.report_fel_dte</field>
-        <field name="print_report_name">'DTE_FEL_%s_%s' % (object.fel_serie or 'SIN', object.fel_numero or object.name)</field>
+        <field name="print_report_name">'DTE_FEL_%s_%s' % (object.fel_serie or 'PREV', object.fel_numero or object.name)</field>
         <field name="binding_model_id" ref="account.model_account_move"/>
         <field name="binding_type">report</field>
     </record>
@@ -26,8 +26,18 @@
         <t t-call="web.external_layout">
             <t t-set="o" t-value="o"/>
             <t t-set="company" t-value="o.company_id"/>
+            <t t-set="is_certified" t-value="o.fel_estado == 'certified'"/>
             
             <div class="page">
+                <!-- Marca de agua VISTA PREVIA si no está certificado -->
+                <t t-if="not is_certified">
+                    <div class="position-absolute" style="top: 35%; left: 5%; transform: rotate(-30deg); z-index: 1000; opacity: 0.15;">
+                        <h1 style="font-size: 80px; color: #007bff; font-weight: bold;">
+                            VISTA PREVIA
+                        </h1>
+                    </div>
+                </t>
+                
                 <!-- Encabezado del DTE -->
                 <div class="row mb-4">
                     <div class="col-6">
@@ -57,9 +67,12 @@
                     </div>
                     <div class="col-6 text-end">
                         <!-- Información del DTE -->
-                        <div class="dte-info p-3" style="background-color: #f8f9fa; border: 2px solid #2c3e50; border-radius: 8px;">
-                            <h4 class="mb-2" style="color: #2c3e50;">
-                                <strong>DOCUMENTO TRIBUTARIO ELECTRÓNICO</strong>
+                        <div class="dte-info p-3" t-attf-style="background-color: #{is_certified and '#f8f9fa' or '#fff3cd'}; border: 2px solid #{is_certified and '#2c3e50' or '#ffc107'}; border-radius: 8px;">
+                            <h4 class="mb-2" t-attf-style="color: #{is_certified and '#2c3e50' or '#856404'};">
+                                <strong>
+                                    <t t-if="is_certified">DOCUMENTO TRIBUTARIO ELECTRÓNICO</t>
+                                    <t t-else="">VISTA PREVIA - DTE</t>
+                                </strong>
                             </h4>
                             <table class="table table-sm table-borderless mb-0" style="font-size: 12px;">
                                 <tr>
@@ -75,11 +88,17 @@
                                 </tr>
                                 <tr>
                                     <td class="text-start"><strong>Serie:</strong></td>
-                                    <td class="text-end"><span t-field="o.fel_serie"/></td>
+                                    <td class="text-end">
+                                        <t t-if="o.fel_serie"><span t-field="o.fel_serie"/></t>
+                                        <t t-else=""><span style="color: #999;">Pendiente</span></t>
+                                    </td>
                                 </tr>
                                 <tr>
                                     <td class="text-start"><strong>Número:</strong></td>
-                                    <td class="text-end"><span t-field="o.fel_numero"/></td>
+                                    <td class="text-end">
+                                        <t t-if="o.fel_numero"><span t-field="o.fel_numero"/></t>
+                                        <t t-else=""><span style="color: #999;">Pendiente</span></t>
+                                    </td>
                                 </tr>
                                 <tr>
                                     <td class="text-start"><strong>Fecha:</strong></td>
@@ -253,18 +272,33 @@
                 <div class="row mt-4">
                     <div class="col-12 text-center" style="font-size: 10px; color: #6c757d;">
                         <hr style="border-top: 1px dashed #ccc;"/>
-                        <p class="mb-1">
-                            <strong>DOCUMENTO TRIBUTARIO ELECTRÓNICO - FEL</strong><br/>
-                            Certificado por INFILE S.A. - Proveedor autorizado por SAT Guatemala
-                        </p>
-                        <p class="mb-1" t-if="o.fel_uuid">
-                            <strong>UUID:</strong> <span t-field="o.fel_uuid"/><br/>
-                            <strong>Fecha de Certificación:</strong> <span t-field="o.fel_fecha_certificacion" t-options='{"format": "dd/MM/yyyy HH:mm:ss"}'/>
-                        </p>
-                        <p class="mb-0">
-                            Documento generado electrónicamente. 
-                            Consulte en: <strong>https://report.feel.com.gt/ingfacereloviewer/</strong>
-                        </p>
+                        
+                        <!-- Si está certificado -->
+                        <t t-if="is_certified">
+                            <p class="mb-1">
+                                <strong>DOCUMENTO TRIBUTARIO ELECTRÓNICO - FEL</strong><br/>
+                                Certificado por INFILE S.A. - Proveedor autorizado por SAT Guatemala
+                            </p>
+                            <p class="mb-1" t-if="o.fel_uuid">
+                                <strong>UUID:</strong> <span t-field="o.fel_uuid"/><br/>
+                                <strong>Fecha de Certificación:</strong> <span t-field="o.fel_fecha_certificacion" t-options='{"format": "dd/MM/yyyy HH:mm:ss"}'/>
+                            </p>
+                            <p class="mb-0">
+                                Documento generado electrónicamente. 
+                                Consulte en: <strong>https://report.feel.com.gt/ingfacereloviewer/</strong>
+                            </p>
+                        </t>
+                        
+                        <!-- Si NO está certificado (Vista previa) -->
+                        <t t-else="">
+                            <p class="mb-1" style="color: #856404;">
+                                <strong>⚠️ VISTA PREVIA - DOCUMENTO NO CERTIFICADO</strong><br/>
+                                Este documento aún no ha sido certificado ante SAT Guatemala.
+                            </p>
+                            <p class="mb-0" style="color: #856404;">
+                                Una vez certificado, este documento tendrá validez fiscal.
+                            </p>
+                        </t>
                     </div>
                 </div>
 
