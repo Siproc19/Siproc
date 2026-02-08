@@ -1,5 +1,115 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <odoo>
+
+    <!-- =================================================================== -->
+    <!-- HERENCIA DEL REPORTE ESTÁNDAR DE ODOO PARA AGREGAR DATOS FEL       -->
+    <!-- =================================================================== -->
+    
+    <!-- Agregar información FEL al reporte estándar de factura de Odoo -->
+    <template id="report_invoice_document_fel_inherit" inherit_id="account.report_invoice_document">
+        <!-- Agregar información FEL después del nombre/título del documento -->
+        <xpath expr="//div[@id='informations']" position="before">
+            <t t-if="o.move_type in ('out_invoice', 'out_refund') and o.fel_estado">
+                <!-- Badge de estado FEL -->
+                <div class="mb-2">
+                    <t t-if="o.fel_estado == 'certified'">
+                        <span class="badge bg-success" style="font-size: 12px;">✓ DOCUMENTO CERTIFICADO FEL</span>
+                    </t>
+                    <t t-elif="o.fel_estado == 'cancelled'">
+                        <span class="badge bg-danger" style="font-size: 12px;">✗ DOCUMENTO ANULADO</span>
+                    </t>
+                    <t t-elif="o.fel_estado == 'pending'">
+                        <span class="badge bg-warning text-dark" style="font-size: 12px;">⏳ PENDIENTE DE CERTIFICAR</span>
+                    </t>
+                    <t t-elif="o.fel_estado == 'error'">
+                        <span class="badge bg-danger" style="font-size: 12px;">⚠ ERROR EN CERTIFICACIÓN</span>
+                    </t>
+                </div>
+                
+                <!-- UUID y datos de certificación -->
+                <t t-if="o.fel_uuid">
+                    <div class="row mb-3">
+                        <div class="col-12">
+                            <div class="p-2 text-center" style="background-color: #e8f4f8; border: 2px solid #17a2b8; border-radius: 6px;">
+                                <strong style="color: #17a2b8; font-size: 11px;">NÚMERO DE AUTORIZACIÓN FEL (UUID):</strong><br/>
+                                <span style="font-family: monospace; font-size: 13px; letter-spacing: 1px; color: #2c3e50;">
+                                    <t t-esc="o.fel_uuid"/>
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-4 text-center">
+                            <strong style="font-size: 11px; color: #6c757d;">Serie FEL:</strong><br/>
+                            <span style="font-size: 14px; font-weight: bold;"><t t-esc="o.fel_serie or '-'"/></span>
+                        </div>
+                        <div class="col-4 text-center">
+                            <strong style="font-size: 11px; color: #6c757d;">Número FEL:</strong><br/>
+                            <span style="font-size: 14px; font-weight: bold;"><t t-esc="o.fel_numero or '-'"/></span>
+                        </div>
+                        <div class="col-4 text-center">
+                            <strong style="font-size: 11px; color: #6c757d;">Fecha Certificación:</strong><br/>
+                            <span style="font-size: 12px;">
+                                <t t-if="o.fel_fecha_certificacion">
+                                    <t t-esc="o.fel_fecha_certificacion" t-options='{"widget": "datetime", "format": "dd/MM/yyyy HH:mm"}'/>
+                                </t>
+                                <t t-else="">-</t>
+                            </span>
+                        </div>
+                    </div>
+                </t>
+            </t>
+        </xpath>
+        
+        <!-- Agregar pie de página con información FEL después de los totales -->
+        <xpath expr="//div[@id='total']" position="after">
+            <t t-if="o.move_type in ('out_invoice', 'out_refund')">
+                <div class="row mt-4">
+                    <div class="col-12">
+                        <hr style="border-top: 1px dashed #ccc;"/>
+                        
+                        <!-- Si está certificado -->
+                        <t t-if="o.fel_estado == 'certified'">
+                            <div class="text-center" style="font-size: 10px; color: #6c757d;">
+                                <p class="mb-1">
+                                    <strong>DOCUMENTO TRIBUTARIO ELECTRÓNICO - FEL GUATEMALA</strong><br/>
+                                    Certificado por INFILE S.A. - Proveedor autorizado por SAT
+                                </p>
+                                <p class="mb-0">
+                                    Consulte este documento en: <strong>https://report.feel.com.gt/ingfacereloviewer/</strong>
+                                </p>
+                            </div>
+                        </t>
+                        
+                        <!-- Si NO está certificado -->
+                        <t t-elif="o.fel_estado in ('pending', 'error')">
+                            <div class="text-center p-2" style="background-color: #fff3cd; border: 1px solid #ffc107; border-radius: 4px;">
+                                <p class="mb-0" style="color: #856404; font-size: 11px;">
+                                    <strong>⚠️ DOCUMENTO NO CERTIFICADO</strong><br/>
+                                    Este documento aún no tiene validez fiscal. Debe ser certificado ante SAT Guatemala.
+                                </p>
+                            </div>
+                        </t>
+                        
+                        <!-- Si está anulado -->
+                        <t t-elif="o.fel_estado == 'cancelled'">
+                            <div class="text-center p-2" style="background-color: #f8d7da; border: 1px solid #f5c6cb; border-radius: 4px;">
+                                <p class="mb-0" style="color: #721c24; font-size: 11px;">
+                                    <strong>✗ DOCUMENTO ANULADO</strong><br/>
+                                    Este documento tributario ha sido anulado ante SAT Guatemala.
+                                </p>
+                            </div>
+                        </t>
+                    </div>
+                </div>
+            </t>
+        </xpath>
+    </template>
+
+    <!-- =================================================================== -->
+    <!-- REPORTE PROPIO DTE FEL (EL QUE YA TENÍAS)                          -->
+    <!-- =================================================================== -->
+    
     <!-- Acción de reporte para imprimir DTE FEL -->
     <record id="action_report_fel_dte" model="ir.actions.report">
         <field name="name">DTE FEL Guatemala</field>

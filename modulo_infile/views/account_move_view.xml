@@ -4,17 +4,11 @@
         <field name="name">account.move.form.fel</field>
         <field name="model">account.move</field>
         <field name="inherit_id" ref="account.view_move_form"/>
+        <field name="priority">99</field>
         <field name="arch" type="xml">
 
-            <!-- Botón fantasma para compatibilidad con vistas Studio heredadas -->
+            <!-- Botones FEL en el header - después del botón de publicar -->
             <xpath expr="//button[@name='action_post']" position="after">
-                <button name="certificar" 
-                        type="object" 
-                        invisible="1"/>
-            </xpath>
-
-            <!-- Botones FEL en el header -->
-            <xpath expr="//button[@name='certificar']" position="after">
                 <button name="action_imprimir_dte"
                         string="Imprimir DTE"
                         type="object"
