@@ -1,5 +1,6 @@
 from odoo import models, fields, api, _
 from odoo.exceptions import UserError
+from xml.dom import minidom
 import logging
 
 _logger = logging.getLogger(__name__)
@@ -72,6 +73,18 @@ class AccountMove(models.Model):
         copy=False,
     )
     
+    # Campos computados para mostrar XML formateado
+    fel_xml_enviado_formatted = fields.Html(
+        string="XML Enviado (Formateado)",
+        compute="_compute_fel_xml_formatted",
+        sanitize=False,
+    )
+    fel_xml_respuesta_formatted = fields.Html(
+        string="XML Respuesta (Formateado)",
+        compute="_compute_fel_xml_formatted",
+        sanitize=False,
+    )
+    
     # ========== Tipo de documento FEL ==========
     fel_tipo_documento = fields.Selection(
         selection=[
@@ -114,6 +127,90 @@ class AccountMove(models.Model):
                 move.fel_tipo_documento = 'NCRE'
             else:
                 move.fel_tipo_documento = False
+
+    @api.depends('fel_xml_enviado', 'fel_xml_respuesta')
+    def _compute_fel_xml_formatted(self):
+        """Formatea el XML para visualización con indentación y colores"""
+        for move in self:
+            move.fel_xml_enviado_formatted = move._format_xml_for_display(move.fel_xml_enviado)
+            move.fel_xml_respuesta_formatted = move._format_xml_for_display(move.fel_xml_respuesta)
+    
+    def _format_xml_for_display(self, xml_string):
+        """Formatea un string XML para mostrarlo de forma legible en HTML"""
+        if not xml_string:
+            return False
+        
+        try:
+            # Parsear y formatear el XML con indentación
+            dom = minidom.parseString(xml_string.encode('utf-8'))
+            xml_formatted = dom.toprettyxml(indent="  ")
+            
+            # Remover la primera línea (declaración XML duplicada si existe)
+            lines = xml_formatted.split('\n')
+            if lines and lines[0].startswith('<?xml'):
+                # Mantener la declaración pero limpiar líneas vacías extras
+                xml_formatted = '\n'.join(line for line in lines if line.strip())
+            
+            # Escapar caracteres HTML y añadir formato con colores
+            import html
+            xml_escaped = html.escape(xml_formatted)
+            
+            # Aplicar colores para mejor visualización
+            # Tags en azul
+            import re
+            xml_colored = re.sub(
+                r'&lt;(/?)([a-zA-Z0-9:_]+)',
+                r'<span style="color: #0066cc;">&lt;\1\2</span>',
+                xml_escaped
+            )
+            # Atributos en verde
+            xml_colored = re.sub(
+                r'([a-zA-Z0-9:_]+)=&quot;([^&]*)&quot;',
+                r'<span style="color: #009933;">\1</span>=<span style="color: #cc6600;">&quot;\2&quot;</span>',
+                xml_colored
+            )
+            
+            # Envolver en un contenedor con estilo de código
+            html_result = f'''
+                <div style="
+                    background-color: #f5f5f5; 
+                    border: 1px solid #ddd; 
+                    border-radius: 4px; 
+                    padding: 15px; 
+                    overflow-x: auto; 
+                    font-family: 'Courier New', Courier, monospace; 
+                    font-size: 12px; 
+                    line-height: 1.4;
+                    white-space: pre-wrap;
+                    word-wrap: break-word;
+                    max-height: 500px;
+                    overflow-y: auto;
+                ">
+                    {xml_colored}
+                </div>
+            '''
+            return html_result
+            
+        except Exception as e:
+            _logger.warning(f"Error al formatear XML: {e}")
+            # Si falla el formateo, mostrar el XML original en un contenedor simple
+            import html
+            xml_escaped = html.escape(xml_string)
+            return f'''
+                <div style="
+                    background-color: #f5f5f5; 
+                    border: 1px solid #ddd; 
+                    border-radius: 4px; 
+                    padding: 15px; 
+                    overflow-x: auto; 
+                    font-family: 'Courier New', Courier, monospace; 
+                    font-size: 12px; 
+                    white-space: pre-wrap;
+                    word-wrap: break-word;
+                ">
+                    {xml_escaped}
+                </div>
+            '''
 
     @api.depends('state', 'move_type', 'fel_estado')
     def _compute_fel_puede_certificar(self):
@@ -171,6 +268,10 @@ class AccountMove(models.Model):
             raise UserError("\n".join(errores))
         
         return True
+
+    def certificar(self):
+        """Alias para compatibilidad con vistas heredadas de Studio"""
+        return self.action_certificar_fel()
 
     def action_certificar_fel(self):
         """Certifica el documento en FEL"""
@@ -243,7 +344,11 @@ class AccountMove(models.Model):
         return True
 
     def action_anular_fel(self):
-        """Anula el documento certificado en FEL"""
+        """Anula el documento certificado en FEL
+        
+        Intenta primero con el proceso unificado (firma + certificación en un paso).
+        Si falla, intenta con el endpoint directo de anulación.
+        """
         for move in self:
             if move.fel_estado != 'certified':
                 raise UserError(_("Solo se pueden anular documentos certificados."))
@@ -257,13 +362,33 @@ class AccountMove(models.Model):
                 # Generar XML de anulación
                 xml_anulacion = fel_service._generar_xml_anulacion(move)
                 
-                # Firmar XML
-                xml_firmado = fel_service._firmar_xml(xml_anulacion)
+                # Guardar el XML de anulación enviado para referencia
+                move.fel_xml_enviado = xml_anulacion
                 
-                # Enviar anulación
-                respuesta = fel_service._enviar_anulacion(xml_firmado, move.fel_uuid)
+                respuesta = None
+                ultimo_error = None
                 
-                if respuesta.get('resultado'):
+                # Intento 1: Proceso unificado (el mismo que funciona para facturas)
+                try:
+                    _logger.info("FEL: Intentando anulación con proceso unificado...")
+                    respuesta = fel_service._enviar_anulacion(xml_anulacion, move.fel_uuid)
+                except UserError as e:
+                    _logger.warning(f"FEL: Proceso unificado falló: {e}")
+                    ultimo_error = str(e)
+                
+                # Intento 2: Endpoint directo de anulación (sin firma previa)
+                if not respuesta or not respuesta.get('resultado'):
+                    try:
+                        _logger.info("FEL: Intentando anulación con endpoint directo...")
+                        respuesta = fel_service._enviar_anulacion_v2(xml_anulacion, move.fel_uuid)
+                    except UserError as e:
+                        _logger.warning(f"FEL: Endpoint directo falló: {e}")
+                        # Si ambos fallan, lanzar el último error
+                        if ultimo_error:
+                            raise UserError(_("Error al anular FEL.\nProceso unificado: %s\nEndpoint directo: %s") % (ultimo_error, str(e)))
+                        raise
+                
+                if respuesta and respuesta.get('resultado'):
                     move.write({
                         'fel_estado': 'cancelled',
                         'fel_xml_respuesta': respuesta.get('xml_respuesta', ''),
@@ -277,7 +402,7 @@ class AccountMove(models.Model):
                         ) % (move.fel_uuid, fields.Datetime.now())
                     )
                 else:
-                    raise UserError(_("Error al anular: %s") % respuesta.get('mensaje', ''))
+                    raise UserError(_("Error al anular: %s") % (respuesta.get('mensaje', '') if respuesta else ultimo_error))
                     
             except UserError:
                 raise
@@ -328,3 +453,126 @@ class AccountMove(models.Model):
             move.fel_error_mensaje = False
         
         return self.action_certificar_fel()
+
+    def action_imprimir_dte(self):
+        """Imprime el DTE en formato PDF
+        
+        Este botón funciona tanto antes como después de certificar:
+        - Antes de certificar: Muestra una vista previa del DTE
+        - Después de certificar: Muestra el DTE con los datos de certificación
+        """
+        self.ensure_one()
+        
+        # Validar que la factura esté publicada
+        if self.state != 'posted':
+            raise UserError(_("Debe publicar la factura antes de imprimir el DTE."))
+        
+        # Validar que sea una factura de cliente o nota de crédito
+        if self.move_type not in ('out_invoice', 'out_refund'):
+            raise UserError(_("Solo se pueden imprimir DTEs de facturas de cliente o notas de crédito."))
+        
+        return self.env.ref('modulo_infile.action_report_fel_dte').report_action(self)
+
+    def _fel_monto_en_letras(self):
+        """Convierte el monto total a letras en español para Guatemala"""
+        self.ensure_one()
+        
+        monto = self.amount_total
+        moneda = self.currency_id.name or 'GTQ'
+        
+        # Diccionarios para conversión
+        UNIDADES = (
+            '', 'UN', 'DOS', 'TRES', 'CUATRO', 'CINCO', 'SEIS', 'SIETE', 'OCHO', 'NUEVE',
+            'DIEZ', 'ONCE', 'DOCE', 'TRECE', 'CATORCE', 'QUINCE', 'DIECISÉIS', 'DIECISIETE',
+            'DIECIOCHO', 'DIECINUEVE', 'VEINTE'
+        )
+        DECENAS = (
+            '', '', '', 'TREINTA', 'CUARENTA', 'CINCUENTA', 'SESENTA', 'SETENTA', 'OCHENTA', 'NOVENTA'
+        )
+        CENTENAS = (
+            '', 'CIENTO', 'DOSCIENTOS', 'TRESCIENTOS', 'CUATROCIENTOS', 'QUINIENTOS',
+            'SEISCIENTOS', 'SETECIENTOS', 'OCHOCIENTOS', 'NOVECIENTOS'
+        )
+        
+        def _numero_a_letras(n):
+            """Convierte un número entero a letras"""
+            if n == 0:
+                return 'CERO'
+            if n == 100:
+                return 'CIEN'
+            
+            resultado = ''
+            
+            # Millones
+            if n >= 1000000:
+                millones = n // 1000000
+                if millones == 1:
+                    resultado += 'UN MILLÓN '
+                else:
+                    resultado += _numero_a_letras(millones) + ' MILLONES '
+                n = n % 1000000
+            
+            # Miles
+            if n >= 1000:
+                miles = n // 1000
+                if miles == 1:
+                    resultado += 'MIL '
+                else:
+                    resultado += _numero_a_letras(miles) + ' MIL '
+                n = n % 1000
+            
+            # Centenas
+            if n >= 100:
+                if n == 100:
+                    resultado += 'CIEN '
+                else:
+                    resultado += CENTENAS[n // 100] + ' '
+                n = n % 100
+            
+            # Decenas y unidades
+            if n > 0:
+                if n <= 20:
+                    resultado += UNIDADES[n]
+                elif n < 30:
+                    resultado += 'VEINTI' + UNIDADES[n - 20]
+                else:
+                    decena = n // 10
+                    unidad = n % 10
+                    resultado += DECENAS[decena]
+                    if unidad > 0:
+                        resultado += ' Y ' + UNIDADES[unidad]
+            
+            return resultado.strip()
+        
+        # Separar parte entera y decimal
+        parte_entera = int(monto)
+        parte_decimal = int(round((monto - parte_entera) * 100))
+        
+        # Convertir a letras
+        letras = _numero_a_letras(parte_entera)
+        
+        # Agregar moneda
+        if moneda == 'GTQ':
+            if parte_entera == 1:
+                letras += ' QUETZAL'
+            else:
+                letras += ' QUETZALES'
+            
+            if parte_decimal > 0:
+                letras += ' CON %02d/100' % parte_decimal
+            else:
+                letras += ' EXACTOS'
+        elif moneda == 'USD':
+            if parte_entera == 1:
+                letras += ' DÓLAR'
+            else:
+                letras += ' DÓLARES'
+            
+            if parte_decimal > 0:
+                letras += ' CON %02d/100' % parte_decimal
+        else:
+            letras += ' ' + moneda
+            if parte_decimal > 0:
+                letras += ' CON %02d/100' % parte_decimal
+        
+        return letras

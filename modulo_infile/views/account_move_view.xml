@@ -4,10 +4,17 @@
         <field name="name">account.move.form.fel</field>
         <field name="model">account.move</field>
         <field name="inherit_id" ref="account.view_move_form"/>
+        <field name="priority">99</field>
         <field name="arch" type="xml">
 
-            <!-- Botones FEL en el header -->
+            <!-- Botones FEL en el header - después del botón de publicar -->
             <xpath expr="//button[@name='action_post']" position="after">
+                <button name="action_imprimir_dte"
+                        string="Imprimir DTE"
+                        type="object"
+                        class="btn-success"
+                        icon="fa-print"
+                        invisible="state != 'posted' or move_type not in ('out_invoice', 'out_refund')"/>
                 <button name="action_certificar_fel"
                         string="Certificar FEL"
                         type="object"
@@ -58,12 +65,28 @@
                             <field name="fel_error_mensaje" invisible="not fel_error_mensaje"/>
                         </group>
                     </group>
-                    <group string="XML Enviado" invisible="not fel_xml_enviado">
-                        <field name="fel_xml_enviado" nolabel="1" readonly="1"/>
-                    </group>
-                    <group string="XML Respuesta" invisible="not fel_xml_respuesta">
-                        <field name="fel_xml_respuesta" nolabel="1" readonly="1"/>
-                    </group>
+                    
+                    <!-- XML Enviado con formato visual -->
+                    <div invisible="not fel_xml_enviado" class="mt-3">
+                        <h4>
+                            <i class="fa fa-code mr-2"/>
+                            XML Enviado
+                        </h4>
+                        <field name="fel_xml_enviado_formatted" nolabel="1" readonly="1"/>
+                    </div>
+                    
+                    <!-- XML Respuesta con formato visual -->
+                    <div invisible="not fel_xml_respuesta" class="mt-3">
+                        <h4>
+                            <i class="fa fa-code mr-2"/>
+                            XML Respuesta
+                        </h4>
+                        <field name="fel_xml_respuesta_formatted" nolabel="1" readonly="1"/>
+                    </div>
+                    
+                    <!-- Campos ocultos para mantener los datos originales -->
+                    <field name="fel_xml_enviado" invisible="1"/>
+                    <field name="fel_xml_respuesta" invisible="1"/>
                 </page>
             </xpath>
 

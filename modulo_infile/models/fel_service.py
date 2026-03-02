@@ -9,6 +9,7 @@ from xml.dom import minidom
 
 from odoo import models, fields, api, _
 from odoo.exceptions import UserError
+from odoo.tools import float_round
 import logging
 
 _logger = logging.getLogger(__name__)
@@ -26,18 +27,30 @@ class FelService(models.AbstractModel):
         """Obtiene la configuración FEL desde parámetros del sistema"""
         ICP = self.env['ir.config_parameter'].sudo()
         
+        # Obtener valores base
+        usuario_api = ICP.get_param('fel.usuario_api', '') or ''
+        llave_api = ICP.get_param('fel.llave_api', '') or ''
+        usuario_firma = ICP.get_param('fel.usuario_firma', '') or ''
+        llave_firma = ICP.get_param('fel.llave_firma', '') or ''
+        
         config = {
-            'nit_emisor': ICP.get_param('fel.nit_emisor', ''),
-            'usuario_api': ICP.get_param('fel.usuario_api', ''),
-            'llave_api': ICP.get_param('fel.llave_api', ''),
-            'usuario_firma': ICP.get_param('fel.usuario_firma', ''),
-            'llave_firma': ICP.get_param('fel.llave_firma', ''),
-            'modo': ICP.get_param('fel.modo', 'test'),
-            'url_base': ICP.get_param('fel.url_base', 'https://certificador.feel.com.gt'),
-            'url_firma': ICP.get_param('fel.url_firma', 'https://signer-emisores.feel.com.gt'),
-            'afiliacion_iva': ICP.get_param('fel.afiliacion_iva', 'GEN'),
-            'codigo_establecimiento': ICP.get_param('fel.codigo_establecimiento', '1'),
+            'nit_emisor': ICP.get_param('fel.nit_emisor', '') or '',
+            'usuario_api': usuario_api.strip() if usuario_api else '',
+            'llave_api': llave_api.strip() if llave_api else '',
+            # Para firma, usar credenciales específicas o fallback a las de API
+            'usuario_firma': (usuario_firma.strip() if usuario_firma else '') or (usuario_api.strip() if usuario_api else ''),
+            'llave_firma': (llave_firma.strip() if llave_firma else '') or (llave_api.strip() if llave_api else ''),
+            'modo': ICP.get_param('fel.modo', 'test') or 'test',
+            'url_base': ICP.get_param('fel.url_base', 'https://certificador.feel.com.gt') or 'https://certificador.feel.com.gt',
+            'url_firma': ICP.get_param('fel.url_firma', 'https://signer-emisores.feel.com.gt') or 'https://signer-emisores.feel.com.gt',
+            'afiliacion_iva': ICP.get_param('fel.afiliacion_iva', 'GEN') or 'GEN',
+            'codigo_establecimiento': ICP.get_param('fel.codigo_establecimiento', '1') or '1',
         }
+        
+        # Log de configuración (sin exponer llaves completas)
+        _logger.info(f"FEL Config: usuario_api={config['usuario_api'][:10] if config['usuario_api'] else 'VACIO'}...")
+        _logger.info(f"FEL Config: usuario_firma={config['usuario_firma'][:10] if config['usuario_firma'] else 'VACIO'}...")
+        _logger.info(f"FEL Config: llave_firma={'***configurada***' if config['llave_firma'] else 'VACIO'}")
         
         # Validar credenciales obligatorias
         if not config['usuario_api'] or not config['llave_api']:
@@ -96,10 +109,14 @@ class FelService(models.AbstractModel):
         
         Según documentación INFILE:
         URL: https://consultareceptores.feel.com.gt/rest/action
-        Body: XML <ConsultaNIT><nit>...</nit></ConsultaNIT>
+        Tipo: POST
+        Interfaz: raw (JSON)
+        Parámetros: {emisor_codigo, emisor_clave, nit_consulta}
         """
         if not nit:
             raise UserError(_("Debe proporcionar un NIT para consultar."))
+        
+        config = self._get_config()
         
         # Limpiar NIT (solo números y K)
         nit_limpio = re.sub(r'[^0-9kK]', '', str(nit)).upper()
@@ -107,29 +124,30 @@ class FelService(models.AbstractModel):
         # URL según manual oficial INFILE
         url = "https://consultareceptores.feel.com.gt/rest/action"
         
-        # XML de consulta según manual INFILE
-        xml_consulta = f"""<?xml version="1.0" encoding="UTF-8"?>
-<ConsultaNIT>
-    <nit>{nit_limpio}</nit>
-</ConsultaNIT>"""
+        # JSON de consulta según documentación INFILE (Imagen 1)
+        payload = {
+            'emisor_codigo': config['usuario_api'],  # PREFIJO
+            'emisor_clave': config['llave_api'],
+            'nit_consulta': nit_limpio
+        }
         
         headers = {
-            'Content-Type': 'application/xml; charset=utf-8',
+            'Content-Type': 'application/json',
         }
         
         try:
             _logger.info(f"FEL: Consultando NIT {nit_limpio}")
-            response = requests.post(url, data=xml_consulta.encode('utf-8'), headers=headers, timeout=30)
+            response = requests.post(url, json=payload, headers=headers, timeout=30)
             response.raise_for_status()
             
-            # Parsear respuesta XML
-            root = ET.fromstring(response.text)
+            data = response.json()
+            _logger.info(f"FEL: Respuesta consulta NIT: {data}")
             
+            # Respuesta según documentación: {nit, nombre, mensaje}
             return {
-                'nit': nit_limpio,
-                'nombre': root.find('.//nombre').text if root.find('.//nombre') is not None else '',
-                'mensaje': root.find('.//mensaje').text if root.find('.//mensaje') is not None else '',
-                'xml_respuesta': response.text,
+                'nit': data.get('nit', nit_limpio),
+                'nombre': data.get('nombre', ''),
+                'mensaje': data.get('mensaje', ''),
             }
             
         except Exception as e:
@@ -194,14 +212,28 @@ class FelService(models.AbstractModel):
     # ============================================================
     
     def _limpiar_nit(self, nit):
-        """Limpia el NIT removiendo caracteres especiales"""
+        """Limpia el NIT removiendo caracteres especiales
+        
+        Si el NIT está vacío o solo contiene caracteres especiales,
+        retorna 'CF' (Consumidor Final) como valor por defecto.
+        """
         if not nit:
             return 'CF'
-        return re.sub(r'[^0-9kK]', '', str(nit)).upper()
+        # Limpiar caracteres especiales, dejar solo números y K
+        nit_limpio = re.sub(r'[^0-9kK]', '', str(nit)).upper()
+        # Si después de limpiar queda vacío, es Consumidor Final
+        if not nit_limpio:
+            return 'CF'
+        return nit_limpio
 
-    def _formatear_monto(self, monto):
-        """Formatea un monto a 6 decimales"""
-        return "{:.6f}".format(float(monto or 0))
+    def _formatear_monto(self, monto, decimales=2):
+        """Formatea un monto con precisión de 2 decimales
+        
+        SAT Guatemala y la validación FEL esperan valores con 2 decimales.
+        Basado en implementación de referencia sihaysistema/factura_electronica_gt.
+        """
+        valor = round(float(monto or 0), decimales)
+        return '{0:.2f}'.format(valor)
 
     def _generar_xml_dte(self, move):
         """Genera el XML del DTE según esquema SAT Guatemala"""
@@ -240,10 +272,11 @@ class FelService(models.AbstractModel):
         
         # Datos de Emisión
         xml_lines.append('      <dte:DatosEmision ID="DatosEmision">')
-        
+         ## cambios 
         # Datos Generales
         exp_value = 'SI' if tipo_documento in ('FACT', 'FCAM') and nit_receptor == 'CF' else ''
-        xml_lines.append(f'        <dte:DatosGenerales CodigoMoneda="{codigo_moneda}" FechaHoraEmision="{fecha_emision}" Tipo="{tipo_documento}"{" Exp=\"SI\"" if exp_value else ""}/>')
+        exp_attr = ' Exp="SI"' if exp_value else ''
+        xml_lines.append(f'        <dte:DatosGenerales CodigoMoneda="{codigo_moneda}" FechaHoraEmision="{fecha_emision}" Tipo="{tipo_documento}"{exp_attr}/>')
         
         # Emisor
         xml_lines.append(f'        <dte:Emisor AfiliacionIVA="{config["afiliacion_iva"]}" CodigoEstablecimiento="{config["codigo_establecimiento"]}" CorreoEmisor="{company.email or ""}" NITEmisor="{nit_emisor}" NombreComercial="{company.name}" NombreEmisor="{company.name}">')
@@ -275,44 +308,123 @@ class FelService(models.AbstractModel):
         xml_lines.append(f'          <dte:Frase CodigoEscenario="1" TipoFrase="1"/>')
         xml_lines.append(f'        </dte:Frases>')
         
-        # Items
+        # Items - filtrar solo líneas con productos (no secciones ni notas)
         xml_lines.append(f'        <dte:Items>')
         
+        # Filtrar líneas válidas (con cantidad y precio)
+        lineas_factura = move.invoice_line_ids.filtered(
+            lambda l: l.display_type not in ('line_section', 'line_note') and l.quantity != 0
+        )
+        
+        # Validar que haya al menos una línea
+        if not lineas_factura:
+            raise UserError(_("La factura no tiene líneas de producto válidas para certificar."))
+        
+        # Acumuladores para totales (deben coincidir con suma de líneas)
+        suma_monto_gravable = 0
+        suma_monto_impuesto = 0
+        suma_total = 0
+        
         numero_linea = 0
-        for line in move.invoice_line_ids.filtered(lambda l: not l.display_type):
+        for line in lineas_factura:
             numero_linea += 1
             
             cantidad = abs(line.quantity)
-            precio_unitario = abs(line.price_unit)
-            descuento = abs(line.discount or 0)
+            if cantidad == 0:
+                continue
             
-            # Calcular precio sin IVA (el IVA en Guatemala es 12%)
-            precio_sin_iva = precio_unitario / 1.12 if config['afiliacion_iva'] == 'GEN' else precio_unitario
-            monto_gravable = cantidad * precio_sin_iva * (1 - descuento / 100)
-            monto_iva = monto_gravable * 0.12 if config['afiliacion_iva'] == 'GEN' else 0
-            total_linea = monto_gravable + monto_iva
+            # ============================================================
+            # CÁLCULO EXACTO SEGÚN PHP DE REFERENCIA
+            # ============================================================
+            # El PHP hace exactamente esto:
+            #   PrecioUnitario = precio con IVA
+            #   Precio = Cantidad × PrecioUnitario
+            #   Total = Precio - Descuento (con IVA)
+            #   MontoGravable = round(Total / 1.12, 6)
+            #   MontoImpuesto = round(Total - round(Total/1.12, 6), 6)
+            #
+            # IMPORTANTE: Usamos price_total de Odoo que ya tiene el total
+            # correcto de la línea (con impuestos incluidos).
+            # ============================================================
             
-            # Descripción del producto
-            descripcion = (line.name or line.product_id.name or 'Producto')[:500]
-            descripcion = descripcion.replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;').replace('"', '&quot;')
+            # Verificar si tiene IVA
+            tiene_iva = False
+            for tax in line.tax_ids:
+                if abs(tax.amount - 12) < 0.01 or 'IVA' in (tax.name or '').upper():
+                    tiene_iva = True
+                    break
             
-            unidad_medida = line.product_uom_id.name[:3] if line.product_uom_id else 'UND'
+            # Total de la línea = price_total de Odoo (ya incluye IVA si aplica)
+            total_linea = abs(line.price_total)
             
-            xml_lines.append(f'          <dte:Item BienOServicio="{"B" if line.product_id.type == "product" else "S"}" NumeroLinea="{numero_linea}">')
+            # Calcular MontoGravable y MontoImpuesto EXACTAMENTE como el PHP
+            if tiene_iva and total_linea > 0:
+                # MontoGravable = round(Total / 1.12, 6) - exactamente como PHP
+                monto_gravable = round(total_linea / 1.12, 6)
+                # MontoImpuesto = round(Total - MontoGravable, 6) - exactamente como PHP
+                monto_impuesto = round(total_linea - monto_gravable, 6)
+            else:
+                monto_gravable = total_linea
+                monto_impuesto = 0.0
+            
+            # Para Precio, PrecioUnitario y Descuento, calculamos hacia atrás
+            # desde el total para que sean consistentes
+            # El precio unitario con IVA
+            if cantidad > 0:
+                # Si hay descuento, calcular el precio bruto
+                if line.discount and line.discount > 0:
+                    # Precio bruto = Total / (1 - %descuento/100)
+                    precio_xml = round(total_linea / (1 - line.discount / 100.0), 2)
+                    descuento_xml = round(precio_xml - total_linea, 2)
+                else:
+                    precio_xml = round(total_linea, 2)
+                    descuento_xml = 0.0
+                
+                precio_unitario_xml = round(precio_xml / cantidad, 2)
+                # Recalcular precio para que sea exacto
+                precio_xml = round(cantidad * precio_unitario_xml, 2)
+                # Recalcular descuento para que total sea exacto
+                descuento_xml = round(precio_xml - total_linea, 2)
+                if descuento_xml < 0:
+                    descuento_xml = 0.0
+            else:
+                precio_unitario_xml = 0.0
+                precio_xml = 0.0
+                descuento_xml = 0.0
+            
+            # Acumular para totales
+            suma_monto_gravable += monto_gravable
+            suma_monto_impuesto += monto_impuesto
+            suma_total += total_linea
+            
+            # Descripción del producto (limpiar caracteres especiales XML)
+            descripcion = (line.name or (line.product_id.name if line.product_id else '') or 'Producto')[:500]
+            descripcion = descripcion.replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;').replace('"', '&quot;').replace("'", '&apos;')
+            
+            # Unidad de medida (máximo 3 caracteres)
+            unidad_medida = (line.product_uom_id.name[:3] if line.product_uom_id else 'UND').upper()
+            
+            # Determinar si es Bien o Servicio
+            tipo_item = 'S'  # Por defecto servicio
+            if line.product_id and line.product_id.type in ('product', 'consu'):
+                tipo_item = 'B'
+            
+            # Formatear montos - usar 6 decimales para MontoGravable y MontoImpuesto como PHP
+            xml_lines.append(f'          <dte:Item BienOServicio="{tipo_item}" NumeroLinea="{numero_linea}">')
             xml_lines.append(f'            <dte:Cantidad>{self._formatear_monto(cantidad)}</dte:Cantidad>')
             xml_lines.append(f'            <dte:UnidadMedida>{unidad_medida}</dte:UnidadMedida>')
             xml_lines.append(f'            <dte:Descripcion>{descripcion}</dte:Descripcion>')
-            xml_lines.append(f'            <dte:PrecioUnitario>{self._formatear_monto(precio_sin_iva)}</dte:PrecioUnitario>')
-            xml_lines.append(f'            <dte:Precio>{self._formatear_monto(cantidad * precio_sin_iva)}</dte:Precio>')
-            xml_lines.append(f'            <dte:Descuento>{self._formatear_monto(cantidad * precio_sin_iva * descuento / 100)}</dte:Descuento>')
+            xml_lines.append(f'            <dte:PrecioUnitario>{self._formatear_monto(precio_unitario_xml)}</dte:PrecioUnitario>')
+            xml_lines.append(f'            <dte:Precio>{self._formatear_monto(precio_xml)}</dte:Precio>')
+            xml_lines.append(f'            <dte:Descuento>{self._formatear_monto(descuento_xml)}</dte:Descuento>')
             
-            # Impuestos
+            # Impuestos - usar 6 decimales como el PHP
             xml_lines.append(f'            <dte:Impuestos>')
             xml_lines.append(f'              <dte:Impuesto>')
             xml_lines.append(f'                <dte:NombreCorto>IVA</dte:NombreCorto>')
             xml_lines.append(f'                <dte:CodigoUnidadGravable>1</dte:CodigoUnidadGravable>')
-            xml_lines.append(f'                <dte:MontoGravable>{self._formatear_monto(monto_gravable)}</dte:MontoGravable>')
-            xml_lines.append(f'                <dte:MontoImpuesto>{self._formatear_monto(monto_iva)}</dte:MontoImpuesto>')
+            xml_lines.append(f'                <dte:MontoGravable>{round(monto_gravable, 6)}</dte:MontoGravable>')
+            xml_lines.append(f'                <dte:MontoImpuesto>{round(monto_impuesto, 6)}</dte:MontoImpuesto>')
             xml_lines.append(f'              </dte:Impuesto>')
             xml_lines.append(f'            </dte:Impuestos>')
             
@@ -321,13 +433,14 @@ class FelService(models.AbstractModel):
         
         xml_lines.append(f'        </dte:Items>')
         
-        # Totales
-        gran_total = abs(move.amount_total)
-        total_impuestos = abs(move.amount_tax) if hasattr(move, 'amount_tax') else gran_total - (gran_total / 1.12)
+        # Totales - usar 6 decimales para TotalMontoImpuesto como en PHP
+        # PHP: round($data->total - round($data->total/1.12,6),6)
+        total_impuestos = round(suma_monto_impuesto, 6)
+        gran_total = round(suma_total, 2)
         
         xml_lines.append(f'        <dte:Totales>')
         xml_lines.append(f'          <dte:TotalImpuestos>')
-        xml_lines.append(f'            <dte:TotalImpuesto NombreCorto="IVA" TotalMontoImpuesto="{self._formatear_monto(total_impuestos)}"/>')
+        xml_lines.append(f'            <dte:TotalImpuesto NombreCorto="IVA" TotalMontoImpuesto="{round(total_impuestos, 6)}"/>')
         xml_lines.append(f'          </dte:TotalImpuestos>')
         xml_lines.append(f'          <dte:GranTotal>{self._formatear_monto(gran_total)}</dte:GranTotal>')
         xml_lines.append(f'        </dte:Totales>')
@@ -361,188 +474,324 @@ class FelService(models.AbstractModel):
         return xml_final
 
     # ============================================================
-    # FIRMA ELECTRÓNICA
+    # PROCESO UNIFICADO - FIRMA Y CERTIFICACIÓN
     # ============================================================
     
-    def _firmar_xml(self, xml_data):
-        """Firma el XML usando el servicio de firma de INFILE"""
+    def _certificar_documento(self, xml_data, es_anulacion=False):
+        """Certifica un documento usando el Web Service Unificado de INFILE
+        
+        Según documentación INFILE (Web Service Unificado):
+        URL: https://certificador.feel.com.gt/fel/procesounificado/transaccion/v2/xml
+        Tipo: POST
+        Headers: UsuarioFirma, LlaveFirma, UsuarioApi, LlaveApi, identificador
+        Body: XML raw del DTE
+        
+        Este endpoint hace FIRMA + CERTIFICACIÓN en un solo paso.
+        """
         if not xml_data:
-            raise UserError(_("No hay XML para firmar."))
+            raise UserError(_("No hay XML para certificar."))
         
         config = self._get_config()
         
-        # URL del servicio de firma
-        url = f"{config['url_firma']}/sign_fel/api/sign"
+        # URL del proceso unificado según documentación oficial INFILE
+        url = "https://certificador.feel.com.gt/fel/procesounificado/transaccion/v2/xml"
         
-        # Codificar XML en base64
-        xml_base64 = base64.b64encode(xml_data.encode('utf-8')).decode('utf-8')
+        # Generar identificador único para esta transacción
+        identificador = f"ODOO_{datetime.now().strftime('%Y%m%d%H%M%S')}_{uuid.uuid4().hex[:8]}"
         
-        payload = {
-            'usuario': config['usuario_firma'] or config['usuario_api'],
-            'llave': config['llave_firma'] or config['llave_api'],
-            'identificador': f"ODOO_{datetime.now().strftime('%Y%m%d%H%M%S')}_{uuid.uuid4().hex[:8]}",
-            'archivo': xml_base64,
-            'codigo': config['nit_emisor'],
-            'es_anulacion': 'N',
-        }
-        
+        # Headers según documentación INFILE (Imagen 1)
         headers = {
-            'Content-Type': 'application/json',
+            'UsuarioFirma': config['usuario_firma'] or config['usuario_api'],
+            'LlaveFirma': config['llave_firma'] or config['llave_api'],
+            'UsuarioApi': config['usuario_api'],
+            'LlaveApi': config['llave_api'],
+            'identificador': identificador,
+            'Content-Type': 'application/xml',
         }
         
         try:
-            _logger.info(f"FEL: Enviando XML para firma a {url}")
-            response = requests.post(url, json=payload, headers=headers, timeout=60)
+            _logger.info(f"FEL: Enviando documento para certificación a {url}")
+            _logger.info(f"FEL: Identificador: {identificador}")
+            
+            # El body es el XML en formato raw (no base64, no JSON)
+            response = requests.post(
+                url, 
+                data=xml_data.encode('utf-8'), 
+                headers=headers, 
+                timeout=60
+            )
             response.raise_for_status()
             
             data = response.json()
-            _logger.info(f"FEL: Respuesta firma: {data.get('resultado', 'sin resultado')}")
+            _logger.info(f"FEL: Respuesta certificación: resultado={data.get('resultado')}, uuid={data.get('uuid')}")
             
-            if data.get('resultado'):
-                # Decodificar XML firmado
-                xml_firmado_base64 = data.get('archivo')
-                if xml_firmado_base64:
-                    xml_firmado = base64.b64decode(xml_firmado_base64).decode('utf-8')
-                    return xml_firmado
-                else:
-                    raise UserError(_("El servicio de firma no devolvió el XML firmado."))
+            # Procesar respuesta según documentación INFILE
+            if data.get('resultado') == True:
+                resultado = {
+                    'resultado': True,
+                    'uuid': data.get('uuid', ''),
+                    'serie': data.get('serie', ''),
+                    'numero': str(data.get('numero', '')),
+                    'fecha_certificacion': data.get('fecha', ''),
+                    'xml_certificado': '',
+                    'mensaje': data.get('descripcion', 'Validado y Certificado Exitosamente'),
+                    'alertas_infile': data.get('descripcion_alertas_infile', []),
+                    'alertas_sat': data.get('descripcion_alertas_sat', []),
+                }
+                
+                # Decodificar XML certificado si viene en base64
+                if data.get('xml_certificado'):
+                    try:
+                        resultado['xml_certificado'] = base64.b64decode(data['xml_certificado']).decode('utf-8')
+                    except Exception:
+                        resultado['xml_certificado'] = data['xml_certificado']
+                
+                return resultado
             else:
-                error_msg = data.get('descripcion') or data.get('mensaje') or 'Error desconocido'
-                raise UserError(_("Error al firmar XML: %s") % error_msg)
+                # Manejar errores según documentación
+                errores = data.get('descripcion_errores', [])
+                if errores:
+                    mensajes_error = []
+                    for error in errores:
+                        msg = error.get('mensaje_error', '') or error.get('descripcion', '')
+                        if msg:
+                            mensajes_error.append(msg)
+                    error_msg = '; '.join(mensajes_error) if mensajes_error else data.get('descripcion', 'Error desconocido')
+                else:
+                    error_msg = data.get('descripcion', 'Error en la certificación')
+                
+                raise UserError(_("Error FEL: %s") % error_msg)
                 
         except requests.exceptions.RequestException as e:
-            _logger.error(f"FEL: Error de conexión al servicio de firma: {e}")
-            raise UserError(_("Error de conexión al servicio de firma: %s") % str(e))
+            _logger.error(f"FEL: Error de conexión: {e}")
+            raise UserError(_("Error de conexión al servicio FEL: %s") % str(e))
 
-    # ============================================================
-    # ENVÍO DE DTE
-    # ============================================================
-    
-    def _enviar_dte(self, xml_firmado):
-        """Envía el DTE firmado a INFILE para certificación"""
-        if not xml_firmado:
-            raise UserError(_("No hay XML firmado para enviar."))
+    def _firmar_xml(self, xml_data):
+        """Método de compatibilidad - redirige al proceso unificado
         
-        config = self._get_config()
-        token = self._get_token()
+        NOTA: El proceso unificado de INFILE hace firma + certificación
+        en un solo paso. Este método se mantiene por compatibilidad.
+        """
+        # Retornamos el XML sin cambios, la firma se hace en _certificar_documento
+        return xml_data
+
+    def _enviar_dte(self, xml_data):
+        """Envía el DTE usando el proceso unificado de INFILE
         
-        # URL de certificación
-        url = f"{config['url_base']}/feel/certificacion/v2/dte"
-        
-        # Codificar XML en base64
-        xml_base64 = base64.b64encode(xml_firmado.encode('utf-8')).decode('utf-8')
-        
-        payload = {
-            'xml': xml_base64,
-        }
-        
-        headers = {
-            'Authorization': f'Bearer {token}',
-            'Content-Type': 'application/json',
-        }
-        
-        try:
-            _logger.info(f"FEL: Enviando DTE para certificación a {url}")
-            response = requests.post(url, json=payload, headers=headers, timeout=60)
-            response.raise_for_status()
-            
-            data = response.json()
-            _logger.info(f"FEL: Respuesta certificación: {data}")
-            
-            # Procesar respuesta según estructura de INFILE
-            resultado = {
-                'resultado': data.get('resultado', False),
-                'uuid': data.get('uuid', ''),
-                'serie': data.get('serie', ''),
-                'numero': data.get('numero', ''),
-                'numero_acceso': data.get('numero_acceso', ''),
-                'fecha_certificacion': data.get('fecha', ''),
-                'xml_certificado': '',
-                'url_pdf': '',
-                'mensaje': data.get('descripcion', '') or data.get('mensaje', ''),
-            }
-            
-            # Decodificar XML certificado si viene en base64
-            if data.get('xml_certificado'):
-                try:
-                    resultado['xml_certificado'] = base64.b64decode(data['xml_certificado']).decode('utf-8')
-                except Exception:
-                    resultado['xml_certificado'] = data['xml_certificado']
-            
-            # URL del PDF
-            if data.get('url_pdf'):
-                resultado['url_pdf'] = data['url_pdf']
-            
-            return resultado
-            
-        except requests.exceptions.RequestException as e:
-            _logger.error(f"FEL: Error al enviar DTE: {e}")
-            raise UserError(_("Error de conexión al certificar DTE: %s") % str(e))
+        Según documentación INFILE, el Web Service Unificado hace
+        firma y certificación en un solo paso.
+        """
+        return self._certificar_documento(xml_data, es_anulacion=False)
 
     # ============================================================
     # ANULACIÓN DE DTE
     # ============================================================
     
     def _generar_xml_anulacion(self, move):
-        """Genera el XML de anulación de un DTE"""
+        """Genera el XML de anulación de un DTE
+        
+        Según PHP de referencia, el XML de anulación tiene esta estructura:
+        - xmlns:dte="http://www.sat.gob.gt/dte/fel/0.1.0" (versión 0.1.0 para anulación)
+        - Los atributos de DatosGenerales en orden específico
+        """
         config = self._get_config()
         company = move.company_id
         
+        # Fecha de anulación en formato ISO 8601
         fecha_anulacion = datetime.now().strftime('%Y-%m-%dT%H:%M:%S')
-        fecha_emision = move.fel_fecha_certificacion.strftime('%Y-%m-%dT%H:%M:%S') if move.fel_fecha_certificacion else ''
+        
+        # Fecha de emisión del documento original
+        if move.fel_fecha_certificacion:
+            fecha_emision = move.fel_fecha_certificacion.strftime('%Y-%m-%dT%H:%M:%S')
+        elif move.invoice_date:
+            fecha_emision = move.invoice_date.strftime('%Y-%m-%dT%H:%M:%S')
+        else:
+            fecha_emision = datetime.now().strftime('%Y-%m-%dT%H:%M:%S')
         
         nit_emisor = self._limpiar_nit(company.vat)
+        nit_receptor = self._limpiar_nit(move.partner_id.vat)
         
+        # Motivo de anulación (limpiar caracteres especiales XML)
+        motivo = (move.ref or 'Anulación de documento')[:255]
+        motivo = motivo.replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;').replace('"', '&quot;').replace("'", '&apos;')
+        
+        # Construir XML según estructura del PHP
+        # El PHP usa los atributos en este orden específico
         xml = f"""<?xml version="1.0" encoding="UTF-8"?>
-<dte:GTAnulacionDocumento xmlns:dte="http://www.sat.gob.gt/dte/fel/0.1.0" Version="0.1">
+<dte:GTAnulacionDocumento xmlns:dte="http://www.sat.gob.gt/dte/fel/0.1.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" Version="0.1">
   <dte:SAT>
     <dte:AnulacionDTE ID="DatosCertificados">
-      <dte:DatosGenerales ID="DatosAnulacion" NumeroDocumentoAAnular="{move.fel_uuid}" NITEmisor="{nit_emisor}" IDReceptor="{self._limpiar_nit(move.partner_id.vat)}" FechaEmisionDocumentoAnular="{fecha_emision}" FechaHoraAnulacion="{fecha_anulacion}" MotivoAnulacion="{move.ref or 'Anulación de documento'}"/>
+      <dte:DatosGenerales FechaEmisionDocumentoAnular="{fecha_emision}" FechaHoraAnulacion="{fecha_anulacion}" ID="DatosAnulacion" IDReceptor="{nit_receptor}" MotivoAnulacion="{motivo}" NITEmisor="{nit_emisor}" NumeroDocumentoAAnular="{move.fel_uuid}"/>
     </dte:AnulacionDTE>
   </dte:SAT>
 </dte:GTAnulacionDocumento>"""
         
+        _logger.info(f"FEL: XML de anulación generado para UUID {move.fel_uuid}")
         return xml
 
-    def _enviar_anulacion(self, xml_firmado, uuid_dte):
-        """Envía la anulación del DTE a INFILE"""
-        if not xml_firmado:
-            raise UserError(_("No hay XML de anulación firmado."))
+    def _enviar_anulacion(self, xml_anulacion, uuid_dte):
+        """Envía la anulación del DTE usando el proceso unificado de INFILE
+        
+        El proceso unificado hace FIRMA + CERTIFICACIÓN en un solo paso.
+        URL: https://certificador.feel.com.gt/fel/procesounificado/transaccion/v2/xml
+        
+        Este es el mismo proceso que funciona para las facturas.
+        Los headers deben usar las MISMAS credenciales que funcionan para certificar facturas.
+        """
+        if not xml_anulacion:
+            raise UserError(_("No hay XML de anulación."))
         
         config = self._get_config()
-        token = self._get_token()
         
-        # URL de anulación
-        url = f"{config['url_base']}/feel/cancelarDocumento/v2/dte"
+        # Usar las MISMAS credenciales que funcionan para certificar facturas
+        # El proceso unificado requiere UsuarioFirma/LlaveFirma en los headers
+        usuario_firma = config.get('usuario_firma') or config.get('usuario_api')
+        llave_firma = config.get('llave_firma') or config.get('llave_api')
         
-        # Codificar XML en base64
-        xml_base64 = base64.b64encode(xml_firmado.encode('utf-8')).decode('utf-8')
+        if not usuario_firma or not llave_firma:
+            raise UserError(_("Faltan credenciales de firma. Configure usuario_firma y llave_firma en la configuración FEL."))
         
-        payload = {
-            'xml': xml_base64,
-        }
+        # Generar identificador único para esta transacción
+        identificador = f"ANUL_{datetime.now().strftime('%Y%m%d%H%M%S')}_{uuid.uuid4().hex[:8]}"
         
+        # URL del proceso unificado - el mismo que se usa para certificar facturas
+        url = "https://certificador.feel.com.gt/fel/procesounificado/transaccion/v2/xml"
+        
+        # Headers EXACTAMENTE como se usan para certificar facturas
         headers = {
-            'Authorization': f'Bearer {token}',
-            'Content-Type': 'application/json',
+            'UsuarioFirma': usuario_firma,
+            'LlaveFirma': llave_firma,
+            'UsuarioApi': config['usuario_api'],
+            'LlaveApi': config['llave_api'],
+            'identificador': identificador,
+            'Content-Type': 'application/xml',
         }
+        
+        _logger.info(f"FEL Anulación: UUID a anular: {uuid_dte}")
+        _logger.info(f"FEL Anulación: Identificador: {identificador}")
+        _logger.info(f"FEL Anulación: UsuarioFirma: {usuario_firma}")
+        _logger.info(f"FEL Anulación: UsuarioApi: {config['usuario_api']}")
         
         try:
-            _logger.info(f"FEL: Enviando anulación para UUID {uuid_dte}")
-            response = requests.post(url, json=payload, headers=headers, timeout=60)
+            _logger.info(f"FEL: Enviando anulación por proceso unificado para UUID {uuid_dte}")
+            _logger.info(f"FEL: XML anulación:\n{xml_anulacion}")
+            
+            response = requests.post(
+                url, 
+                data=xml_anulacion.encode('utf-8'), 
+                headers=headers, 
+                timeout=60
+            )
+            
+            _logger.info(f"FEL: Status respuesta: {response.status_code}")
+            _logger.info(f"FEL: Respuesta raw: {response.text[:1000] if response.text else 'vacío'}")
+            
             response.raise_for_status()
             
             data = response.json()
-            _logger.info(f"FEL: Respuesta anulación: {data}")
+            _logger.info(f"FEL: Respuesta anulación JSON: {data}")
             
-            return {
-                'resultado': data.get('resultado', False),
-                'mensaje': data.get('descripcion', '') or data.get('mensaje', ''),
-                'xml_respuesta': str(data),
-            }
+            if data.get('resultado') == True:
+                return {
+                    'resultado': True,
+                    'mensaje': data.get('descripcion', 'Documento anulado exitosamente'),
+                    'uuid': data.get('uuid', ''),
+                    'fecha': data.get('fecha', ''),
+                    'xml_respuesta': data.get('xml_certificado', ''),
+                }
+            else:
+                error_msg = data.get('descripcion', 'Error al anular documento')
+                errores = data.get('descripcion_errores', [])
+                if errores:
+                    mensajes = [e.get('mensaje_error', '') for e in errores if e.get('mensaje_error')]
+                    if mensajes:
+                        error_msg = '; '.join(mensajes)
+                raise UserError(_("Error FEL Anulación: %s") % error_msg)
             
         except requests.exceptions.RequestException as e:
             _logger.error(f"FEL: Error al anular DTE: {e}")
+            raise UserError(_("Error de conexión al anular DTE: %s") % str(e))
+
+    def _enviar_anulacion_v2(self, xml_anulacion, uuid_dte):
+        """Envía la anulación del DTE al endpoint específico de anulación de INFILE
+        
+        URL: https://certificador.feel.com.gt/fel/anulacion/v2/dte/
+        
+        Este método envía el XML de anulación directamente al endpoint de anulación
+        usando las credenciales de API en los headers.
+        
+        Según documentación INFILE, el endpoint puede aceptar:
+        - nit: NIT del emisor
+        - correo_copia: Correo para notificación (opcional)
+        - xml_dte: XML de anulación en base64
+        """
+        import base64
+        
+        if not xml_anulacion:
+            raise UserError(_("No hay XML de anulación."))
+        
+        config = self._get_config()
+        company = self.env.company
+        nit_emisor = self._limpiar_nit(company.vat)
+        
+        # URL del endpoint de anulación con slash al final
+        url_anulacion = "https://certificador.feel.com.gt/fel/anulacion/v2/dte/"
+        
+        # Headers con credenciales de API
+        headers = {
+            'UsuarioApi': config['usuario_api'],
+            'LlaveApi': config['llave_api'],
+            'Content-Type': 'application/json',
+        }
+        
+        # Convertir XML a base64
+        xml_base64 = base64.b64encode(xml_anulacion.encode('utf-8')).decode('utf-8')
+        
+        body = {
+            'nit': nit_emisor,
+            'correo_copia': company.email or '',
+            'xml_dte': xml_base64,
+        }
+        
+        _logger.info(f"FEL Anulación v2: URL: {url_anulacion}")
+        _logger.info(f"FEL Anulación v2: NIT Emisor: {nit_emisor}")
+        _logger.info(f"FEL Anulación v2: UUID a anular: {uuid_dte}")
+        
+        try:
+            response = requests.post(
+                url_anulacion,
+                json=body,
+                headers=headers,
+                timeout=60
+            )
+            
+            _logger.info(f"FEL Anulación v2: Status: {response.status_code}")
+            _logger.info(f"FEL Anulación v2: Respuesta: {response.text[:1000] if response.text else 'vacío'}")
+            
+            response.raise_for_status()
+            
+            data = response.json()
+            _logger.info(f"FEL Anulación v2: JSON: {data}")
+            
+            if data.get('resultado') == True:
+                return {
+                    'resultado': True,
+                    'mensaje': data.get('descripcion', 'Documento anulado exitosamente'),
+                    'uuid': data.get('uuid', ''),
+                    'fecha': data.get('fecha', ''),
+                    'xml_respuesta': data.get('xml_certificado', ''),
+                }
+            else:
+                error_msg = data.get('descripcion', 'Error al anular documento')
+                errores = data.get('descripcion_errores', [])
+                if errores:
+                    mensajes = [e.get('mensaje_error', '') for e in errores if e.get('mensaje_error')]
+                    if mensajes:
+                        error_msg = '; '.join(mensajes)
+                raise UserError(_("Error FEL Anulación: %s") % error_msg)
+            
+        except requests.exceptions.RequestException as e:
+            _logger.error(f"FEL Anulación v2: Error de conexión: {e}")
             raise UserError(_("Error de conexión al anular DTE: %s") % str(e))
 
     # ============================================================

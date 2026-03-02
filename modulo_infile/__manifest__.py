@@ -1,6 +1,6 @@
 {
     "name": "SIPROC FEL INFILE Guatemala",
-    "version": "19.0.1.0.0",
+    "version": "17.0.1.0.0",
     "author": "Ronald de León / SIPROC",
     "website": "https://siproc.com",
     "license": "LGPL-3",
@@ -57,6 +57,7 @@ y el esquema FEL 0.2.0 de SAT Guatemala.
         "data/ir_config_parameter.xml",
         "views/res_config_settings_view.xml",
         "views/account_move_view.xml",
+        "report/fel_dte_report.xml",
     ],
     "assets": {},
     "installable": True,
