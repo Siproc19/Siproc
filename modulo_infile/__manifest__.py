@@ -1,6 +1,6 @@
 {
     "name": "SIPROC FEL INFILE Guatemala",
-    "version": "17.0.1.0.0",
+    "version": "19.0.1.0.0",
     "author": "Ronald de León / SIPROC",
     "website": "https://siproc.com",
     "license": "LGPL-3",
@@ -24,7 +24,7 @@ Características:
 * Firma electrónica de documentos
 * Almacenamiento de XML enviados y respuestas
 * Visualización de PDF certificado
-* Compatible con Odoo 17
+* Compatible con Odoo 19
 
 Configuración:
 --------------
