@@ -1,6 +1,6 @@
 {
     "name": "SIPROC FEL INFILE Guatemala",
-    "version": "17.0.1.0.0",
+    "version": "19.0.1.0.0",
     "author": "Ronald de León / SIPROC",
     "website": "https://siproc.com",
     "license": "LGPL-3",
