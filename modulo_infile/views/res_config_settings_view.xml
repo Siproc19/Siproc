@@ -1,0 +1,83 @@
+<odoo>
+    <record id="res_config_settings_view_fel" model="ir.ui.view">
+        <field name="name">res.config.settings.view.fel</field>
+        <field name="model">res.config.settings</field>
+        <field name="inherit_id" ref="account.res_config_settings_view_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//app[@name='account']" position="inside">
+                
+                <block title="FEL Guatemala (INFILE)" name="fel_settings">
+                    <setting string="Credenciales API INFILE" help="Configuración de acceso al servicio FEL de INFILE">
+                        <div class="row mt16">
+                            <div class="col-lg-6">
+                                <label for="fel_nit_emisor" string="NIT Emisor"/>
+                                <field name="fel_nit_emisor" placeholder="Ej: 120498219 (sin guiones)"/>
+                            </div>
+                            <div class="col-lg-6">
+                                <label for="fel_modo" string="Modo"/>
+                                <field name="fel_modo"/>
+                            </div>
+                        </div>
+                        <div class="row mt8">
+                            <div class="col-lg-6">
+                                <label for="fel_usuario_api" string="Prefijo/Usuario API"/>
+                                <field name="fel_usuario_api" placeholder="Ej: 120498219"/>
+                            </div>
+                            <div class="col-lg-6">
+                                <label for="fel_llave_api" string="Llave API"/>
+                                <field name="fel_llave_api" password="True" placeholder="Llave API secreta"/>
+                            </div>
+                        </div>
+                    </setting>
+                    
+                    <setting string="Firma Electrónica" help="Credenciales para firma electrónica de documentos">
+                        <div class="row mt8">
+                            <div class="col-lg-6">
+                                <label for="fel_usuario_firma" string="Usuario Firma"/>
+                                <field name="fel_usuario_firma" placeholder="Ej: 120498219"/>
+                            </div>
+                            <div class="col-lg-6">
+                                <label for="fel_llave_firma" string="Llave Firma"/>
+                                <field name="fel_llave_firma" password="True" placeholder="Llave de firma"/>
+                            </div>
+                        </div>
+                        <div class="text-muted mt8">
+                            <i class="fa fa-info-circle"/> La llave de firma tiene una caducidad aproximada de 2 años desde su descarga en la Agencia Virtual de SAT.
+                        </div>
+                    </setting>
+                    
+                    <setting string="Configuración Tributaria" help="Datos tributarios del emisor">
+                        <div class="row mt8">
+                            <div class="col-lg-4">
+                                <label for="fel_afiliacion_iva" string="Afiliación IVA"/>
+                                <field name="fel_afiliacion_iva"/>
+                            </div>
+                            <div class="col-lg-4">
+                                <label for="fel_regimen_isr" string="Régimen ISR"/>
+                                <field name="fel_regimen_isr"/>
+                            </div>
+                            <div class="col-lg-4">
+                                <label for="fel_codigo_establecimiento" string="Código Establecimiento"/>
+                                <field name="fel_codigo_establecimiento" placeholder="1"/>
+                            </div>
+                        </div>
+                    </setting>
+                    
+                    <setting string="URLs de Servicios INFILE (Avanzado)" help="URLs técnicas del certificador - NO modificar a menos que INFILE lo indique">
+                        <div class="row mt8">
+                            <div class="col-lg-6">
+                                <label for="fel_url_base" string="URL Base Certificador"/>
+                                <field name="fel_url_base" placeholder="https://certificador.feel.com.gt"/>
+                            </div>
+                            <div class="col-lg-6">
+                                <label for="fel_url_firma" string="URL Servicio Firma"/>
+                                <field name="fel_url_firma" placeholder="https://signer-emisores.feel.com.gt"/>
+                            </div>
+                        </div>
+                    </setting>
+                </block>
+                
+            </xpath>
+        </field>
+    </record>
+</odoo>

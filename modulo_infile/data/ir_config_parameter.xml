@@ -1,0 +1,35 @@
+<odoo>
+    <data noupdate="1">
+        <!-- URLs de servicios INFILE (según documentación oficial) -->
+        <record id="fel_param_url_base" model="ir.config_parameter">
+            <field name="key">fel.url_base</field>
+            <field name="value">https://certificador.feel.com.gt</field>
+        </record>
+
+        <record id="fel_param_url_firma" model="ir.config_parameter">
+            <field name="key">fel.url_firma</field>
+            <field name="value">https://signer-emisores.feel.com.gt</field>
+        </record>
+
+        <!-- Configuración por defecto -->
+        <record id="fel_param_modo" model="ir.config_parameter">
+            <field name="key">fel.modo</field>
+            <field name="value">test</field>
+        </record>
+
+        <record id="fel_param_afiliacion_iva" model="ir.config_parameter">
+            <field name="key">fel.afiliacion_iva</field>
+            <field name="value">GEN</field>
+        </record>
+
+        <record id="fel_param_codigo_establecimiento" model="ir.config_parameter">
+            <field name="key">fel.codigo_establecimiento</field>
+            <field name="value">1</field>
+        </record>
+
+        <record id="fel_param_regimen_isr" model="ir.config_parameter">
+            <field name="key">fel.regimen_isr</field>
+            <field name="value">2</field>
+        </record>
+    </data>
+</odoo>
