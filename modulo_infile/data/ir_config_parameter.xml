@@ -11,7 +11,7 @@
             <field name="value">https://signer-emisores.feel.com.gt</field>
         </record>
 
-        <!-- Configuración por defecto -->
+        <!-- Configuración por defectoo -->
         <record id="fel_param_modo" model="ir.config_parameter">
             <field name="key">fel.modo</field>
             <field name="value">test</field>
