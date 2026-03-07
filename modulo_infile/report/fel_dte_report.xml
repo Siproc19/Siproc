@@ -379,12 +379,19 @@
                                     <span t-field="o.amount_tax" t-options='{"widget": "monetary", "display_currency": o.currency_id}'/>
                                 </td>
                             </tr>
-                            <tr style="background-color:#556B2F; color:white;">
-                                <td class="text-end"><strong>TOTAL:</strong></td>
-                                <td class="text-end">
-                                    <strong><span t-field="o.amount_total" t-options='{"widget": "monetary", "display_currency": o.currency_id}'/></strong>
-                                </td>
-                            </tr>
+                            <tr style="background-color:#556B2F;">
+    <td class="text-end" style="color:white;">
+        <strong>TOTAL:</strong>
+    </td>
+
+    <td class="text-end">
+        <strong style="color:white;">
+            <span t-field="o.amount_total"
+            t-options='{"widget": "monetary", "display_currency": o.currency_id}'
+            style="color:white;"/>
+        </strong>
+    </td>
+</tr>
                         </table>
                     </div>
                 </div>
