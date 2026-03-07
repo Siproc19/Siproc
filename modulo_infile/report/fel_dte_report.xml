@@ -281,7 +281,7 @@
                                 <div class="mt-2">
                                     <strong style="font-size:11px; color:#556B2F;">Serie:</strong>
                                     <span t-esc="o.fel_serie or '-'"/>
-                                    &nbsp;&nbsp;|&nbsp;&nbsp;
+                                    <span> | </span>
                                     <strong style="font-size:11px; color:#556B2F;">Número:</strong>
                                     <span t-esc="o.fel_numero or '-'"/>
                                 </div>
