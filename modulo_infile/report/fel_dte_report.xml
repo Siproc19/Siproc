@@ -121,7 +121,7 @@
     <!-- =================================================================== -->
 
 <record id="action_report_fel_dte" model="ir.actions.report">
-    <field name="name">DTE FEL Guatemala PRUEBA 999</field>
+    <field name="name">DTE FEL Guatemala</field>
     <field name="model">account.move</field>
     <field name="report_type">qweb-pdf</field>
     <field name="report_name">modulo_infile.report_fel_dte</field>
@@ -147,9 +147,7 @@
             <t t-set="qr_text" t-value="'UUID:%s|Serie:%s|Numero:%s|Empresa:%s' % (o.fel_uuid or '', o.fel_serie or '', o.fel_numero or '', company.name or '')"/>
 
             <div class="page">
-                    <div style="font-size:24px; color:red; font-weight:bold;">
-                PRUEBA SIPROC 999
-            </div>
+                    <field name="print_report_name">'DTE_FEL_%s_%s' % (object.fel_serie or 'PREV', object.fel_numero or object.name)</field>
                 
 
                 <t t-if="not is_certified">
