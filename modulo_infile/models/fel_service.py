@@ -278,8 +278,22 @@ class FelService(models.AbstractModel):
         exp_attr = ' Exp="SI"' if exp_value else ''
         xml_lines.append(f'        <dte:DatosGenerales CodigoMoneda="{codigo_moneda}" FechaHoraEmision="{fecha_emision}" Tipo="{tipo_documento}"{exp_attr}/>')
         
-        # Emisor
-        xml_lines.append(f'        <dte:Emisor AfiliacionIVA="{config["afiliacion_iva"]}" CodigoEstablecimiento="{config["codigo_establecimiento"]}" CorreoEmisor="{company.email or ""}" NITEmisor="{nit_emisor}" NombreComercial="{company.name}" NombreEmisor="{company.name}">')
+                # Emisor
+        nombre_comercial = (
+            company.x_studio_nombre_comercial
+            or company.partner_id.commercial_company_name
+            or company.name
+            or "S/N"
+        )
+
+        xml_lines.append(
+            f'        <dte:Emisor AfiliacionIVA="{config["afiliacion_iva"]}" '
+            f'CodigoEstablecimiento="{config["codigo_establecimiento"]}" '
+            f'CorreoEmisor="{company.email or ""}" '
+            f'NITEmisor="{nit_emisor}" '
+            f'NombreComercial="{nombre_comercial}" '
+            f'NombreEmisor="{company.name or ""}">'
+        )
         xml_lines.append(f'          <dte:DireccionEmisor>')
         xml_lines.append(f'            <dte:Direccion>{company.street or "Ciudad"}</dte:Direccion>')
         xml_lines.append(f'            <dte:CodigoPostal>{company.zip or "01001"}</dte:CodigoPostal>')
@@ -288,7 +302,7 @@ class FelService(models.AbstractModel):
         xml_lines.append(f'            <dte:Pais>GT</dte:Pais>')
         xml_lines.append(f'          </dte:DireccionEmisor>')
         xml_lines.append(f'        </dte:Emisor>')
-        
+
         # Receptor
         nombre_receptor = partner.name or 'Consumidor Final'
         correo_receptor = partner.email or ''
@@ -301,7 +315,7 @@ class FelService(models.AbstractModel):
         xml_lines.append(f'            <dte:Pais>{partner.country_id.code or "GT"}</dte:Pais>')
         xml_lines.append(f'          </dte:DireccionReceptor>')
         xml_lines.append(f'        </dte:Receptor>')
-        
+
         # Frases (requeridas según tipo de contribuyente)
         xml_lines.append(f'        <dte:Frases>')
         # Frase tipo 1: Sujeto a pagos trimestrales ISR
