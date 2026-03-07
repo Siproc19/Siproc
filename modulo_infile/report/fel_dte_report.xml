@@ -1,10 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <odoo>
 
-    <!-- =================================================================== -->
-    <!-- HERENCIA DEL REPORTE ESTÁNDAR DE ODOO PARA AGREGAR DATOS FEL       -->
-    <!-- =================================================================== -->
-
+    <!-- ================================================================ -->
+    <!-- HERENCIA DE FACTURA ESTÁNDAR                                     -->
+    <!-- ================================================================ -->
     <template id="report_invoice_document_fel_inherit" inherit_id="account.report_invoice_document">
         <xpath expr="//div[@id='informations']" position="before">
             <div class="row mb-3" t-if="o.move_type in ('out_invoice', 'out_refund')">
@@ -96,7 +95,7 @@
                         <t t-elif="o.fel_estado in ('pending', 'error')">
                             <div class="text-center p-2" style="background-color:#fff3cd; border:1px solid #F6B500; border-radius:4px;">
                                 <p class="mb-0" style="color:#856404; font-size:11px;">
-                                    <strong>⚠️ DOCUMENTO NO CERTIFICADO</strong><br/>
+                                    <strong>⚠ DOCUMENTO NO CERTIFICADO</strong><br/>
                                     Este documento aún no tiene validez fiscal. Debe ser certificado ante SAT Guatemala.
                                 </p>
                             </div>
@@ -116,29 +115,34 @@
         </xpath>
     </template>
 
-    <!-- =================================================================== -->
-    <!-- REPORTE PROPIO DTE FEL                                             -->
-    <!-- =================================================================== -->
+    <!-- ================================================================ -->
+    <!-- ACCIÓN DE REPORTE DTE                                            -->
+    <!-- ================================================================ -->
+    <record id="action_report_fel_dte" model="ir.actions.report">
+        <field name="name">DTE FEL Guatemala</field>
+        <field name="model">account.move</field>
+        <field name="report_type">qweb-pdf</field>
+        <field name="report_name">modulo_infile.report_fel_dte</field>
+        <field name="report_file">modulo_infile.report_fel_dte</field>
+        <field name="print_report_name">'DTE_FEL_%s_%s' % (object.fel_serie or 'PREV', object.fel_numero or object.name)</field>
+        <field name="binding_model_id" ref="account.model_account_move"/>
+        <field name="binding_type">report</field>
+    </record>
 
-<record id="action_report_fel_dte" model="ir.actions.report">
-    <field name="name">DTE FEL Guatemala</field>
-    <field name="model">account.move</field>
-    <field name="report_type">qweb-pdf</field>
-    <field name="report_name">modulo_infile.report_fel_dte</field>
-    <field name="report_file">modulo_infile.report_fel_dte</field>
-    <field name="print_report_name">'PRUEBA_999_%s' % (object.name)</field>
-    <field name="binding_model_id" ref="account.model_account_move"/>
-    <field name="binding_type">report</field>
-</record>
-
-<template id="report_fel_dte">
-    <t t-call="web.html_container">
-        <t t-foreach="docs" t-as="o">
-            <t t-call="modulo_infile.report_fel_dte_document"/>
+    <!-- ================================================================ -->
+    <!-- CONTENEDOR DEL REPORTE                                           -->
+    <!-- ================================================================ -->
+    <template id="report_fel_dte">
+        <t t-call="web.html_container">
+            <t t-foreach="docs" t-as="o">
+                <t t-call="modulo_infile.report_fel_dte_document"/>
+            </t>
         </t>
-    </t>
-</template>
+    </template>
 
+    <!-- ================================================================ -->
+    <!-- DOCUMENTO DEL REPORTE                                            -->
+    <!-- ================================================================ -->
     <template id="report_fel_dte_document">
         <t t-call="web.external_layout">
             <t t-set="o" t-value="o"/>
@@ -147,33 +151,31 @@
             <t t-set="qr_text" t-value="'UUID:%s|Serie:%s|Numero:%s|Empresa:%s' % (o.fel_uuid or '', o.fel_serie or '', o.fel_numero or '', company.name or '')"/>
 
             <div class="page">
-                    <field name="print_report_name">'DTE_FEL_%s_%s' % (object.fel_serie or 'PREV', object.fel_numero or object.name)</field>
-                
 
                 <t t-if="not is_certified">
-                    <div class="position-absolute" style="top:35%; left:5%; transform:rotate(-30deg); z-index:1000; opacity:0.10;">
+                    <div class="position-absolute" style="top:35%; left:8%; transform:rotate(-30deg); z-index:1000; opacity:0.08;">
                         <h1 style="font-size:90px; color:#556B2F; font-weight:bold;">
                             VISTA PREVIA
                         </h1>
                     </div>
                 </t>
 
-                <!-- BANDA SUPERIOR SIPROC -->
+                <!-- Banda superior -->
                 <div class="row mb-3">
                     <div class="col-12">
-                        <div style="height:14px; background:linear-gradient(90deg, #F6B500 0%, #F18A1A 55%, #556B2F 100%); border-radius:6px;"></div>
+                        <div style="height:12px; background:linear-gradient(90deg, #F6B500 0%, #F18A1A 55%, #556B2F 100%); border-radius:6px;"></div>
                     </div>
                 </div>
 
                 <!-- Encabezado -->
                 <div class="row mb-4">
-                    <div class="col-7">
-                        <div class="company-info p-3" style="background-color:#F5F5F5; border-radius:10px; border-left:6px solid #556B2F;">
+                    <div class="col-8">
+                        <div class="p-3" style="background-color:#F5F5F5; border-radius:10px; border-left:6px solid #556B2F; min-height:165px;">
                             <div class="row">
                                 <div class="col-3">
                                     <img t-if="company.logo"
                                          t-att-src="image_data_uri(company.logo)"
-                                         style="max-height:70px; max-width:100%;"/>
+                                         style="max-height:75px; max-width:100%;"/>
                                 </div>
                                 <div class="col-9">
                                     <h3 class="mb-1" style="color:#556B2F;">
@@ -194,13 +196,9 @@
 
                                     <p class="mb-0" style="font-size:12px;">
                                         <strong>NIT:</strong> <span t-field="company.vat"/><br/>
-                                        <strong>Dirección:</strong> <span t-field="company.street"/><br/>
-                                        <t t-if="company.city">
-                                            <span t-field="company.city"/>,
-                                        </t>
-                                        <t t-if="company.state_id">
-                                            <span t-field="company.state_id.name"/>
-                                        </t>
+                                        <strong>Dirección:</strong> <span t-field="company.street"/>
+                                        <t t-if="company.city">, <span t-field="company.city"/></t>
+                                        <t t-if="company.state_id">, <span t-field="company.state_id.name"/></t>
                                         <br/>
                                         <t t-if="company.phone">
                                             <strong>Tel:</strong> <span t-field="company.phone"/><br/>
@@ -214,62 +212,41 @@
                         </div>
                     </div>
 
-                    <div class="col-5 text-end">
-                        <div class="p-3" style="background:linear-gradient(90deg,#F6B500,#F18A1A); color:white; border-radius:10px;">
-                            <h4 class="mb-2" style="color:white;">
+                    <div class="col-4">
+                        <div class="p-3 text-center" style="background:linear-gradient(90deg,#F6B500,#F18A1A); color:white; border-radius:10px; min-height:165px;">
+                            <h4 class="mb-2" style="color:white; font-size:18px;">
                                 <strong>
-                                    <t t-if="is_certified">DOCUMENTO TRIBUTARIO ELECTRÓNICO</t>
-                                    <t t-else="">VISTA PREVIA - DTE</t>
+                                    <t t-if="is_certified">DTE FEL</t>
+                                    <t t-else="">VISTA PREVIA DTE</t>
                                 </strong>
                             </h4>
 
-                            <table class="table table-sm table-borderless mb-0" style="font-size:12px; color:white;">
-                                <tr>
-                                    <td class="text-start" style="color:white;"><strong>Tipo:</strong></td>
-                                    <td class="text-end" style="color:white;">
-                                        <t t-if="o.fel_tipo_documento == 'FACT'">FACTURA</t>
-                                        <t t-elif="o.fel_tipo_documento == 'FCAM'">FACTURA CAMBIARIA</t>
-                                        <t t-elif="o.fel_tipo_documento == 'FPEQ'">FACTURA PEQUEÑO CONTRIBUYENTE</t>
-                                        <t t-elif="o.fel_tipo_documento == 'NCRE'">NOTA DE CRÉDITO</t>
-                                        <t t-elif="o.fel_tipo_documento == 'NDEB'">NOTA DE DÉBITO</t>
-                                        <t t-else=""><span t-field="o.fel_tipo_documento"/></t>
-                                    </td>
-                                </tr>
-                                <tr>
-                                    <td class="text-start" style="color:white;"><strong>Serie:</strong></td>
-                                    <td class="text-end" style="color:white;">
-                                        <t t-if="o.fel_serie"><span t-field="o.fel_serie"/></t>
-                                        <t t-else=""><span>Pendiente</span></t>
-                                    </td>
-                                </tr>
-                                <tr>
-                                    <td class="text-start" style="color:white;"><strong>Número:</strong></td>
-                                    <td class="text-end" style="color:white;">
-                                        <t t-if="o.fel_numero"><span t-field="o.fel_numero"/></t>
-                                        <t t-else=""><span>Pendiente</span></t>
-                                    </td>
-                                </tr>
-                                <tr>
-                                    <td class="text-start" style="color:white;"><strong>Fecha:</strong></td>
-                                    <td class="text-end" style="color:white;">
-                                        <span t-field="o.invoice_date"/>
-                                    </td>
-                                </tr>
-                                <tr t-if="o.fel_fecha_certificacion">
-                                    <td class="text-start" style="color:white;"><strong>Certificación:</strong></td>
-                                    <td class="text-end" style="color:white;">
-                                        <span t-field="o.fel_fecha_certificacion" t-options='{"widget": "datetime", "format": "dd/MM/yyyy HH:mm"}'/>
-                                    </td>
-                                </tr>
-                            </table>
+                            <div style="font-size:12px; line-height:1.7;">
+                                <div>
+                                    <strong>Tipo:</strong>
+                                    <t t-if="o.fel_tipo_documento == 'FACT'"> FACTURA</t>
+                                    <t t-elif="o.fel_tipo_documento == 'FCAM'"> FACTURA CAMBIARIA</t>
+                                    <t t-elif="o.fel_tipo_documento == 'FPEQ'"> FACTURA PEQUEÑO CONTRIBUYENTE</t>
+                                    <t t-elif="o.fel_tipo_documento == 'NCRE'"> NOTA DE CRÉDITO</t>
+                                    <t t-elif="o.fel_tipo_documento == 'NDEB'"> NOTA DE DÉBITO</t>
+                                    <t t-else=""> <span t-field="o.fel_tipo_documento"/></t>
+                                </div>
+                                <div><strong>Serie:</strong> <span t-esc="o.fel_serie or 'Pendiente'"/></div>
+                                <div><strong>Número:</strong> <span t-esc="o.fel_numero or 'Pendiente'"/></div>
+                                <div><strong>Fecha:</strong> <span t-field="o.invoice_date"/></div>
+                                <div t-if="o.fel_fecha_certificacion">
+                                    <strong>Certificación:</strong>
+                                    <span t-field="o.fel_fecha_certificacion" t-options='{"widget": "datetime", "format": "dd/MM/yyyy HH:mm"}'/>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
 
-                <!-- UUID + QR -->
-                <div class="row mb-3">
+                <!-- UUID y QR -->
+                <div class="row mb-4">
                     <div class="col-8">
-                        <div class="p-3 text-center" style="background-color:#F5F5F5; border:2px solid #F18A1A; border-radius:8px; min-height:120px;">
+                        <div class="p-3 text-center" style="background-color:#F5F5F5; border:2px solid #F18A1A; border-radius:8px; min-height:130px;">
                             <strong style="color:#556B2F;">NÚMERO DE AUTORIZACIÓN (UUID):</strong><br/>
                             <t t-if="o.fel_uuid">
                                 <span style="font-family:monospace; font-size:14px; letter-spacing:1px;" t-field="o.fel_uuid"/>
@@ -290,16 +267,16 @@
                     </div>
 
                     <div class="col-4 text-center">
-                        <div class="p-2" style="background-color:#FFFFFF; border:1px solid #dee2e6; border-radius:8px; min-height:140px;">
+                        <div class="p-2" style="background-color:#FFFFFF; border:1px solid #dee2e6; border-radius:8px; min-height:130px;">
                             <t t-if="is_certified and o.fel_uuid">
                                 <img t-att-src="'/report/barcode/?barcode_type=QR&amp;value=%s&amp;width=180&amp;height=180' % qr_text"
-                                     style="width:120px; height:120px;"/>
+                                     style="width:115px; height:115px;"/>
                                 <div style="font-size:10px; color:#556B2F;">
                                     <strong>QR FEL</strong>
                                 </div>
                             </t>
                             <t t-else="">
-                                <div style="font-size:11px; color:#856404; padding-top:45px;">
+                                <div style="font-size:11px; color:#856404; padding-top:40px;">
                                     QR disponible al certificar
                                 </div>
                             </t>
@@ -472,7 +449,7 @@
 
                         <t t-else="">
                             <p class="mb-1" style="color:#856404;">
-                                <strong>⚠️ VISTA PREVIA - DOCUMENTO NO CERTIFICADO</strong><br/>
+                                <strong>⚠ VISTA PREVIA - DOCUMENTO NO CERTIFICADO</strong><br/>
                                 Este documento aún no ha sido certificado ante SAT Guatemala.
                             </p>
                             <p class="mb-0" style="color:#856404;">
@@ -482,7 +459,7 @@
                     </div>
                 </div>
 
-                <!-- Anulado -->
+                <!-- Marca anulado -->
                 <t t-if="o.fel_estado == 'cancelled'">
                     <div class="position-absolute" style="top:40%; left:10%; transform:rotate(-30deg); z-index:1000;">
                         <h1 style="font-size:100px; color:rgba(255, 0, 0, 0.3); font-weight:bold;">
@@ -491,7 +468,7 @@
                     </div>
                 </t>
 
-                <!-- BANDA INFERIOR SIPROC -->
+                <!-- Banda inferior -->
                 <div class="row mt-3">
                     <div class="col-12">
                         <div style="height:10px; background:linear-gradient(90deg, #556B2F 0%, #F18A1A 50%, #F6B500 100%); border-radius:6px;"></div>
