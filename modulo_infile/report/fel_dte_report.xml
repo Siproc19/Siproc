@@ -150,10 +150,7 @@
                     <div style="font-size:24px; color:red; font-weight:bold;">
                 PRUEBA SIPROC 999
             </div>
-                <!-- PRUEBA PARA CONFIRMAR QUE ESTE XML SI CARGA -->
-                <div style="font-size:24px; color:red; font-weight:bold;">
-                    PRUEBA SIPROC 999
-                </div>
+                
 
                 <t t-if="not is_certified">
                     <div class="position-absolute" style="top:35%; left:5%; transform:rotate(-30deg); z-index:1000; opacity:0.10;">
