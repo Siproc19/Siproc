@@ -148,6 +148,11 @@
 
             <div class="page">
 
+                <!-- PRUEBA PARA CONFIRMAR QUE ESTE XML SI CARGA -->
+                <div style="font-size:24px; color:red; font-weight:bold;">
+                    PRUEBA SIPROC 999
+                </div>
+
                 <t t-if="not is_certified">
                     <div class="position-absolute" style="top:35%; left:5%; transform:rotate(-30deg); z-index:1000; opacity:0.10;">
                         <h1 style="font-size:90px; color:#556B2F; font-weight:bold;">
@@ -174,12 +179,10 @@
                                          style="max-height:70px; max-width:100%;"/>
                                 </div>
                                 <div class="col-9">
-                                    <!-- RAZÓN SOCIAL -->
                                     <h3 class="mb-1" style="color:#556B2F;">
                                         <strong t-field="company.name"/>
                                     </h3>
 
-                                    <!-- NOMBRE COMERCIAL -->
                                     <t t-if="company.x_studio_nombre_comercial">
                                         <p class="mb-1" style="font-size:12px;">
                                             <strong style="color:#F18A1A;">Nombre Comercial:</strong>
@@ -187,13 +190,11 @@
                                         </p>
                                     </t>
 
-                                    <!-- RÉGIMEN -->
                                     <p class="mb-1" style="font-size:12px;">
                                         <strong style="color:#F18A1A;">Régimen:</strong>
                                         <span>Sujeto a pagos trimestrales</span>
                                     </p>
 
-                                    <!-- DATOS FISCALES -->
                                     <p class="mb-0" style="font-size:12px;">
                                         <strong>NIT:</strong> <span t-field="company.vat"/><br/>
                                         <strong>Dirección:</strong> <span t-field="company.street"/><br/>
