@@ -99,7 +99,7 @@
         <field name="model">account.move</field>
         <field name="inherit_id" ref="account.view_invoice_tree"/>
         <field name="arch" type="xml">
-            <xpath expr="//field[@name='state']" position="after">
+            <xpath expr="//field[@name='payment_state']" position="after">
                 <field name="fel_estado" widget="badge" optional="show"
                        decoration-success="fel_estado == 'certified'" 
                        decoration-danger="fel_estado in ('error', 'cancelled')" 
