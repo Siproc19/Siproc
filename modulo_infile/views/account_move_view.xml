@@ -43,6 +43,7 @@
             <xpath expr="//field[@name='invoice_payment_term_id']" position="after">
                 <group string="FEL Guatemala" invisible="move_type not in ('out_invoice', 'out_refund')">
                     <group>
+                        <field name="x_nombre_comercial_empresa" readonly="1"/>
                         <field name="fel_tipo_documento"/>
                         <field name="fel_estado" widget="badge"
                                decoration-success="fel_estado == 'certified'"
