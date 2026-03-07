@@ -167,83 +167,81 @@
                     </div>
                 </div>
 
-                <!-- Encabezado -->
-                <div class="row mb-4">
-                    <div class="col-8">
-                        <div class="col-8">
-                            <div class="p-2" style="background-color:#F5F5F5; border-radius:10px; border-left:6px solid #556B2F;">
-                            <div class="row">
-                                <div class="col-3">
-                                    <img t-if="company.logo"
-                                         t-att-src="image_data_uri(company.logo)"
-                                         style="max-height:60px; max-width:100%;">
-                                </div>
-                                <div class="col-9">
-                                    <h3 class="mb-1" style="color:#556B2F;">
-                                        <strong t-field="company.name"/>
-                                    </h3>
-
-                                    <t t-if="company.x_studio_nombre_comercial">
-                                        <p class="mb-1" style="font-size:12px;">
-                                            <strong style="color:#F18A1A;">Nombre Comercial:</strong>
-                                            <span t-field="company.x_studio_nombre_comercial"/>
-                                        </p>
-                                    </t>
-
-                                    <p class="mb-1" style="font-size:12px;">
-                                        <strong style="color:#F18A1A;">Régimen:</strong>
-                                        <span>Sujeto a pagos trimestrales</span>
-                                    </p>
-
-                                    <p class="mb-0" style="font-size:12px;">
-                                        <strong>NIT:</strong> <span t-field="company.vat"/><br/>
-                                        <strong>Dirección:</strong> <span t-field="company.street"/>
-                                        <t t-if="company.city">, <span t-field="company.city"/></t>
-                                        <t t-if="company.state_id">, <span t-field="company.state_id.name"/></t>
-                                        <br/>
-                                        <t t-if="company.phone">
-                                            <strong>Tel:</strong> <span t-field="company.phone"/><br/>
-                                        </t>
-                                        <t t-if="company.email">
-                                            <strong>Email:</strong> <span t-field="company.email"/>
-                                        </t>
-                                    </p>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="col-4">
-                        <div class="col-4">
-                            <div class="p-2 text-center" style="background:linear-gradient(90deg,#F6B500,#F18A1A); color:white; border-radius:10px;">
-                            <h4 class="mb-2" style="color:white; font-size:18px;">
-                                <strong>
-                                    <t t-if="is_certified">DTE FEL</t>
-                                    <t t-else="">VISTA PREVIA DTE</t>
-                                </strong>
-                            </h4>
-
-                            <div style="font-size:12px; line-height:1.7;">
-                                <div>
-                                    <strong>Tipo:</strong>
-                                    <t t-if="o.fel_tipo_documento == 'FACT'"> FACTURA</t>
-                                    <t t-elif="o.fel_tipo_documento == 'FCAM'"> FACTURA CAMBIARIA</t>
-                                    <t t-elif="o.fel_tipo_documento == 'FPEQ'"> FACTURA PEQUEÑO CONTRIBUYENTE</t>
-                                    <t t-elif="o.fel_tipo_documento == 'NCRE'"> NOTA DE CRÉDITO</t>
-                                    <t t-elif="o.fel_tipo_documento == 'NDEB'"> NOTA DE DÉBITO</t>
-                                    <t t-else=""> <span t-field="o.fel_tipo_documento"/></t>
-                                </div>
-                                <div><strong>Serie:</strong> <span t-esc="o.fel_serie or 'Pendiente'"/></div>
-                                <div><strong>Número:</strong> <span t-esc="o.fel_numero or 'Pendiente'"/></div>
-                                <div><strong>Fecha:</strong> <span t-field="o.invoice_date"/></div>
-                                <div t-if="o.fel_fecha_certificacion">
-                                    <strong>Certificación:</strong>
-                                    <span t-field="o.fel_fecha_certificacion" t-options='{"widget": "datetime", "format": "dd/MM/yyyy HH:mm"}'/>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
+               <!-- Encabezado -->
+<div class="row mb-4">
+    <div class="col-8">
+        <div class="p-2" style="background-color:#F5F5F5; border-radius:10px; border-left:6px solid #556B2F;">
+            <div class="row">
+                <div class="col-3">
+                    <img t-if="company.logo"
+                         t-att-src="image_data_uri(company.logo)"
+                         style="max-height:60px; max-width:100%;"/>
                 </div>
+                <div class="col-9">
+                    <h3 class="mb-1" style="color:#556B2F;">
+                        <strong t-field="company.name"/>
+                    </h3>
+
+                    <t t-if="company.x_studio_nombre_comercial">
+                        <p class="mb-1" style="font-size:12px;">
+                            <strong style="color:#F18A1A;">Nombre Comercial:</strong>
+                            <span t-field="company.x_studio_nombre_comercial"/>
+                        </p>
+                    </t>
+
+                    <p class="mb-1" style="font-size:12px;">
+                        <strong style="color:#F18A1A;">Régimen:</strong>
+                        <span>Sujeto a pagos trimestrales</span>
+                    </p>
+
+                    <p class="mb-0" style="font-size:12px;">
+                        <strong>NIT:</strong> <span t-field="company.vat"/><br/>
+                        <strong>Dirección:</strong> <span t-field="company.street"/>
+                        <t t-if="company.city">, <span t-field="company.city"/></t>
+                        <t t-if="company.state_id">, <span t-field="company.state_id.name"/></t>
+                        <br/>
+                        <t t-if="company.phone">
+                            <strong>Tel:</strong> <span t-field="company.phone"/><br/>
+                        </t>
+                        <t t-if="company.email">
+                            <strong>Email:</strong> <span t-field="company.email"/>
+                        </t>
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-4">
+        <div class="p-2 text-center" style="background:linear-gradient(90deg,#F6B500,#F18A1A); color:white; border-radius:10px;">
+            <h4 class="mb-2" style="color:white; font-size:18px;">
+                <strong>
+                    <t t-if="is_certified">DTE FEL</t>
+                    <t t-else="">VISTA PREVIA DTE</t>
+                </strong>
+            </h4>
+
+            <div style="font-size:12px; line-height:1.7;">
+                <div>
+                    <strong>Tipo:</strong>
+                    <t t-if="o.fel_tipo_documento == 'FACT'"> FACTURA</t>
+                    <t t-elif="o.fel_tipo_documento == 'FCAM'"> FACTURA CAMBIARIA</t>
+                    <t t-elif="o.fel_tipo_documento == 'FPEQ'"> FACTURA PEQUEÑO CONTRIBUYENTE</t>
+                    <t t-elif="o.fel_tipo_documento == 'NCRE'"> NOTA DE CRÉDITO</t>
+                    <t t-elif="o.fel_tipo_documento == 'NDEB'"> NOTA DE DÉBITO</t>
+                    <t t-else=""> <span t-field="o.fel_tipo_documento"/></t>
+                </div>
+                <div><strong>Serie:</strong> <span t-esc="o.fel_serie or 'Pendiente'"/></div>
+                <div><strong>Número:</strong> <span t-esc="o.fel_numero or 'Pendiente'"/></div>
+                <div><strong>Fecha:</strong> <span t-field="o.invoice_date"/></div>
+                <div t-if="o.fel_fecha_certificacion">
+                    <strong>Certificación:</strong>
+                    <span t-field="o.fel_fecha_certificacion" t-options='{"widget": "datetime", "format": "dd/MM/yyyy HH:mm"}'/>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
 
                 <!-- UUID y QR -->
                 <div class="row mb-4">
