@@ -167,122 +167,95 @@
                     </div>
                 </div>
 
-               <!-- Encabezado -->
+<!-- ENCABEZADO EN UNA SOLA LÍNEA -->
 <div class="row mb-4">
-    <div class="col-8">
-        <div class="p-2" style="background-color:#F5F5F5; border-radius:10px; border-left:6px solid #556B2F;">
+    <!-- Empresa -->
+    <div class="col-4">
+        <div class="p-2" style="background-color:#F5F5F5; border-radius:10px; border-left:6px solid #556B2F; min-height:145px;">
             <div class="row">
-                <div class="col-3">
+                <div class="col-4 text-center">
                     <img t-if="company.logo"
                          t-att-src="image_data_uri(company.logo)"
-                         style="max-height:60px; max-width:100%;"/>
+                         style="max-height:58px; max-width:100%;"/>
                 </div>
-                <div class="col-9">
-                    <h3 class="mb-1" style="color:#556B2F;">
+                <div class="col-8">
+                    <h4 class="mb-1" style="color:#556B2F; font-size:20px;">
                         <strong t-field="company.name"/>
-                    </h3>
+                    </h4>
 
                     <t t-if="company.x_studio_nombre_comercial">
-                        <p class="mb-1" style="font-size:12px;">
+                        <p class="mb-1" style="font-size:11px;">
                             <strong style="color:#F18A1A;">Nombre Comercial:</strong>
                             <span t-field="company.x_studio_nombre_comercial"/>
                         </p>
                     </t>
 
-                    <p class="mb-1" style="font-size:12px;">
+                    <p class="mb-1" style="font-size:11px;">
                         <strong style="color:#F18A1A;">Régimen:</strong>
                         <span>Sujeto a pagos trimestrales</span>
                     </p>
 
-                    <p class="mb-0" style="font-size:12px;">
+                    <p class="mb-0" style="font-size:11px; line-height:1.4;">
                         <strong>NIT:</strong> <span t-field="company.vat"/><br/>
                         <strong>Dirección:</strong> <span t-field="company.street"/>
                         <t t-if="company.city">, <span t-field="company.city"/></t>
-                        <t t-if="company.state_id">, <span t-field="company.state_id.name"/></t>
-                        <br/>
-                        <t t-if="company.phone">
-                            <strong>Tel:</strong> <span t-field="company.phone"/><br/>
-                        </t>
-                        <t t-if="company.email">
-                            <strong>Email:</strong> <span t-field="company.email"/>
-                        </t>
                     </p>
                 </div>
             </div>
         </div>
     </div>
 
-    <div class="col-4">
-        <div class="p-2 text-center" style="background:linear-gradient(90deg,#F6B500,#F18A1A); color:white; border-radius:10px;">
-            <h4 class="mb-2" style="color:white; font-size:18px;">
-                <strong>
-                    <t t-if="is_certified">DTE FEL</t>
-                    <t t-else="">VISTA PREVIA DTE</t>
-                </strong>
-            </h4>
-
-            <div style="font-size:12px; line-height:1.7;">
-                <div>
-                    <strong>Tipo:</strong>
-                    <t t-if="o.fel_tipo_documento == 'FACT'"> FACTURA</t>
-                    <t t-elif="o.fel_tipo_documento == 'FCAM'"> FACTURA CAMBIARIA</t>
-                    <t t-elif="o.fel_tipo_documento == 'FPEQ'"> FACTURA PEQUEÑO CONTRIBUYENTE</t>
-                    <t t-elif="o.fel_tipo_documento == 'NCRE'"> NOTA DE CRÉDITO</t>
-                    <t t-elif="o.fel_tipo_documento == 'NDEB'"> NOTA DE DÉBITO</t>
-                    <t t-else=""> <span t-field="o.fel_tipo_documento"/></t>
-                </div>
-                <div><strong>Serie:</strong> <span t-esc="o.fel_serie or 'Pendiente'"/></div>
-                <div><strong>Número:</strong> <span t-esc="o.fel_numero or 'Pendiente'"/></div>
-                <div><strong>Fecha:</strong> <span t-field="o.invoice_date"/></div>
-                <div t-if="o.fel_fecha_certificacion">
-                    <strong>Certificación:</strong>
-                    <span t-field="o.fel_fecha_certificacion" t-options='{"widget": "datetime", "format": "dd/MM/yyyy HH:mm"}'/>
-                </div>
+    <!-- UUID / AUTORIZACIÓN -->
+    <div class="col-5">
+        <div class="p-2 text-center" style="background-color:#F5F5F5; border:2px solid #F18A1A; border-radius:10px; min-height:145px;">
+            <div style="font-size:13px; color:#556B2F; font-weight:bold; margin-bottom:8px;">
+                NÚMERO DE AUTORIZACIÓN FEL
             </div>
+
+            <t t-if="o.fel_uuid">
+                <div style="font-family:monospace; font-size:12px; color:#2c3e50; word-break:break-word; line-height:1.4;">
+                    <span t-field="o.fel_uuid"/>
+                </div>
+
+                <div class="mt-2" style="font-size:11px;">
+                    <strong style="color:#556B2F;">Serie:</strong>
+                    <span t-esc="o.fel_serie or '-'"/>
+                    <span> | </span>
+                    <strong style="color:#556B2F;">Número:</strong>
+                    <span t-esc="o.fel_numero or '-'"/>
+                </div>
+
+                <div class="mt-1" style="font-size:11px;">
+                    <strong style="color:#556B2F;">Fecha:</strong>
+                    <span t-field="o.invoice_date"/>
+                </div>
+            </t>
+            <t t-else="">
+                <div style="padding-top:35px; color:#856404; font-size:12px;">
+                    Pendiente de certificación
+                </div>
+            </t>
+        </div>
+    </div>
+
+    <!-- QR -->
+    <div class="col-3">
+        <div class="p-2 text-center" style="background-color:#FFFFFF; border:1px solid #dee2e6; border-radius:10px; min-height:145px;">
+            <t t-if="is_certified and o.fel_uuid">
+                <img t-att-src="'/report/barcode/?barcode_type=QR&amp;value=%s&amp;width=180&amp;height=180' % qr_text"
+                     style="width:95px; height:95px;"/>
+                <div style="font-size:10px; color:#556B2F; margin-top:4px;">
+                    <strong>QR FEL</strong>
+                </div>
+            </t>
+            <t t-else="">
+                <div style="font-size:11px; color:#856404; padding-top:45px;">
+                    QR disponible al certificar
+                </div>
+            </t>
         </div>
     </div>
 </div>
-
-                <!-- UUID y QR -->
-                <div class="row mb-4">
-                    <div class="col-8">
-                        <div class="p-3 text-center" style="background-color:#F5F5F5; border:2px solid #F18A1A; border-radius:8px; min-height:130px;">
-                            <strong style="color:#556B2F;">NÚMERO DE AUTORIZACIÓN (UUID):</strong><br/>
-                            <t t-if="o.fel_uuid">
-                                <span style="font-family:monospace; font-size:14px; letter-spacing:1px;" t-field="o.fel_uuid"/>
-                                <div class="mt-2">
-                                    <strong style="font-size:11px; color:#556B2F;">Serie:</strong>
-                                    <span t-esc="o.fel_serie or '-'"/>
-                                    <span> | </span>
-                                    <strong style="font-size:11px; color:#556B2F;">Número:</strong>
-                                    <span t-esc="o.fel_numero or '-'"/>
-                                </div>
-                            </t>
-                            <t t-else="">
-                                <div style="padding-top:28px; color:#856404;">
-                                    Pendiente de certificación
-                                </div>
-                            </t>
-                        </div>
-                    </div>
-
-                    <div class="col-4 text-center">
-                        <div class="p-2" style="background-color:#FFFFFF; border:1px solid #dee2e6; border-radius:8px; min-height:130px;">
-                            <t t-if="is_certified and o.fel_uuid">
-                                <img t-att-src="'/report/barcode/?barcode_type=QR&amp;value=%s&amp;width=180&amp;height=180' % qr_text"
-                                     style="width:115px; height:115px;"/>
-                                <div style="font-size:10px; color:#556B2F;">
-                                    <strong>QR FEL</strong>
-                                </div>
-                            </t>
-                            <t t-else="">
-                                <div style="font-size:11px; color:#856404; padding-top:40px;">
-                                    QR disponible al certificar
-                                </div>
-                            </t>
-                        </div>
-                    </div>
-                </div>
 
                 <!-- Receptor -->
                 <div class="row mb-4">
