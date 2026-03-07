@@ -168,8 +168,10 @@
                         <div class="company-info p-3" style="background-color:#F5F5F5; border-radius:10px; border-left:6px solid #556B2F;">
                             <div class="row">
                                 <div class="col-3">
-                                    <img t-att-src="'/modulo_infile/static/src/img/logo_siproc.png'" style="max-height:70px; max-width:100%;"/>
-                                </div>
+                                    <img t-if="company.logo"
+                                     t-att-src="image_data_uri(company.logo)"
+                                     style="max-height:70px; max-width:100%;"/>
+                                    </div>
                                 <div class="col-9">
                                     <h3 class="mb-1" style="color:#556B2F;">
                                         <strong t-field="company.name"/>
