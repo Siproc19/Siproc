@@ -195,11 +195,13 @@
                         <span>Sujeto a pagos trimestrales</span>
                     </p>
 
-                    <p class="mb-0" style="font-size:11px; line-height:1.4;">
-                        <strong>NIT:</strong> <span t-field="company.vat"/><br/>
-                        <strong>Dirección:</strong> <span t-field="company.street"/>
-                        <t t-if="company.city">, <span t-field="company.city"/></t>
-                    </p>
+                 <p class="mb-0" style="font-size:11px; line-height:1.4;">
+    <strong>NIT:</strong> <span t-field="company.vat"/><br/>
+    <strong>Dirección:</strong> 
+    <span t-field="company.street"/>
+    <t t-if="company.city">, <span t-field="company.city"/></t>
+    <t t-if="company.country_id">, <span t-field="company.country_id.name"/></t>
+</p>
                 </div>
             </div>
         </div>
