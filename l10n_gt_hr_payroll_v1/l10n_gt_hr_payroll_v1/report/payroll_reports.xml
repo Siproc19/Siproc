@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="action_report_gt_liquidation" model="ir.actions.report">
+        <field name="name">GT Liquidation</field>
+        <field name="model">l10n_gt.liquidation</field>
+        <field name="report_type">qweb-pdf</field>
+        <field name="report_name">l10n_gt_hr_payroll_v1.report_gt_liquidation_document</field>
+        <field name="report_file">l10n_gt_hr_payroll_v1.report_gt_liquidation_document</field>
+        <field name="binding_model_id" ref="model_l10n_gt_liquidation"/>
+        <field name="binding_type">report</field>
+    </record>
+</odoo>

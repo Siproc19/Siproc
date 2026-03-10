@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_employee_form_gt_payroll" model="ir.ui.view">
+        <field name="name">hr.employee.form.gt.payroll</field>
+        <field name="model">hr.employee</field>
+        <field name="inherit_id" ref="hr.view_employee_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//sheet/notebook" position="inside">
+                <page string="GT Payroll">
+                    <group>
+                        <group string="Identification">
+                            <field name="gt_dpi"/>
+                            <field name="gt_nit"/>
+                            <field name="gt_igss_number"/>
+                            <field name="gt_employee_type"/>
+                        </group>
+                        <group string="Employment">
+                            <field name="gt_hire_date"/>
+                            <field name="gt_labor_status"/>
+                            <field name="gt_termination_date"/>
+                            <field name="gt_termination_reason"/>
+                            <field name="gt_cost_center_id"/>
+                        </group>
+                    </group>
+                    <group>
+                        <group string="Payment">
+                            <field name="gt_bank_id"/>
+                            <field name="gt_bank_account"/>
+                            <field name="gt_payment_method"/>
+                        </group>
+                    </group>
+                </page>
+            </xpath>
+        </field>
+    </record>
+</odoo>

@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <menuitem id="menu_gt_payroll_root"
+              name="GT Payroll"
+              parent="hr_payroll.menu_hr_payroll_root"
+              sequence="90"
+              groups="l10n_gt_hr_payroll_v1.group_gt_payroll_user"/>
+
+    <menuitem id="menu_gt_payroll_operations"
+              name="Operations"
+              parent="menu_gt_payroll_root"
+              sequence="10"
+              groups="l10n_gt_hr_payroll_v1.group_gt_payroll_user"/>
+
+    <menuitem id="menu_gt_payroll_config"
+              name="Configuration"
+              parent="menu_gt_payroll_root"
+              sequence="90"
+              groups="l10n_gt_hr_payroll_v1.group_gt_payroll_manager"/>
+
+    <menuitem id="menu_gt_payroll_parameters"
+              name="Legal Parameters"
+              parent="menu_gt_payroll_config"
+              action="action_gt_payroll_parameters"
+              sequence="10"/>
+
+    <menuitem id="menu_gt_payroll_overtime"
+              name="Overtime"
+              parent="menu_gt_payroll_operations"
+              action="action_gt_overtime"
+              sequence="20"/>
+
+    <menuitem id="menu_gt_payroll_liquidations"
+              name="Liquidations"
+              parent="menu_gt_payroll_operations"
+              action="action_gt_liquidations"
+              sequence="30"/>
+</odoo>
