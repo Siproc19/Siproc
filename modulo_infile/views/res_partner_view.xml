@@ -10,18 +10,6 @@
                 <field name="cui"/>
             </xpath>
 
-            <xpath expr="//field[@name='vat']" position="after">
-                <button name="action_consultar_nit"
-                        type="object"
-                        string="Consultar NIT"
-                        class="btn btn-primary"/>
-
-                <button name="action_consultar_cui"
-                        type="object"
-                        string="Consultar DPI / CUI"
-                        class="btn btn-secondary"/>
-            </xpath>
-
         </field>
     </record>
 </odoo>
