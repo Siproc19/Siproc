@@ -2,14 +2,7 @@
 <odoo>
     <menuitem id="menu_gt_payroll_root"
               name="GT Payroll"
-              parent="hr_payroll.menu_hr_payroll_root"
               sequence="90"
-              groups="l10n_gt_hr_payroll_odoo19.group_gt_payroll_user"/>
-
-    <menuitem id="menu_gt_payroll_operations"
-              name="Operations"
-              parent="menu_gt_payroll_root"
-              sequence="10"
               groups="l10n_gt_hr_payroll_odoo19.group_gt_payroll_user"/>
 
     <menuitem id="menu_gt_payroll_config"
@@ -26,13 +19,13 @@
 
     <menuitem id="menu_gt_payroll_overtime"
               name="Overtime"
-              parent="menu_gt_payroll_operations"
+              parent="menu_gt_payroll_root"
               action="action_gt_overtime"
               sequence="20"/>
 
     <menuitem id="menu_gt_payroll_liquidations"
               name="Liquidations"
-              parent="menu_gt_payroll_operations"
+              parent="menu_gt_payroll_root"
               action="action_gt_liquidations"
               sequence="30"/>
 </odoo>
