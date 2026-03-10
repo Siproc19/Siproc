@@ -22,12 +22,11 @@ Usa hr.version como base contractual en vez de hr.contract.
         "account",
         "mail",
     ],
- "data": [
+"data": [
     "security/security.xml",
     "security/ir.model.access.csv",
 
     "data/sequence.xml",
-    "data/payroll_categories.xml",
     "data/work_entry_types.xml",
     "data/salary_rule_parameters.xml",
     "data/salary_structures.xml",
@@ -43,7 +42,6 @@ Usa hr.version como base contractual en vez de hr.contract.
 
     "report/payroll_reports.xml",
     "views/report_templates.xml",
-
     "views/menu.xml",
 ],
     "demo": [],
