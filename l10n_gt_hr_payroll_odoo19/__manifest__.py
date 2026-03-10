@@ -32,7 +32,6 @@ Usa hr.version como base contractual en vez de hr.contract.
 
     "views/res_company_views.xml",
     "views/hr_employee_views.xml",
-    "views/hr_contract_views.xml",
     "views/hr_leave_views.xml",
     "views/hr_payslip_views.xml",
     "views/payroll_parameter_views.xml",
