@@ -64,9 +64,9 @@
         </field>
     </record>
 
-    <record id="action_gt_liquidations" model="ir.actions.act_window">
-        <field name="name">GT Liquidations</field>
-        <field name="res_model">l10n_gt.liquidation</field>
-        <field name="view_mode">tree,form</field>
-    </record>
+  <record id="action_gt_liquidations" model="ir.actions.act_window">
+    <field name="name">Liquidations</field>
+    <field name="res_model">l10n_gt.liquidation</field>
+    <field name="view_mode">list,form</field>
+</record>
 </odoo>
