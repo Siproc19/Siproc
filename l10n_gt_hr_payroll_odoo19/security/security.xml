@@ -2,17 +2,14 @@
 <odoo>
     <record id="group_gt_payroll_user" model="res.groups">
         <field name="name">GT Payroll User</field>
-        <field name="category_id" ref="base.module_category_human_resources"/>
     </record>
 
     <record id="group_gt_payroll_manager" model="res.groups">
         <field name="name">GT Payroll Manager</field>
-        <field name="category_id" ref="base.module_category_human_resources"/>
         <field name="implied_ids" eval="[(4, ref('l10n_gt_hr_payroll_odoo19.group_gt_payroll_user'))]"/>
     </record>
 
     <record id="group_gt_payroll_auditor" model="res.groups">
         <field name="name">GT Payroll Auditor</field>
-        <field name="category_id" ref="base.module_category_human_resources"/>
     </record>
 </odoo>
