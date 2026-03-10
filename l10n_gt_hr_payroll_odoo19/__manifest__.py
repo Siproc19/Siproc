@@ -1,0 +1,46 @@
+# -*- coding: utf-8 -*-
+{
+    "name": "Guatemala Payroll Localization (Odoo 19)",
+    "version": "19.0.2.0.0",
+    "summary": "Payroll localization draft for Guatemala adapted to Odoo 19 stack",
+    "description": """
+Base de localización de nómina para Guatemala adaptada al stack observado en Odoo 19.
+Usa hr.version como base contractual en vez de hr.contract.
+""",
+    "author": "OpenAI - Draft Base",
+    "website": "https://www.odoo.com",
+    "license": "OEEL-1",
+    "category": "Human Resources/Payroll",
+    "depends": [
+        "hr",
+        "hr_contract_salary",
+        "hr_contract_salary_payroll",
+        "hr_contract_salary_holidays",
+        "hr_holidays",
+        "hr_attendance",
+        "hr_payroll",
+        "account",
+        "mail",
+    ],
+    "data": [
+        "security/security.xml",
+        "security/ir.model.access.csv",
+        "data/sequence.xml",
+        "data/work_entry_types.xml",
+        "data/salary_rule_parameters.xml",
+        "views/menu.xml",
+        "views/res_company_views.xml",
+        "views/hr_employee_views.xml",
+        "views/hr_version_views.xml",
+        "views/hr_leave_views.xml",
+        "views/hr_payslip_views.xml",
+        "views/payroll_parameter_views.xml",
+        "views/overtime_views.xml",
+        "views/liquidation_views.xml",
+        "report/payroll_reports.xml",
+        "report/report_templates.xml",
+    ],
+    "demo": [],
+    "installable": True,
+    "application": False,
+}
