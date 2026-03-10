@@ -29,7 +29,6 @@ Usa hr.version como base contractual en vez de hr.contract.
     "data/sequence.xml",
     "data/work_entry_types.xml",
     "data/salary_rule_parameters.xml",
-    "data/salary_structures.xml",
 
     "views/res_company_views.xml",
     "views/hr_employee_views.xml",
