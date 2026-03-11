@@ -1,28 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
     <menuitem id="menu_gt_payroll_root"
-              name="GT Payroll"
-              sequence="90"
-              groups="l10n_gt_hr_payroll_odoo19.group_gt_payroll_user"/>
-
-    <menuitem id="menu_gt_payroll_config"
-              name="Configuration"
-              parent="menu_gt_payroll_root"
-              sequence="90"
-              groups="l10n_gt_hr_payroll_odoo19.group_gt_payroll_manager"/>
-
-    <menuitem id="menu_gt_payroll_parameters"
-              name="Legal Parameters"
-              parent="menu_gt_payroll_config"
-              sequence="10"/>
-
-    <menuitem id="menu_gt_payroll_overtime"
-              name="Overtime"
-              parent="menu_gt_payroll_root"
-              sequence="20"/>
-
-    <menuitem id="menu_gt_payroll_liquidations"
-              name="Liquidations"
-              parent="menu_gt_payroll_root"
-              sequence="30"/>
+              name="Guatemala Payroll"
+              sequence="90"/>
 </odoo>
