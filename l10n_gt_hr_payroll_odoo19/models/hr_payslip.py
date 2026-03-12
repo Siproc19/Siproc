@@ -6,14 +6,10 @@ from odoo import fields, models
 class HrPayslip(models.Model):
     _inherit = "hr.payslip"
 
-    gt_payroll_type = fields.Selection([
-        ("ordinary", "Ordinary"),
-        ("extraordinary", "Extraordinary"),
-        ("aguinaldo", "Aguinaldo"),
-        ("bono14", "Bono 14"),
-        ("liquidation", "Liquidation"),
-        ("adjustment", "Adjustment"),
-    ], default="ordinary", required=True)
+    is_gt_vacation = fields.Boolean(string="Vacación GT")
+is_gt_igss_suspension = fields.Boolean(string="Suspensión IGSS")
+is_gt_paid_license = fields.Boolean(string="Licencia con goce")
+is_gt_unpaid_license = fields.Boolean(string="Licencia sin goce")
     gt_explain_json = fields.Text(readonly=True)
     gt_liquidation_id = fields.Many2one("l10n_gt.liquidation", readonly=True)
 
