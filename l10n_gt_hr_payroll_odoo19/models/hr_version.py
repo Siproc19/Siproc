@@ -40,23 +40,15 @@ class HrVersion(models.Model):
         string="Cuenta analítica"
     )
 
-    @api.depends("monthly_wage", "wage")
+    @api.depends("wage")
     def _compute_gt_salary_daily(self):
         for rec in self:
-            monthly = 0.0
-            if "monthly_wage" in rec._fields and rec.monthly_wage:
-                monthly = rec.monthly_wage
-            elif "wage" in rec._fields and rec.wage:
-                monthly = rec.wage
+            monthly = rec.wage or 0.0
             rec.gt_salary_daily = monthly / 30.0 if monthly else 0.0
 
     def _get_gt_monthly_wage(self):
         self.ensure_one()
-        if "monthly_wage" in self._fields and self.monthly_wage:
-            return self.monthly_wage
-        if "wage" in self._fields and self.wage:
-            return self.wage
-        return 0.0
+        return self.wage or 0.0
 
     def _get_gt_start_date(self):
         self.ensure_one()
