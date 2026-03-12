@@ -7,38 +7,38 @@ class HrEmployee(models.Model):
 
     gt_dpi = fields.Char(string="DPI")
     gt_nit = fields.Char(string="NIT")
-    gt_igss_number = fields.Char(string="IGSS Number")
+    gt_igss_number = fields.Char(string="Número de afiliación IGSS")
     gt_employee_type = fields.Selection([
-        ("administrative", "Administrative"),
-        ("operative", "Operative"),
-        ("sales", "Sales"),
-        ("temporary", "Temporary"),
-        ("other", "Other"),
-    ], string="GT Employee Type")
-    gt_bank_id = fields.Many2one("res.bank", string="Bank")
-    gt_bank_account = fields.Char(string="Bank Account")
+        ("administrative", "Administrativo"),
+        ("operative", "Operativo"),
+        ("sales", "Ventas"),
+        ("temporary", "Temporal"),
+        ("other", "Otro"),
+    ], string="Tipo de empleado")
+    gt_bank_id = fields.Many2one("res.bank", string="Banco")
+    gt_bank_account = fields.Char(string="Cuenta bancaria")
     gt_payment_method = fields.Selection([
-        ("bank_transfer", "Bank Transfer"),
-        ("cash", "Cash"),
-        ("check", "Check"),
-        ("other", "Other"),
-    ], default="bank_transfer")
-    gt_cost_center_id = fields.Many2one("account.analytic.account", string="Cost Center")
+        ("bank_transfer", "Transferencia bancaria"),
+        ("cash", "Efectivo"),
+        ("check", "Cheque"),
+        ("other", "Otro"),
+    ], string="Método de pago", default="bank_transfer")
+    gt_cost_center_id = fields.Many2one("account.analytic.account", string="Centro de costo")
     gt_labor_status = fields.Selection([
-        ("active", "Active"),
-        ("suspended", "Suspended"),
-        ("terminated", "Terminated"),
-    ], default="active")
-    gt_hire_date = fields.Date(string="Hire Date")
-    gt_termination_date = fields.Date(string="Termination Date")
+        ("active", "Activo"),
+        ("suspended", "Suspendido"),
+        ("terminated", "Finalizado"),
+    ], string="Estado laboral", default="active")
+    gt_hire_date = fields.Date(string="Fecha de ingreso")
+    gt_termination_date = fields.Date(string="Fecha de egreso")
     gt_termination_reason = fields.Selection([
-        ("resignation", "Resignation"),
-        ("dismissal", "Dismissal"),
-        ("mutual_agreement", "Mutual Agreement"),
-        ("end_contract", "End of Contract"),
-        ("death", "Death"),
-        ("other", "Other"),
-    ], string="Termination Reason")
+        ("resignation", "Renuncia"),
+        ("dismissal", "Despido"),
+        ("mutual_agreement", "Mutuo acuerdo"),
+        ("end_contract", "Fin de contrato"),
+        ("death", "Fallecimiento"),
+        ("other", "Otro"),
+    ], string="Motivo de baja")
 
     def _get_gt_active_version(self):
         self.ensure_one()
