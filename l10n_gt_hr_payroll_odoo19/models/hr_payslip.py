@@ -14,13 +14,13 @@ class HrPayslip(models.Model):
         ("adjustment", "Ajuste"),
     ], string="Tipo de planilla", default="ordinary", required=True)
 
-    gt_explain_json = fields.Text(
-        string="Explicación de cálculo",
-        readonly=True
-    )
-
+    gt_explain_json = fields.Text(string="Explicación de cálculo", readonly=True)
     gt_liquidation_id = fields.Many2one(
         "l10n_gt.liquidation",
         string="Liquidación asociada",
         readonly=True
     )
+
+    def action_refresh_gt_explanation(self):
+        for rec in self:
+            rec.gt_explain_json = "Explicación pendiente de configurar."
