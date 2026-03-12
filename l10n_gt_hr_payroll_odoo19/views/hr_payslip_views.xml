@@ -1,22 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
 
-    <!-- Vista heredada de recibo de nómina -->
     <record id="view_hr_payslip_form_gt_payroll" model="ir.ui.view">
         <field name="name">hr.payslip.form.gt.payroll</field>
         <field name="model">hr.payslip</field>
         <field name="inherit_id" ref="hr_payroll.view_hr_payslip_form"/>
         <field name="arch" type="xml">
 
-            <!-- Agrega botón en encabezado para recalcular explicación -->
-            <xpath expr="//header" position="inside">
-                <button name="action_refresh_gt_explanation"
-                        type="object"
-                        string="Actualizar explicación GT"
-                        class="btn-primary"/>
-            </xpath>
-
-            <!-- Agrega grupo de datos GT dentro del formulario -->
             <xpath expr="//sheet/notebook" position="inside">
                 <page string="Planilla Guatemala">
                     <group>
