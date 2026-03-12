@@ -10,15 +10,24 @@
         "hr_attendance",
         "account",
     ],
-    "data": [
-        "security/security.xml",
-        "security/ir.model.access.csv",
+   "data": [
+    "security/security.xml",
+    "security/ir.model.access.csv",
 
-        "views/hr_employee_views.xml",
-        "views/hr_version_views.xml",
-        "views/res_company_views.xml",
-        "views/menu.xml",
-    ],
+    "data/sequence.xml",
+    "data/work_entry_types.xml",
+    "data/salary_rule_parameters.xml",
+
+    "views/hr_employee_views.xml",
+    "views/hr_version_views.xml",
+    "views/hr_leave_views.xml",
+    "views/hr_payslip_views.xml",
+    "views/payroll_parameter_views.xml",
+    "views/overtime_views.xml",
+    "views/liquidation_views.xml",
+    "views/res_company_views.xml",
+    "views/menu.xml",
+],
     "installable": True,
     "application": True,
 }
