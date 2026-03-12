@@ -47,8 +47,8 @@
         </field>
     </record>
 
-    <record id="action_gt_payroll_parameters" model="ir.actions.act_window">
-    <field name="name">GT Payroll Parameters</field>
+<record id="action_gt_payroll_parameters" model="ir.actions.act_window">
+    <field name="name">Parámetros de planilla GT</field>
     <field name="res_model">l10n_gt.payroll.parameter</field>
     <field name="view_mode">list,form</field>
 </record>
