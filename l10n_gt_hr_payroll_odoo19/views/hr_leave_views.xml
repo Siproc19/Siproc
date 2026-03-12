@@ -5,7 +5,6 @@
         <field name="name">hr.leave.type.form.gt.payroll</field>
         <field name="model">hr.leave.type</field>
         <field name="inherit_id" ref="hr_holidays.edit_holiday_status_form"/>
-
         <field name="arch" type="xml">
             <xpath expr="//sheet/group" position="inside">
                 <group string="Planilla Guatemala">
@@ -18,4 +17,4 @@
         </field>
     </record>
 
-</odoo>>
+</odoo>
