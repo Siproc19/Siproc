@@ -5,11 +5,10 @@ from odoo import fields, models
 class HrLeaveType(models.Model):
     _inherit = "hr.leave.type"
 
-    is_gt_vacation = fields.Boolean(string="GT Vacation")
-    is_gt_igss_suspension = fields.Boolean(string="GT IGSS Suspension")
-    is_gt_paid_license = fields.Boolean(string="GT Paid License")
-    is_gt_unpaid_license = fields.Boolean(string="GT Unpaid License")
-
+    is_gt_vacation = fields.Boolean(string="Vacación GT")
+is_gt_igss_suspension = fields.Boolean(string="Suspensión IGSS")
+is_gt_paid_license = fields.Boolean(string="Licencia con goce")
+is_gt_unpaid_license = fields.Boolean(string="Licencia sin goce")
 
 class HrLeave(models.Model):
     _inherit = "hr.leave"
