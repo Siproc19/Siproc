@@ -1,0 +1,171 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="delivery_route_view_tree" model="ir.ui.view">
+        <field name="name">delivery.route.tree</field>
+        <field name="model">delivery.route</field>
+        <field name="arch" type="xml">
+            <list string="Rutas">
+                <field name="name"/>
+                <field name="date"/>
+                <field name="vehicle_id"/>
+                <field name="driver_id"/>
+                <field name="state"/>
+                <field name="total_deliveries"/>
+                <field name="delivered_deliveries"/>
+                <field name="pending_deliveries"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="delivery_route_view_form" model="ir.ui.view">
+        <field name="name">delivery.route.form</field>
+        <field name="model">delivery.route</field>
+        <field name="arch" type="xml">
+            <form string="Ruta de Entrega">
+                <header>
+                    <button name="action_plan" type="object" string="Planificar" class="btn-primary" invisible="state != 'draft'"/>
+                    <button name="action_start" type="object" string="Iniciar Ruta" class="btn-primary" invisible="state not in ('planned')"/>
+                    <button name="action_done" type="object" string="Completar" invisible="state not in ('in_progress','partial')"/>
+                    <button name="action_cancel" type="object" string="Cancelar" invisible="state in ('done','cancelled')"/>
+                    <field name="state" widget="statusbar" statusbar_visible="draft,planned,in_progress,partial,done,cancelled"/>
+                </header>
+
+                <sheet>
+                    <group>
+                        <group>
+                            <field name="name" readonly="1"/>
+                            <field name="date"/>
+                            <field name="vehicle_id"/>
+                            <field name="driver_id"/>
+                        </group>
+                        <group>
+                            <field name="warehouse_id"/>
+                            <field name="company_id"/>
+                            <field name="start_datetime" readonly="1"/>
+                            <field name="end_datetime" readonly="1"/>
+                        </group>
+                    </group>
+
+                    <group string="Ubicación Actual">
+                        <group>
+                            <field name="current_latitude" readonly="1"/>
+                            <field name="current_longitude" readonly="1"/>
+                            <field name="last_gps_datetime" readonly="1"/>
+                        </group>
+                    </group>
+
+                    <group string="Resumen">
+                        <group>
+                            <field name="total_deliveries" readonly="1"/>
+                            <field name="delivered_deliveries" readonly="1"/>
+                            <field name="pending_deliveries" readonly="1"/>
+                        </group>
+                    </group>
+
+                    <notebook>
+                        <page string="Puntos de Entrega">
+                            <field name="line_ids">
+                                <list editable="bottom">
+                                    <field name="sequence" widget="handle"/>
+                                    <field name="partner_id"/>
+                                    <field name="sale_order_id"/>
+                                    <field name="picking_id"/>
+                                    <field name="delivery_address"/>
+                                    <field name="planned_latitude"/>
+                                    <field name="planned_longitude"/>
+                                    <field name="delivery_status"/>
+                                    <button name="action_set_on_the_way" type="object" string="En camino"/>
+                                    <button name="action_mark_delivered" type="object" string="Entregado"/>
+                                </list>
+                                <form string="Punto de Entrega">
+                                    <sheet>
+                                        <group>
+                                            <group>
+                                                <field name="sequence"/>
+                                                <field name="partner_id"/>
+                                                <field name="sale_order_id"/>
+                                                <field name="picking_id"/>
+                                                <field name="delivery_status"/>
+                                            </group>
+                                            <group>
+                                                <field name="receiver_name"/>
+                                                <field name="delivered_at" readonly="1"/>
+                                                <field name="distance_from_point_km" readonly="1"/>
+                                            </group>
+                                        </group>
+
+                                        <group string="Ubicación Planificada">
+                                            <group>
+                                                <field name="delivery_address"/>
+                                                <field name="city"/>
+                                                <field name="state_name"/>
+                                                <field name="country_id"/>
+                                                <field name="reference"/>
+                                            </group>
+                                            <group>
+                                                <field name="planned_latitude"/>
+                                                <field name="planned_longitude"/>
+                                            </group>
+                                        </group>
+
+                                        <group string="Ubicación de Entrega">
+                                            <group>
+                                                <field name="delivered_latitude" readonly="1"/>
+                                                <field name="delivered_longitude" readonly="1"/>
+                                                <field name="delivery_notes"/>
+                                            </group>
+                                        </group>
+
+                                        <group string="Evidencia">
+                                            <group>
+                                                <field name="proof_image" filename="proof_image_filename" widget="image"/>
+                                                <field name="proof_image_filename" invisible="1"/>
+                                            </group>
+                                            <group>
+                                                <field name="signature" filename="signature_filename" widget="image"/>
+                                                <field name="signature_filename" invisible="1"/>
+                                            </group>
+                                        </group>
+
+                                        <footer>
+                                            <button name="action_set_on_the_way" type="object" string="En camino" class="btn-secondary"/>
+                                            <button name="action_mark_delivered" type="object" string="Marcar Entregado" class="btn-primary"/>
+                                            <button name="action_mark_rejected" type="object" string="Rechazado"/>
+                                            <button name="action_mark_not_found" type="object" string="No localizado"/>
+                                            <button name="action_mark_rescheduled" type="object" string="Reprogramado"/>
+                                        </footer>
+                                    </sheet>
+                                </form>
+                            </field>
+                        </page>
+
+                        <page string="Historial GPS">
+                            <field name="gps_log_ids" readonly="1">
+                                <list>
+                                    <field name="gps_datetime"/>
+                                    <field name="vehicle_id"/>
+                                    <field name="driver_id"/>
+                                    <field name="latitude"/>
+                                    <field name="longitude"/>
+                                    <field name="speed"/>
+                                    <field name="note"/>
+                                </list>
+                            </field>
+                        </page>
+
+                        <page string="Observaciones">
+                            <field name="note"/>
+                        </page>
+                    </notebook>
+                </sheet>
+                <chatter/>
+            </form>
+        </field>
+    </record>
+
+    <record id="delivery_route_action" model="ir.actions.act_window">
+        <field name="name">Rutas de Entrega</field>
+        <field name="res_model">delivery.route</field>
+        <field name="view_mode">list,form</field>
+    </record>
+</odoo>
