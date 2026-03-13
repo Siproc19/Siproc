@@ -5,11 +5,11 @@
     "description": """
 Módulo de logística de entregas para Odoo 19.
 - Rutas de entrega
-- Vehículos tipo panel/camión
-- Pilotos o repartidores
+- Vehículos
+- Pilotos
 - Geolocalización
-- Confirmación de entrega
-- Integración con inventario
+- Rastreo
+- Integración con inventario y orden de venta
     """,
     "author": "SIPROC",
     "website": "https://www.siprocgt.com",
@@ -19,6 +19,7 @@ Módulo de logística de entregas para Odoo 19.
         "base",
         "mail",
         "stock",
+        "sale_management",
         "hr",
         "web",
     ],
@@ -28,6 +29,7 @@ Módulo de logística de entregas para Odoo 19.
         "views/delivery_vehicle_views.xml",
         "views/delivery_driver_views.xml",
         "views/delivery_route_views.xml",
+        "views/sale_order_views.xml",
         "views/stock_picking_views.xml",
         "views/menu_views.xml",
     ],
