@@ -2,11 +2,7 @@
 <odoo>
     <menuitem id="delivery_logistics_root_menu"
               name="Logística Entregas"
-              sequence="10"
-              groups="siproc_delivery_logistics.group_delivery_logistics_admin,
-                      siproc_delivery_logistics.group_delivery_logistics_coordinator,
-                      siproc_delivery_logistics.group_delivery_logistics_driver,
-                      siproc_delivery_logistics.group_delivery_logistics_sales"/>
+              sequence="10"/>
 
     <menuitem id="delivery_route_menu"
               name="Rutas"
