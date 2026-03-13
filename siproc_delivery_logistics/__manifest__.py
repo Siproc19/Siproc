@@ -35,6 +35,8 @@ Módulo de logística de entregas para Odoo 19.
     ],
     "assets": {
         "web.assets_backend": [
+            "siproc_delivery_logistics/static/lib/leaflet/leaflet.css",
+            "siproc_delivery_logistics/static/lib/leaflet/leaflet.js",
             "siproc_delivery_logistics/static/src/js/gps_tracker.js",
             "siproc_delivery_logistics/static/src/js/delivery_map_action.js",
             "siproc_delivery_logistics/static/src/xml/delivery_map_templates.xml",
