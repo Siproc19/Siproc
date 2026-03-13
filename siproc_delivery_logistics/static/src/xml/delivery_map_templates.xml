@@ -1,11 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <templates xml:space="preserve">
     <t t-name="siproc_delivery_logistics.DeliveryMapAction">
-        <div class="o_delivery_map_screen" style="height:100%; display:flex; flex-direction:column;">
-            <div style="padding:12px; display:flex; gap:8px; flex-wrap:wrap;">
-                <button class="btn btn-primary" t-on-click="takeLocationNow">Tomar ubicación</button>
-                <button class="btn btn-success" t-on-click="startTracking" t-if="!state.tracking">Iniciar rastreo</button>
-                <button class="btn btn-warning" t-on-click="stopTracking" t-if="state.tracking">Detener rastreo</button>
+        <div style="height:100%; display:flex; flex-direction:column;">
+            <div style="padding:12px; font-weight:bold;">
+                Mapa de Reparto
             </div>
             <div id="delivery_route_map" style="flex:1; min-height:500px;"></div>
         </div>
