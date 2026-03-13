@@ -104,6 +104,24 @@ export class DeliveryMapAction extends Component {
                 `);
         }
     }
+
+    async takeLocationNow() {
+        this.notification.add("Función Tomar ubicación aún en construcción.", {
+            type: "info",
+        });
+    }
+
+    startTracking() {
+        this.notification.add("Función Iniciar rastreo aún en construcción.", {
+            type: "info",
+        });
+    }
+
+    stopTracking() {
+        this.notification.add("Función Detener rastreo aún en construcción.", {
+            type: "info",
+        });
+    }
 }
 
 registry.category("actions").add(
