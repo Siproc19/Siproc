@@ -2,7 +2,7 @@
 <odoo>
     <menuitem id="delivery_logistics_root_menu"
               name="Logística Entregas"
-              parent="stock.menu_stock_warehouse_mgmt"
+              parent="stock.menu_stock_root"
               sequence="80"/>
 
     <menuitem id="delivery_route_menu"
