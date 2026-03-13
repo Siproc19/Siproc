@@ -1,0 +1,661 @@
+/* estilos requeridos */
+
+.panel-hoja,
+.hoja-mosaico,
+.icono-marcador-folleto,
+.leaflet-marker-shadow,
+.leaflet-tile-container,
+.leaflet-pane > svg,
+.leaflet-pane > lienzo,
+.leaflet-zoom-box,
+.leaflet-image-layer,
+.leaflet-layer {
+	posición: absoluta;
+	izquierda: 0;
+	superior: 0;
+	}
+.leaflet-container {
+	desbordamiento: oculto;
+	}
+.hoja-mosaico,
+.icono-marcador-folleto,
+.leaflet-marker-shadow {
+	-webkit-user-select: ninguno;
+	   -moz-user-select: ninguno;
+	        selección del usuario: ninguna;
+	  -webkit-user-drag: ninguno;
+	}
+/* Evita que IE11 resalte los mosaicos en azul */
+.leaflet-tile::selección {
+	fondo: transparente;
+}
+/* Safari muestra mejor los mosaicos que no son Retina en pantallas Retina con esto, pero Chrome lo hace peor */
+.leaflet-safari .leaflet-tile {
+	representación de imágenes: -webkit-optimize-contrast;
+	}
+/* truco que evita que las capas hw se "estiren" al cargar nuevos mosaicos */
+.leaflet-safari .leaflet-tile-container {
+	ancho: 1600px;
+	altura: 1600px;
+	-webkit-transform-origin: 0 0;
+	}
+.icono-marcador-folleto,
+.leaflet-marker-shadow {
+	mostrar: bloque;
+	}
+/* .leaflet-container svg: restablece la declaración de ancho máximo de svg incluida en Joomla! (joomla.org) 3.x */
+/* .leaflet-container img: el mapa no funciona en FF si tienes max-width: 100% en los mosaicos */
+.leaflet-container .leaflet-overlay-pane svg {
+	ancho máximo: ninguno !importante;
+	altura máxima: ninguna !importante;
+	}
+.leaflet-container .leaflet-marker-pane img,
+.leaflet-container .leaflet-shadow-pane img,
+.leaflet-container .leaflet-tile-pane img,
+.leaflet-container img.leaflet-image-layer,
+.leaflet-container .leaflet-tile {
+	ancho máximo: ninguno !importante;
+	altura máxima: ninguna !importante;
+	ancho: automático;
+	relleno: 0;
+	}
+
+.leaflet-container img.leaflet-tile {
+	/* Ver: https://bugs.chromium.org/p/chromium/issues/detail?id=600120 */
+	modo de mezcla: más ligero;
+}
+
+.leaflet-container.leaflet-touch-zoom {
+	-ms-touch-action: pan-x pan-y;
+	acción táctil: pan-x pan-y;
+	}
+.leaflet-container.leaflet-touch-drag {
+	-ms-touch-action: pellizcar para hacer zoom;
+	/* Alternativa para Firefox que no admite el zoom con pellizco */
+	acción táctil: ninguna;
+	Acción táctil: pellizcar para hacer zoom;
+}
+.leaflet-container.leaflet-touch-drag.leaflet-touch-zoom {
+	-ms-touch-action: ninguna;
+	acción táctil: ninguna;
+}
+.leaflet-container {
+	-webkit-tap-highlight-color: transparente;
+}
+.leaflet-container a {
+	-webkit-tap-highlight-color: rgba(51, 181, 229, 0.4);
+}
+.leaflet-tile {
+	filtro: heredar;
+	visibilidad: oculta;
+	}
+.leaflet-tile-loaded {
+	visibilidad: heredar;
+	}
+.leaflet-zoom-box {
+	ancho: 0;
+	altura: 0;
+	-moz-box-sizing: border-box;
+	     box-size: border-box;
+	Índice z: 800;
+	}
+/* Solución alternativa para https://bugzilla.mozilla.org/show_bug.cgi?id=888319 */
+.leaflet-overlay-pane svg {
+	-moz-user-select: ninguno;
+	}
+
+.leaflet-pane { z-index: 400; }
+
+.leaflet-tile-pane { índice z: 200; }
+.leaflet-overlay-pane { índice z: 400; }
+.leaflet-shadow-pane { índice z: 500; }
+.leaflet-marker-pane { índice z: 600; }
+.leaflet-tooltip-pane { índice z: 650; }
+.leaflet-popup-pane { índice z: 700; }
+
+.leaflet-map-pane lienzo { índice z: 100; }
+.leaflet-map-pane svg { índice z: 200; }
+
+.leaflet-vml-shape {
+	ancho: 1px;
+	altura: 1px;
+	}
+.lvml {
+	comportamiento: url(#predeterminado#VML);
+	pantalla: bloque en línea;
+	posición: absoluta;
+	}
+
+
+/*control de posicionamiento*/
+
+.leaflet-control {
+	posición: relativa;
+	Índice z: 800;
+	eventos-puntero: visiblePainted; /* IE 9-10 no tiene auto */
+	eventos de puntero: automático;
+	}
+.hoja-superior,
+.leaflet-bottom {
+	posición: absoluta;
+	índice z: 1000;
+	eventos de puntero: ninguno;
+	}
+.leaflet-top {
+	superior: 0;
+	}
+.leaflet-right {
+	derecha: 0;
+	}
+.leaflet-bottom {
+	fondo: 0;
+	}
+.leaflet-left {
+	izquierda: 0;
+	}
+.leaflet-control {
+	flotar: izquierda;
+	claro: ambos;
+	}
+.leaflet-right .leaflet-control {
+	flotar: derecha;
+	}
+.leaflet-top .leaflet-control {
+	margen superior: 10px;
+	}
+.leaflet-bottom .leaflet-control {
+	margen inferior: 10px;
+	}
+.leaflet-left .leaflet-control {
+	margen izquierdo: 10px;
+	}
+.leaflet-right .leaflet-control {
+	margen derecho: 10px;
+	}
+
+
+/* animaciones de zoom y desvanecimiento */
+
+.leaflet-fade-anim .leaflet-popup {
+	opacidad: 0;
+	-webkit-transition: opacidad 0,2 s lineal;
+	   -moz-transition: opacidad 0,2 s lineal;
+	        transición: opacidad 0,2 s lineal;
+	}
+.leaflet-fade-anim .leaflet-map-pane .leaflet-popup {
+	opacidad: 1;
+	}
+.leaflet-zoom-animated {
+	-webkit-transform-origin: 0 0;
+	    -ms-transform-origin: 0 0;
+	        origen-de-transformación: 0 0;
+	}
+svg.leaflet-zoom-animated {
+	voluntad-cambiar: transformar;
+}
+
+.leaflet-zoom-anim .leaflet-zoom-animated {
+	-webkit-transition: -webkit-transform 0.25s cubic-bezier(0,0,0.25,1);
+	   -moz-transition: -moz-transform 0.25s cubic-bezier(0,0,0.25,1);
+	        transición: transformar 0,25s cubic-bezier(0,0,0,25,1);
+	}
+.leaflet-zoom-anim .leaflet-tile,
+.leaflet-pan-anim .leaflet-tile {
+	-webkit-transition: ninguna;
+	   -moz-transition: ninguna;
+	        transición: ninguna;
+	}
+
+.leaflet-zoom-anim .leaflet-zoom-hide {
+	visibilidad: oculta;
+	}
+
+
+/* cursores */
+
+.leaflet-interactivo {
+	cursor: puntero;
+	}
+.leaflet-grab {
+	cursor: -webkit-grab;
+	cursor: -moz-grab;
+	cursor: agarrar;
+	}
+.hoja-cruz,
+.leaflet-crosshair .leaflet-interactive {
+	cursor: cruz;
+	}
+.leaflet-popup-pane,
+.leaflet-control {
+	cursor: automático;
+	}
+.leaflet-dragging .leaflet-grab,
+.leaflet-arrastrar .leaflet-agarrar .leaflet-interactivo,
+.leaflet-dragging .leaflet-marker-draggable {
+	cursor: mover;
+	cursor: -webkit-grabbing;
+	cursor: -moz-grabbing;
+	cursor: agarrando;
+	}
+
+/* Interactividad de marcadores y superposiciones */
+.icono-marcador-folleto,
+.leaflet-marker-shadow,
+.leaflet-image-layer,
+.leaflet-pane > ruta svg,
+.leaflet-tile-container {
+	eventos de puntero: ninguno;
+	}
+
+.leaflet-marker-icon.leaflet-interactive,
+.leaflet-image-layer.leaflet-interactive,
+.leaflet-pane > ruta svg.leaflet-interactive,
+svg.leaflet-image-layer.leaflet-interactive ruta {
+	eventos-puntero: visiblePainted; /* IE 9-10 no tiene auto */
+	eventos de puntero: automático;
+	}
+
+/* retoques visuales */
+
+.leaflet-container {
+	fondo: #ddd;
+	Outline-offset: 1px;
+	}
+.leaflet-container a {
+	color: #0078A8;
+	}
+.leaflet-zoom-box {
+	borde: 2px punteado #38f;
+	fondo: rgba(255,255,255,0.5);
+	}
+
+
+/* tipografía general */
+.leaflet-container {
+	font-family: "Helvetica Neue", Arial, Helvetica, sans-serif;
+	tamaño de fuente: 12px;
+	tamaño de fuente: 0,75rem;
+	altura de línea: 1,5;
+	}
+
+
+/* estilos generales de la barra de herramientas */
+
+.leaflet-bar {
+	box-shadow: 0 1px 5px rgba(0,0,0,0.65);
+	radio del borde: 4px;
+	}
+.leaflet-bar a {
+	color de fondo: #fff;
+	borde inferior: 1px sólido #ccc;
+	ancho: 26px;
+	altura: 26px;
+	altura de línea: 26px;
+	mostrar: bloque;
+	alineación de texto: centro;
+	decoración de texto: ninguna;
+	color: negro;
+	}
+.leaflet-bar a,
+.leaflet-control-layers-toggle {
+	posición de fondo: 50% 50%;
+	repetición de fondo: no repetir;
+	mostrar: bloque;
+	}
+.leaflet-bar a:hover,
+.leaflet-bar a:focus {
+	color de fondo: #f4f4f4;
+	}
+.leaflet-bar a:first-child {
+	borde-superior-izquierdo-radius: 4px;
+	borde-superior-derecho-radio: 4px;
+	}
+.leaflet-bar a:last-child {
+	borde-inferior-izquierdo-radius: 4px;
+	borde-inferior-derecho-radius: 4px;
+	borde inferior: ninguno;
+	}
+.leaflet-bar a.leaflet-disabled {
+	cursor: predeterminado;
+	color de fondo: #f4f4f4;
+	color: #bbb;
+	}
+
+.leaflet-touch .leaflet-bar a {
+	ancho: 30px;
+	altura: 30px;
+	altura de línea: 30px;
+	}
+.leaflet-touch .leaflet-bar a:first-child {
+	borde-superior-izquierdo-radius: 2px;
+	borde-superior-derecho-radio: 2px;
+	}
+.leaflet-touch .leaflet-bar a:last-child {
+	borde-inferior-izquierdo-radius: 2px;
+	borde-inferior-derecho-radius: 2px;
+	}
+
+/* control de zoom */
+
+.leaflet-control-zoom-in,
+.leaflet-control-zoom-out {
+	fuente: negrita 18px 'Lucida Console', Monaco, monoespacio;
+	sangría de texto: 1px;
+	}
+
+.leaflet-touch .leaflet-control-zoom-in, .leaflet-touch .leaflet-control-zoom-out {
+	tamaño de fuente: 22px;
+	}
+
+
+/* control de capas */
+
+.leaflet-control-layers {
+	caja-sombra: 0 1px 5px rgba(0,0,0,0.4);
+	fondo: #fff;
+	radio de borde: 5px;
+	}
+.leaflet-control-layers-toggle {
+	imagen de fondo: url(images/layers.png);
+	ancho: 36px;
+	altura: 36px;
+	}
+.leaflet-retina .leaflet-control-layers-toggle {
+	imagen de fondo: url(images/layers-2x.png);
+	background-size: 26px 26px;
+	}
+.leaflet-touch .leaflet-control-layers-toggle {
+	ancho: 44px;
+	altura: 44px;
+	}
+.leaflet-control-layers .leaflet-control-layers-list,
+.leaflet-control-layers-expanded .leaflet-control-layers-toggle {
+	mostrar: ninguno;
+	}
+.leaflet-control-layers-expanded .leaflet-control-layers-list {
+	mostrar: bloque;
+	posición: relativa;
+	}
+.leaflet-control-layers-expanded {
+	relleno: 6px 10px 6px 6px;
+	color: #333;
+	fondo: #fff;
+	}
+.leaflet-control-layers-scrollbar {
+	desbordamiento-y: desplazamiento;
+	desbordamiento-x: oculto;
+	relleno-derecho: 5px;
+	}
+.leaflet-control-layers-selector {
+	margen superior: 2px;
+	posición: relativa;
+	superior: 1px;
+	}
+.leaflet-control-layers etiqueta {
+	mostrar: bloque;
+	tamaño de fuente: 13px;
+	tamaño de fuente: 1,08333em;
+	}
+.leaflet-control-layers-separator {
+	altura: 0;
+	borde superior: 1px sólido #ddd;
+	margen: 5px -10px 5px -6px;
+	}
+
+/* URL de iconos predeterminados */
+.leaflet-default-icon-path { /* utilizado solo en la heurística de adivinación de ruta, ver L.Icon.Default */
+	imagen de fondo: url(images/marker-icon.png);
+	}
+
+
+/* controles de atribución y escala */
+
+.leaflet-container .leaflet-control-attribution {
+	fondo: #fff;
+	fondo: rgba(255, 255, 255, 0.8);
+	margen: 0;
+	}
+.leaflet-control-attribution,
+.leaflet-control-scale-line {
+	relleno: 0 5px;
+	color: #333;
+	altura de línea: 1,4;
+	}
+.leaflet-control-attribution a {
+	decoración de texto: ninguna;
+	}
+.leaflet-control-attribution a:hover,
+.leaflet-control-attribution a:focus {
+	decoración de texto: subrayado;
+	}
+.leaflet-attribution-flag {
+	mostrar: en línea !importante;
+	vertical-align: línea base !important;
+	ancho: 1em;
+	altura: 0,6669em;
+	}
+.leaflet-left .leaflet-control-scale {
+	margen izquierdo: 5px;
+	}
+.leaflet-bottom .leaflet-control-scale {
+	margen inferior: 5px;
+	}
+.leaflet-control-scale-line {
+	borde: 2px sólido #777;
+	borde superior: ninguno;
+	interlineado: 1,1;
+	relleno: 2px 5px 1px;
+	espacio en blanco: nowrap;
+	-moz-box-sizing: border-box;
+	     box-size: border-box;
+	fondo: rgba(255, 255, 255, 0.8);
+	sombra de texto: 1px 1px #fff;
+	}
+.leaflet-control-scale-line:not(:first-child) {
+	borde superior: 2px sólido #777;
+	borde inferior: ninguno;
+	margen superior: -2px;
+	}
+.leaflet-control-scale-line:not(:first-child):not(:last-child) {
+	borde inferior: 2px sólido #777;
+	}
+
+.leaflet-touch .leaflet-control-attribution,
+.leaflet-touch .leaflet-control-layers,
+.leaflet-touch .leaflet-bar {
+	caja-sombra: ninguna;
+	}
+.leaflet-touch .leaflet-control-layers,
+.leaflet-touch .leaflet-bar {
+	borde: 2px sólido rgba(0,0,0,0.2);
+	clip de fondo: cuadro de relleno;
+	}
+
+
+/* ventana emergente */
+
+.leaflet-popup {
+	posición: absoluta;
+	alineación de texto: centro;
+	margen inferior: 20px;
+	}
+.leaflet-popup-content-wrapper {
+	relleno: 1px;
+	alineación de texto: izquierda;
+	radio del borde: 12px;
+	}
+.leaflet-popup-content {
+	margen: 13px 24px 13px 20px;
+	altura de línea: 1.3;
+	tamaño de fuente: 13px;
+	tamaño de fuente: 1,08333em;
+	altura mínima: 1px;
+	}
+.leaflet-popup-content p {
+	margen: 17px 0;
+	margen: 1.3em 0;
+	}
+.leaflet-popup-tip-container {
+	ancho: 40px;
+	altura: 20px;
+	posición: absoluta;
+	izquierda: 50%;
+	margen superior: -1px;
+	margen izquierdo: -20px;
+	desbordamiento: oculto;
+	eventos de puntero: ninguno;
+	}
+.leaflet-popup-tip {
+	ancho: 17px;
+	altura: 17px;
+	relleno: 1px;
+
+	margen: -10px auto 0;
+	eventos de puntero: automático;
+
+	-webkit-transform: rotar(45 grados);
+	   -moz-transform: rotar(45 grados);
+	    -ms-transform: rotar(45 grados);
+	        transformar: rotar(45deg);
+	}
+.leaflet-popup-content-wrapper,
+.leaflet-popup-tip {
+	fondo: blanco;
+	color: #333;
+	box-shadow: 0 3px 14px rgba(0,0,0,0.4);
+	}
+.leaflet-container a.leaflet-popup-close-button {
+	posición: absoluta;
+	superior: 0;
+	derecha: 0;
+	borde: ninguno;
+	alineación de texto: centro;
+	ancho: 24px;
+	altura: 24px;
+	fuente: 16px/24px Tahoma, Verdana, sans-serif;
+	color: #757575;
+	decoración de texto: ninguna;
+	fondo: transparente;
+	}
+.leaflet-container a.leaflet-popup-close-button:hover,
+.leaflet-container a.leaflet-popup-close-button:focus {
+	color: #585858;
+	}
+.leaflet-popup-scrolled {
+	desbordamiento: automático;
+	}
+
+.leaflet-oldie .leaflet-popup-content-wrapper {
+	-ms-zoom: 1;
+	}
+.leaflet-oldie .leaflet-popup-tip {
+	ancho: 24px;
+	margen: 0 automático;
+
+	-ms-filter: "progid:DXImageTransform.Microsoft.Matrix(M11=0.70710678, M12=0.70710678, M21=-0.70710678, M22=0.70710678)";
+	filtro: progid:DXImageTransform.Microsoft.Matrix(M11=0.70710678, M12=0.70710678, M21=-0.70710678, M22=0.70710678);
+	}
+
+.leaflet-oldie .leaflet-control-zoom,
+.leaflet-oldie .leaflet-control-layers,
+.leaflet-oldie .leaflet-popup-content-wrapper,
+.leaflet-oldie .leaflet-popup-tip {
+	borde: 1px sólido #999;
+	}
+
+
+/* icono div */
+
+.leaflet-div-icon {
+	fondo: #fff;
+	borde: 1px sólido #666;
+	}
+
+
+/* Información sobre herramientas */
+/* Estilos base para el elemento que tiene una información sobre herramientas */
+.leaflet-tooltip {
+	posición: absoluta;
+	relleno: 6px;
+	color de fondo: #fff;
+	borde: 1px sólido #fff;
+	radio del borde: 3px;
+	color: #222;
+	espacio en blanco: nowrap;
+	-webkit-user-select: ninguno;
+	-moz-user-select: ninguno;
+	-ms-user-select: ninguno;
+	selección del usuario: ninguna;
+	eventos de puntero: ninguno;
+	box-shadow: 0 1px 3px rgba(0,0,0,0.4);
+	}
+.leaflet-tooltip.leaflet-interactive {
+	cursor: puntero;
+	eventos de puntero: automático;
+	}
+.leaflet-tooltip-top:before,
+.leaflet-tooltip-bottom:before,
+.leaflet-tooltip-left:before,
+.leaflet-tooltip-right:before {
+	posición: absoluta;
+	eventos de puntero: ninguno;
+	borde: 6px sólido transparente;
+	fondo: transparente;
+	contenido: "";
+	}
+
+/* Instrucciones */
+
+.leaflet-tooltip-bottom {
+	margen superior: 6px;
+}
+.leaflet-tooltip-top {
+	margen superior: -6px;
+}
+.leaflet-tooltip-bottom:before,
+.leaflet-tooltip-top:before {
+	izquierda: 50%;
+	margen izquierdo: -6px;
+	}
+.leaflet-tooltip-top:before {
+	fondo: 0;
+	margen inferior: -12px;
+	color del borde superior: #fff;
+	}
+.leaflet-tooltip-bottom:before {
+	superior: 0;
+	margen superior: -12px;
+	margen izquierdo: -6px;
+	color del borde inferior: #fff;
+	}
+.leaflet-tooltip-left {
+	margen izquierdo: -6px;
+}
+.leaflet-tooltip-right {
+	margen izquierdo: 6px;
+}
+.leaflet-tooltip-left:before,
+.leaflet-tooltip-right:before {
+	parte superior: 50%;
+	margen superior: -6px;
+	}
+.leaflet-tooltip-left:before {
+	derecha: 0;
+	margen derecho: -12px;
+	color del borde izquierdo: #fff;
+	}
+.leaflet-tooltip-right:before {
+	izquierda: 0;
+	margen izquierdo: -12px;
+	color del borde derecho: #fff;
+	}
+
+/* Impresión */
+
+@media print {
+	/* Evita que las impresoras eliminen las imágenes de fondo de los controles. */
+	.leaflet-control {
+		-webkit-print-color-adjust: exacto;
+		ajuste-color-impresión: exacto;
+		}
+	}
