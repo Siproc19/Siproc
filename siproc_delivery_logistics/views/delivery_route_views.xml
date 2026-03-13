@@ -1,5 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
+
+    <record id="action_delivery_route_map" model="ir.actions.client">
+        <field name="name">Mapa de Reparto</field>
+        <field name="tag">siproc_delivery_logistics.delivery_map</field>
+    </record>
+
     <record id="delivery_route_view_tree" model="ir.ui.view">
         <field name="name">delivery.route.tree</field>
         <field name="model">delivery.route</field>
