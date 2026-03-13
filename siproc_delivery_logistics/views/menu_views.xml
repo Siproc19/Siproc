@@ -2,7 +2,8 @@
 <odoo>
     <menuitem id="delivery_logistics_root_menu"
               name="Logística Entregas"
-              sequence="10"/>
+              parent="stock.menu_stock_warehouse_mgmt"
+              sequence="80"/>
 
     <menuitem id="delivery_route_menu"
               name="Rutas"
@@ -10,15 +11,21 @@
               action="delivery_route_action"
               sequence="10"/>
 
+    <menuitem id="delivery_route_map_menu"
+              name="Mapa de Reparto"
+              parent="delivery_logistics_root_menu"
+              action="action_delivery_route_map"
+              sequence="20"/>
+
     <menuitem id="delivery_vehicle_menu"
               name="Vehículos"
               parent="delivery_logistics_root_menu"
               action="delivery_vehicle_action"
-              sequence="20"/>
+              sequence="30"/>
 
     <menuitem id="delivery_driver_menu"
               name="Pilotos"
               parent="delivery_logistics_root_menu"
               action="delivery_driver_action"
-              sequence="30"/>
+              sequence="40"/>
 </odoo>
