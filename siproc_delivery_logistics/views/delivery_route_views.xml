@@ -28,13 +28,21 @@
         <field name="model">delivery.route</field>
         <field name="arch" type="xml">
             <form string="Ruta de Entrega">
-                <header>
-                    <button name="action_plan" type="object" string="Planificar" class="btn-primary" invisible="state != 'draft'"/>
-                    <button name="action_start" type="object" string="Iniciar Ruta" class="btn-primary" invisible="state not in ('planned')"/>
-                    <button name="action_done" type="object" string="Completar" invisible="state not in ('in_progress','partial')"/>
-                    <button name="action_cancel" type="object" string="Cancelar" invisible="state in ('done','cancelled')"/>
-                    <field name="state" widget="statusbar" statusbar_visible="draft,planned,in_progress,partial,done,cancelled"/>
-                </header>
+               <header>
+    <button name="action_plan" type="object" string="Planificar" class="btn-primary" invisible="state != 'draft'"/>
+    <button name="action_start" type="object" string="Iniciar Ruta" class="btn-primary" invisible="state not in ('planned')"/>
+
+    <button name="%(action_delivery_route_map)d"
+            type="action"
+            string="Ver Mapa"
+            class="btn-primary"
+            invisible="not id"/>
+
+    <button name="action_done" type="object" string="Completar" invisible="state not in ('in_progress','partial')"/>
+    <button name="action_cancel" type="object" string="Cancelar" invisible="state in ('done','cancelled')"/>
+
+    <field name="state" widget="statusbar"/>
+</header>
 
                 <sheet>
                     <group>
