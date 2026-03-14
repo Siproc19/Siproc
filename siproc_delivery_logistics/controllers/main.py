@@ -1,4 +1,4 @@
-from odoo import http, fields
+from odoo import http
 from odoo.http import request
 
 
@@ -29,21 +29,21 @@ class DeliveryGpsController(http.Controller):
         for line in route.line_ids.sorted("sequence"):
             points.append({
                 "id": line.id,
+                "sequence": line.sequence,
                 "name": line.partner_id.name or "Entrega",
                 "address": line.delivery_address or "",
+                "reference": line.reference or "",
+                "municipality": line.municipality or "",
+                "department": line.state_name or "",
+                "zone": line.zone or "",
                 "lat": line.planned_latitude,
                 "lng": line.planned_longitude,
                 "status": line.delivery_status,
                 "receiver_name": line.receiver_name or "",
                 "delivered_at": str(line.delivered_at) if line.delivered_at else "",
-                "picking_id": line.picking_id.id if line.picking_id else False,
+                "google_maps_url": line.google_maps_url or "",
+                "waze_url": line.waze_url or "",
             })
-
-        gps_logs = [{
-            "lat": log.latitude,
-            "lng": log.longitude,
-            "datetime": str(log.gps_datetime),
-        } for log in route.gps_log_ids.sorted("gps_datetime")]
 
         return {
             "success": True,
@@ -53,13 +53,8 @@ class DeliveryGpsController(http.Controller):
                 "state": route.state,
                 "current_latitude": route.current_latitude,
                 "current_longitude": route.current_longitude,
+                "google_maps_url": route.google_maps_url or "",
+                "waze_url": route.waze_url or "",
             },
             "points": points,
-            "gps_logs": gps_logs,
-        }
-
-    @http.route("/delivery/open_google_maps", type="json", auth="user")
-    def open_google_maps(self, latitude, longitude):
-        return {
-            "url": f"https://www.google.com/maps?q={latitude},{longitude}"
         }

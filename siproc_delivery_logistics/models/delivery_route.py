@@ -1,10 +1,15 @@
+from math import radians, sin, cos, sqrt, atan2
+
 from odoo import api, fields, models, _
 from odoo.exceptions import ValidationError, UserError
-from math import radians, sin, cos, sqrt, atan2
 
 
 def _haversine_distance_km(lat1, lon1, lat2, lon2):
-    if not all([lat1, lon1, lat2, lon2]):
+    if any(v in (False, None) for v in [lat1, lon1, lat2, lon2]):
+        return 0.0
+    if lat1 == 0.0 and lon1 == 0.0:
+        return 0.0
+    if lat2 == 0.0 and lon2 == 0.0:
         return 0.0
     r = 6371.0
     dlat = radians(lat2 - lat1)
@@ -55,6 +60,8 @@ class DeliveryRoute(models.Model):
     current_latitude = fields.Float(string="Latitud Actual", digits=(10, 6))
     current_longitude = fields.Float(string="Longitud Actual", digits=(10, 6))
     last_gps_datetime = fields.Datetime(string="Última Actualización GPS")
+    google_maps_url = fields.Char(string="Google Maps", compute="_compute_navigation_urls")
+    waze_url = fields.Char(string="Waze", compute="_compute_navigation_urls")
 
     @api.depends("line_ids.delivery_status")
     def _compute_counts(self):
@@ -62,6 +69,16 @@ class DeliveryRoute(models.Model):
             rec.total_deliveries = len(rec.line_ids)
             rec.delivered_deliveries = len(rec.line_ids.filtered(lambda l: l.delivery_status == "delivered"))
             rec.pending_deliveries = len(rec.line_ids.filtered(lambda l: l.delivery_status in ("pending", "on_the_way", "rescheduled")))
+
+    @api.depends("current_latitude", "current_longitude")
+    def _compute_navigation_urls(self):
+        for rec in self:
+            if rec.current_latitude and rec.current_longitude:
+                rec.google_maps_url = f"https://www.google.com/maps?q={rec.current_latitude},{rec.current_longitude}"
+                rec.waze_url = f"https://waze.com/ul?ll={rec.current_latitude},{rec.current_longitude}&navigate=yes"
+            else:
+                rec.google_maps_url = False
+                rec.waze_url = False
 
     @api.model_create_multi
     def create(self, vals_list):
@@ -151,6 +168,18 @@ class DeliveryRoute(models.Model):
                 "last_gps_datetime": fields.Datetime.now(),
             })
 
+    def action_open_google_maps(self):
+        self.ensure_one()
+        if not self.google_maps_url:
+            raise UserError(_("La ruta aún no tiene ubicación actual."))
+        return {"type": "ir.actions.act_url", "url": self.google_maps_url, "target": "new"}
+
+    def action_open_waze(self):
+        self.ensure_one()
+        if not self.waze_url:
+            raise UserError(_("La ruta aún no tiene ubicación actual."))
+        return {"type": "ir.actions.act_url", "url": self.waze_url, "target": "new"}
+
 
 class DeliveryRouteLine(models.Model):
     _name = "delivery.route.line"
@@ -165,6 +194,8 @@ class DeliveryRouteLine(models.Model):
     partner_id = fields.Many2one("res.partner", string="Cliente", required=True)
 
     delivery_address = fields.Char(string="Dirección de Entrega")
+    zone = fields.Char(string="Zona")
+    municipality = fields.Char(string="Municipio")
     city = fields.Char(string="Ciudad")
     state_name = fields.Char(string="Departamento")
     country_id = fields.Many2one("res.country", string="País")
@@ -172,6 +203,8 @@ class DeliveryRouteLine(models.Model):
 
     planned_latitude = fields.Float(string="Latitud Planificada", digits=(10, 6))
     planned_longitude = fields.Float(string="Longitud Planificada", digits=(10, 6))
+    google_maps_url = fields.Char(string="Google Maps", compute="_compute_navigation_urls")
+    waze_url = fields.Char(string="Waze", compute="_compute_navigation_urls")
 
     delivered_latitude = fields.Float(string="Latitud Entrega", digits=(10, 6))
     delivered_longitude = fields.Float(string="Longitud Entrega", digits=(10, 6))
@@ -202,6 +235,16 @@ class DeliveryRouteLine(models.Model):
         store=False,
     )
 
+    @api.depends("planned_latitude", "planned_longitude")
+    def _compute_navigation_urls(self):
+        for rec in self:
+            if rec.planned_latitude and rec.planned_longitude:
+                rec.google_maps_url = f"https://www.google.com/maps?q={rec.planned_latitude},{rec.planned_longitude}"
+                rec.waze_url = f"https://waze.com/ul?ll={rec.planned_latitude},{rec.planned_longitude}&navigate=yes"
+            else:
+                rec.google_maps_url = False
+                rec.waze_url = False
+
     @api.depends("planned_latitude", "planned_longitude", "delivered_latitude", "delivered_longitude")
     def _compute_distance_from_point(self):
         for rec in self:
@@ -216,9 +259,39 @@ class DeliveryRouteLine(models.Model):
     def _onchange_partner_id(self):
         for rec in self:
             if rec.partner_id:
-                rec.delivery_address = rec.partner_id.contact_address or rec.partner_id.street or ""
-                rec.city = rec.partner_id.city or ""
-                rec.country_id = rec.partner_id.country_id.id or False
+                rec.action_copy_partner_address()
+
+    def action_copy_partner_address(self):
+        for rec in self:
+            if not rec.partner_id:
+                continue
+            rec.delivery_address = rec.partner_id.street or rec.partner_id.contact_address or ""
+            rec.city = rec.partner_id.city or ""
+            rec.municipality = rec.partner_id.city or ""
+            rec.state_name = rec.partner_id.state_id.name or ""
+            rec.country_id = rec.partner_id.country_id.id or False
+            rec.reference = rec.partner_id.street2 or ""
+
+    def action_open_google_maps(self):
+        self.ensure_one()
+        if not self.google_maps_url:
+            raise UserError(_("Esta entrega aún no tiene coordenadas planificadas."))
+        return {"type": "ir.actions.act_url", "url": self.google_maps_url, "target": "new"}
+
+    def action_open_waze(self):
+        self.ensure_one()
+        if not self.waze_url:
+            raise UserError(_("Esta entrega aún no tiene coordenadas planificadas."))
+        return {"type": "ir.actions.act_url", "url": self.waze_url, "target": "new"}
+
+    def action_use_route_location(self):
+        for rec in self:
+            if not rec.route_id.current_latitude or not rec.route_id.current_longitude:
+                raise UserError(_("Primero debes tomar la ubicación actual de la ruta desde el teléfono."))
+            rec.write({
+                "planned_latitude": rec.route_id.current_latitude,
+                "planned_longitude": rec.route_id.current_longitude,
+            })
 
     def action_set_on_the_way(self):
         for rec in self:
