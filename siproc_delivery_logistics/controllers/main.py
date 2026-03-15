@@ -4,7 +4,7 @@ from odoo.http import request
 
 class DeliveryGpsController(http.Controller):
 
-    @http.route("/delivery/update_gps", type="json", auth="user")
+    @http.route("/delivery/update_gps", type="jsonrpc", auth="user")
     def update_gps(self, route_id, latitude, longitude, speed=0.0, delivery_line_id=False):
         route = request.env["delivery.route"].sudo().browse(int(route_id))
         if not route.exists():
@@ -19,7 +19,7 @@ class DeliveryGpsController(http.Controller):
         )
         return {"success": True, "message": "Ubicación actualizada"}
 
-    @http.route("/delivery/route_map_data/<int:route_id>", type="json", auth="user")
+    @http.route("/delivery/route_map_data/<int:route_id>", type="jsonrpc", auth="user")
     def route_map_data(self, route_id):
         route = request.env["delivery.route"].sudo().browse(route_id)
         if not route.exists():
