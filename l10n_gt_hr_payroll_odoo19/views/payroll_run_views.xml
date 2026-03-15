@@ -1,0 +1,115 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_gt_payroll_run_tree" model="ir.ui.view">
+        <field name="name">gt.payroll.run.tree</field>
+        <field name="model">gt.payroll.run</field>
+        <field name="arch" type="xml">
+            <list>
+                <field name="name"/>
+                <field name="date_from"/>
+                <field name="date_to"/>
+                <field name="payroll_type"/>
+                <field name="parameter_id"/>
+                <field name="state"/>
+                <field name="total_gross"/>
+                <field name="total_deductions"/>
+                <field name="total_net"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="view_gt_payroll_run_form" model="ir.ui.view">
+        <field name="name">gt.payroll.run.form</field>
+        <field name="model">gt.payroll.run</field>
+        <field name="arch" type="xml">
+            <form>
+                <header>
+                    <button name="action_generate_lines" type="object" string="Generar Líneas" class="btn-primary" invisible="state != 'draft'"/>
+                    <button name="action_confirm" type="object" string="Confirmar" invisible="state != 'draft'"/>
+                    <button name="action_mark_paid" type="object" string="Marcar Pagada" invisible="state != 'confirmed'"/>
+                    <button name="action_cancel" type="object" string="Cancelar" invisible="state in ('paid','cancelled')"/>
+                    <field name="state" widget="statusbar" statusbar_visible="draft,confirmed,paid,cancelled"/>
+                </header>
+                <sheet>
+                    <group>
+                        <group>
+                            <field name="name" readonly="1"/>
+                            <field name="company_id"/>
+                            <field name="parameter_id"/>
+                        </group>
+                        <group>
+                            <field name="date_from"/>
+                            <field name="date_to"/>
+                            <field name="payroll_type"/>
+                        </group>
+                    </group>
+
+                    <group string="Totales">
+                        <group>
+                            <field name="total_gross" readonly="1"/>
+                            <field name="total_deductions" readonly="1"/>
+                            <field name="total_net" readonly="1"/>
+                        </group>
+                    </group>
+
+                    <notebook>
+                        <page string="Líneas de Planilla">
+                            <field name="line_ids">
+                                <list editable="bottom">
+                                    <field name="employee_id"/>
+                                    <field name="contract_id"/>
+                                    <field name="worked_days"/>
+                                    <field name="extra_hours"/>
+                                    <field name="commissions"/>
+                                    <field name="bonuses"/>
+                                    <field name="gross_total" readonly="1"/>
+                                    <field name="total_deductions" readonly="1"/>
+                                    <field name="net_total" readonly="1"/>
+                                </list>
+                                <form>
+                                    <sheet>
+                                        <group>
+                                            <group>
+                                                <field name="employee_id"/>
+                                                <field name="contract_id"/>
+                                                <field name="worked_days"/>
+                                                <field name="extra_hours"/>
+                                            </group>
+                                            <group>
+                                                <field name="commissions"/>
+                                                <field name="bonuses"/>
+                                                <field name="other_income"/>
+                                                <field name="other_deductions"/>
+                                            </group>
+                                        </group>
+                                        <group string="Cálculo">
+                                            <group>
+                                                <field name="ordinary_salary" readonly="1"/>
+                                                <field name="overtime_amount" readonly="1"/>
+                                                <field name="incentive_bonus" readonly="1"/>
+                                                <field name="gross_total" readonly="1"/>
+                                            </group>
+                                            <group>
+                                                <field name="igss_employee" readonly="1"/>
+                                                <field name="isr_amount" readonly="1"/>
+                                                <field name="total_deductions" readonly="1"/>
+                                                <field name="net_total" readonly="1"/>
+                                            </group>
+                                        </group>
+                                    </sheet>
+                                </form>
+                            </field>
+                        </page>
+                    </notebook>
+                </sheet>
+                <chatter/>
+            </form>
+        </field>
+    </record>
+
+    <record id="action_gt_payroll_run" model="ir.actions.act_window">
+        <field name="name">Períodos de Planilla</field>
+        <field name="res_model">gt.payroll.run</field>
+        <field name="view_mode">list,form</field>
+    </record>
+</odoo>

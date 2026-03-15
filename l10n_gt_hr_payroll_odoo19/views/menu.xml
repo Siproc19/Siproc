@@ -1,12 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
-    <menuitem id="menu_gt_payroll_root"
-              name="Planilla Guatemala"
-              sequence="10"/>
-
-    <menuitem id="menu_gt_payroll_parameters"
-              name="Parámetros"
-              parent="menu_gt_payroll_root"
-              action="action_gt_payroll_parameters"
-              sequence="10"/>
+    <menuitem id="menu_gt_payroll_root" name="Planilla Guatemala" sequence="50"/>
+    <menuitem id="menu_gt_payroll_parameters" name="Parámetros" parent="menu_gt_payroll_root" action="action_gt_payroll_parameter" sequence="10"/>
+    <menuitem id="menu_gt_payroll_runs" name="Períodos de Planilla" parent="menu_gt_payroll_root" action="action_gt_payroll_run" sequence="20"/>
 </odoo>
