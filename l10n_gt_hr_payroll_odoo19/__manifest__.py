@@ -1,7 +1,7 @@
 {
     "name": "GT Payroll Base",
-    "version": "19.0.2.0",
-    "summary": "Planilla Guatemala completa base para Odoo 19",
+    "version": "19.0.2.1",
+    "summary": "Planilla Guatemala base para Odoo 19",
     "description": '''
 Planilla Guatemala base para Odoo 19.
 Incluye parámetros, períodos, líneas de planilla y cálculo básico.
@@ -14,14 +14,15 @@ Incluye parámetros, períodos, líneas de planilla y cálculo básico.
         "base",
         "mail",
         "hr",
-            ],
+        "hr_contract"
+    ],
     "data": [
         "security/security.xml",
         "security/ir.model.access.csv",
         "data/sequence.xml",
         "views/menu.xml",
         "views/gt_payroll_parameter_views.xml",
-                "views/hr_employee_views.xml",
+        "views/hr_employee_views.xml",
         "views/payroll_run_views.xml"
     ],
     "installable": True,
