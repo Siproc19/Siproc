@@ -1,1 +1,4 @@
-from . import gt_payroll_parameter, hr_employee, payroll_run, payroll_run_line
+from . import gt_payroll_parameter
+from . import hr_employee
+from . import payroll_run
+from . import payroll_run_line
