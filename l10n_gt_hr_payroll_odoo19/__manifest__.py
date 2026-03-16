@@ -54,6 +54,7 @@
         # MODELOS GT
         # ----------------
         "views/payroll_parameter_views.xml",
+        "views/payroll_run_views.xml",
         "views/overtime_views.xml",
         "views/liquidation_views.xml",
 
