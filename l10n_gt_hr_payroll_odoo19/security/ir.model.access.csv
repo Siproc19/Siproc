@@ -1,6 +1,6 @@
 id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
-access_gt_payroll_parameter_admin,gt.payroll.parameter admin,model_gt_payroll_parameter,l10n_gt_hr_payroll_odoo19.group_gt_payroll_admin,1,1,1,1
-access_gt_payroll_parameter_user,gt.payroll.parameter user,model_gt_payroll_parameter,l10n_gt_hr_payroll_odoo19.group_gt_payroll_user,1,0,0,0
+access_l10n_gt_payroll_parameter_admin,l10n_gt.payroll.parameter admin,model_l10n_gt_payroll_parameter,l10n_gt_hr_payroll_odoo19.group_gt_payroll_admin,1,1,1,1
+access_l10n_gt_payroll_parameter_user,l10n_gt.payroll.parameter user,model_l10n_gt_payroll_parameter,l10n_gt_hr_payroll_odoo19.group_gt_payroll_user,1,0,0,0
 access_gt_payroll_run_admin,gt.payroll.run admin,model_gt_payroll_run,l10n_gt_hr_payroll_odoo19.group_gt_payroll_admin,1,1,1,1
 access_gt_payroll_run_user,gt.payroll.run user,model_gt_payroll_run,l10n_gt_hr_payroll_odoo19.group_gt_payroll_user,1,1,1,0
 access_gt_payroll_run_line_admin,gt.payroll.run.line admin,model_gt_payroll_run_line,l10n_gt_hr_payroll_odoo19.group_gt_payroll_admin,1,1,1,1
