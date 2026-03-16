@@ -11,8 +11,8 @@
           sequence="10"/>
 
     <menuitem id="menu_gt_payroll_runs"
-              name="Períodos de Planilla"
-              parent="menu_gt_payroll_root"
-              action="action_gt_payroll_run"
-              sequence="20"/>
+          name="Períodos de Planilla"
+          parent="menu_gt_payroll_root"
+          action="l10n_gt_hr_payroll_odoo19.action_gt_payroll_run"
+          sequence="20"/>
 </odoo>
