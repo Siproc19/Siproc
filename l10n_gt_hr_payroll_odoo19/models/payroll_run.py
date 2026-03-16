@@ -24,7 +24,7 @@ class GtPayrollRun(models.Model):
         tracking=True,
     )
     parameter_id = fields.Many2one("gt.payroll.parameter", string="Parámetro GT", required=True)
-    line_ids = fields.One2many("gt.payroll.run.line", "run_id", string="Líneas")
+    line_ids = fields.One2many("gt.payroll.run.line", "payroll_run_id", string="Líneas")
     state = fields.Selection(
         [
             ("draft", "Borrador"),
