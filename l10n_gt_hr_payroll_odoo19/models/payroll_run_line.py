@@ -1,87 +1,58 @@
+# -*- coding: utf-8 -*-
 from odoo import api, fields, models
 
 
 class GtPayrollRunLine(models.Model):
     _name = "gt.payroll.run.line"
-    _description = "Línea de Planilla Guatemala"
-    _order = "employee_id"
+    _description = "Línea de corrida de planilla GT"
 
-    run_id = fields.Many2one("gt.payroll.run", string="Planilla", required=True, ondelete="cascade")
-    company_id = fields.Many2one(related="run_id.company_id", store=True)
-    parameter_id = fields.Many2one(related="run_id.parameter_id", store=True)
-
+    payroll_run_id = fields.Many2one("gt.payroll.run", string="Corrida de planilla")
     employee_id = fields.Many2one("hr.employee", string="Empleado", required=True)
-    version_id = fields.Many2one("hr.version", string="Versión salarial")
+    version_id = fields.Many2one("hr.version", string="Versión salarial", required=True)
+    parameter_id = fields.Many2one("l10n_gt.payroll.parameter", string="Parámetro GT")
 
-    worked_days = fields.Float(string="Días Laborados", default=15.0)
-    extra_hours = fields.Float(string="Horas Extra", default=0.0)
-    commissions = fields.Float(string="Comisiones / Bonificaciones", default=0.0)
-    bonuses = fields.Float(string="Bonos", default=0.0)
-    other_income = fields.Float(string="Otros Ingresos", default=0.0)
-    other_deductions = fields.Float(string="Otros Descuentos", default=0.0)
+    worked_days = fields.Float(string="Días trabajados", default=30.0)
+    extra_hours = fields.Float(string="Horas extra", default=0.0)
+    commissions = fields.Float(string="Comisiones", default=0.0)
+    bonuses = fields.Float(string="Bonificaciones", default=0.0)
+    other_income = fields.Float(string="Otros ingresos", default=0.0)
+    other_deductions = fields.Float(string="Otras deducciones", default=0.0)
 
-    base_salary = fields.Float(string="Salario Base", compute="_compute_all_amounts", store=True)
-    ordinary_salary = fields.Float(string="Salario Ordinario", compute="_compute_all_amounts", store=True)
-    incentive_bonus = fields.Float(string="Bonificación Incentivo", compute="_compute_all_amounts", store=True)
-    overtime_amount = fields.Float(string="Monto Horas Extra", compute="_compute_all_amounts", store=True)
-    gross_total = fields.Float(string="Total Devengado", compute="_compute_all_amounts", store=True)
+    base_salary = fields.Float(string="Salario base", compute="_compute_all_amounts", store=True)
+    incentive_bonus = fields.Float(string="Bono incentivo", compute="_compute_all_amounts", store=True)
+    igss_employee = fields.Float(string="IGSS laboral", compute="_compute_all_amounts", store=True)
+    gross_total = fields.Float(string="Total ingresos", compute="_compute_all_amounts", store=True)
+    total_deductions = fields.Float(string="Total deducciones", compute="_compute_all_amounts", store=True)
+    net_total = fields.Float(string="Neto a pagar", compute="_compute_all_amounts", store=True)
 
-    igss_employee = fields.Float(string="IGSS Laboral", compute="_compute_all_amounts", store=True)
-    isr_amount = fields.Float(string="ISR", compute="_compute_all_amounts", store=True)
-    total_deductions = fields.Float(string="Total Descuentos", compute="_compute_all_amounts", store=True)
-    net_total = fields.Float(string="Neto a Pagar", compute="_compute_all_amounts", store=True)
-
-  @api.depends(
-    "worked_days",
-    "extra_hours",
-    "commissions",
-    "bonuses",
-    "other_income",
-    "other_deductions",
-    "version_id.wage",
-    "version_id.gt_apply_incentive_bonus",
-    "version_id.gt_apply_igss",
-    "parameter_id.incentive_bonus",
-    "parameter_id.igss_employee_rate",
-    "parameter_id.extra_hour_rate_multiplier",
-    "parameter_id.isr_exempt_monthly",
-    "parameter_id.isr_rate_low",
-    "parameter_id.isr_rate_high",
-    "parameter_id.isr_high_threshold",
-)
+    @api.depends(
+        "worked_days",
+        "extra_hours",
+        "commissions",
+        "bonuses",
+        "other_income",
+        "other_deductions",
+        "version_id.wage",
+        "version_id.gt_apply_incentive_bonus",
+        "version_id.gt_apply_igss",
+    )
     def _compute_all_amounts(self):
         for rec in self:
-            wage = rec.contract_id.wage or 0.0
-            days_per_month = rec.contract_id.gt_days_per_month or 30.0
-            hours_per_day = rec.contract_id.gt_hours_per_day or 8.0
+            monthly_wage = rec.version_id.wage or 0.0
+            rec.base_salary = (monthly_wage / 30.0) * (rec.worked_days or 0.0)
 
-            rec.base_salary = wage
-            rec.ordinary_salary = (wage / days_per_month) * rec.worked_days if days_per_month else 0.0
+            rec.incentive_bonus = 250.0 if rec.version_id.gt_apply_incentive_bonus else 0.0
 
-            hourly_rate = (wage / days_per_month / hours_per_day) if days_per_month and hours_per_day else 0.0
-            rec.overtime_amount = hourly_rate * rec.extra_hours * (rec.parameter_id.extra_hour_rate_multiplier or 1.5)
-            rec.incentive_bonus = rec.parameter_id.incentive_bonus if rec.contract_id.gt_has_incentive_bonus else 0.0
-
-            rec.gross_total = (
-                rec.ordinary_salary + rec.overtime_amount + rec.incentive_bonus +
-                rec.commissions + rec.bonuses + rec.other_income
+            gross = (
+                rec.base_salary
+                + rec.incentive_bonus
+                + (rec.commissions or 0.0)
+                + (rec.bonuses or 0.0)
+                + (rec.other_income or 0.0)
             )
+            rec.gross_total = gross
 
-            rec.igss_employee = 0.0
-            if rec.contract_id.gt_igss_enabled:
-                rec.igss_employee = rec.ordinary_salary * ((rec.parameter_id.igss_employee_rate or 0.0) / 100.0)
+            rec.igss_employee = gross * 0.0483 if rec.version_id.gt_apply_igss else 0.0
+            rec.total_deductions = rec.igss_employee + (rec.other_deductions or 0.0)
 
-            rec.isr_amount = 0.0
-            if rec.contract_id.gt_isr_enabled:
-                taxable = rec.gross_total - rec.igss_employee
-                exempt = rec.parameter_id.isr_exempt_monthly or 0.0
-                if taxable > exempt:
-                    excess = taxable - exempt
-                    high_threshold = rec.parameter_id.isr_high_threshold or 6000.0
-                    if taxable <= high_threshold:
-                        rec.isr_amount = excess * ((rec.parameter_id.isr_rate_low or 0.0) / 100.0)
-                    else:
-                        rec.isr_amount = excess * ((rec.parameter_id.isr_rate_high or 0.0) / 100.0)
-
-            rec.total_deductions = rec.igss_employee + rec.isr_amount + rec.other_deductions
             rec.net_total = rec.gross_total - rec.total_deductions
