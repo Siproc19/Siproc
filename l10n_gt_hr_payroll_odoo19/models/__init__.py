@@ -1,4 +1,16 @@
-from . import gt_payroll_parameter
+from . import res_company
 from . import hr_employee
+from . import hr_version
+from . import hr_leave
+from . import hr_work_entry
+from . import hr_payslip
+
+from . import payroll_parameter
 from . import payroll_run
 from . import payroll_run_line
+
+from . import overtime
+from . import payroll_adjustment
+from . import vacation_snapshot
+from . import liquidation
+from . import utils
