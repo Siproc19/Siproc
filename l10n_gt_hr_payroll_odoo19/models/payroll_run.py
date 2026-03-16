@@ -27,7 +27,7 @@ class GtPayrollRun(models.Model):
         ("confirmed", "Confirmada"),
         ("done", "Finalizada"),
         ("cancel", "Cancelada"),
-    ], string="Estado", default="draft", tracking=True)
+    ], string="Estado", default="draft")
 
     line_ids = fields.One2many(
         "gt.payroll.run.line",
