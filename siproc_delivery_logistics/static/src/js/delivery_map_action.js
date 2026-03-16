@@ -1,6 +1,6 @@
 /** @odoo-module **/
 
-import { Component, onMounted, useState } from "@odoo/owl";
+import { Component, onMounted, onWillUnmount, useState } from "@odoo/owl";
 import { registry } from "@web/core/registry";
 import { useService } from "@web/core/utils/hooks";
 import { rpc } from "@web/core/network/rpc";
@@ -17,6 +17,22 @@ function buildEmbedUrl(lat, lng) {
     return `https://www.openstreetmap.org/export/embed.html?bbox=${left},${bottom},${right},${top}&layer=mapnik&marker=${lat},${lng}`;
 }
 
+function gpsStatus(lastGpsDatetime) {
+    if (!lastGpsDatetime) {
+        return { label: "Sin señal", color: "#ef4444" };
+    }
+    const last = new Date(lastGpsDatetime);
+    const now = new Date();
+    const diffSec = Math.floor((now - last) / 1000);
+    if (diffSec <= 30) {
+        return { label: "En línea", color: "#16a34a" };
+    }
+    if (diffSec <= 120) {
+        return { label: "Con retraso", color: "#d97706" };
+    }
+    return { label: "Sin señal", color: "#ef4444" };
+}
+
 export class DeliveryMapAction extends Component {
     static template = "siproc_delivery_logistics.DeliveryMapAction";
 
@@ -29,6 +45,9 @@ export class DeliveryMapAction extends Component {
             selectedPointIndex: null,
             mapUrl: buildEmbedUrl(),
             tracking: false,
+            adminAutoRefresh: true,
+            gpsStatusLabel: "Sin señal",
+            gpsStatusColor: "#ef4444",
         });
 
         onMounted(async () => {
@@ -44,10 +63,27 @@ export class DeliveryMapAction extends Component {
 
             this.state.routeId = activeId;
             await this.loadRouteData();
+
+            this.refreshTimer = window.setInterval(async () => {
+                if (this.state.adminAutoRefresh && this.state.routeId) {
+                    await this.loadRouteData(false);
+                }
+            }, 10000);
+        });
+
+        onWillUnmount(() => {
+            if (this.watchId) {
+                navigator.geolocation.clearWatch(this.watchId);
+                this.watchId = null;
+            }
+            if (this.refreshTimer) {
+                window.clearInterval(this.refreshTimer);
+                this.refreshTimer = null;
+            }
         });
     }
 
-    async loadRouteData() {
+    async loadRouteData(resetFocus = true) {
         const data = await rpc(`/delivery/route_map_data/${this.state.routeId}`, {});
         if (!data || !data.success) {
             this.notification.add((data && data.message) || "Error cargando datos del mapa", {
@@ -57,6 +93,15 @@ export class DeliveryMapAction extends Component {
         }
         this.state.route = data.route || {};
         this.state.points = data.points || [];
+
+        const status = gpsStatus(this.state.route.last_gps_datetime);
+        this.state.gpsStatusLabel = status.label;
+        this.state.gpsStatusColor = status.color;
+
+        const selected = this.state.selectedPointIndex !== null ? this.state.points[this.state.selectedPointIndex] : null;
+        if (!resetFocus && selected) {
+            return;
+        }
 
         const lat = this.state.route.current_latitude || this.state.points[0]?.lat;
         const lng = this.state.route.current_longitude || this.state.points[0]?.lng;
@@ -73,6 +118,14 @@ export class DeliveryMapAction extends Component {
         const lng = this.state.route.current_longitude || this.state.points[0]?.lng;
         this.state.selectedPointIndex = null;
         this.state.mapUrl = buildEmbedUrl(lat, lng);
+    }
+
+    toggleAutoRefresh() {
+        this.state.adminAutoRefresh = !this.state.adminAutoRefresh;
+        this.notification.add(
+            this.state.adminAutoRefresh ? "Actualización automática activada." : "Actualización automática detenida.",
+            { type: "info" }
+        );
     }
 
     async takeLocationNow() {
@@ -113,6 +166,7 @@ export class DeliveryMapAction extends Component {
                     speed: pos.coords.speed || 0,
                 });
                 this.state.tracking = true;
+                await this.loadRouteData(false);
             },
             () => this.notification.add("No se pudo rastrear la ubicación.", { type: "warning" }),
             { enableHighAccuracy: true, timeout: 15000, maximumAge: 5000 }

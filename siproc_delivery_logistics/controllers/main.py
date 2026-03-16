@@ -53,6 +53,7 @@ class DeliveryGpsController(http.Controller):
                 "state": route.state,
                 "current_latitude": route.current_latitude,
                 "current_longitude": route.current_longitude,
+                "last_gps_datetime": str(route.last_gps_datetime) if route.last_gps_datetime else "",
                 "google_maps_url": route.google_maps_url or "",
                 "waze_url": route.waze_url or "",
             },

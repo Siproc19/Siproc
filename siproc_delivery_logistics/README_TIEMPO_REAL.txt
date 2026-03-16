@@ -1,0 +1,1 @@
+Cambios aplicados solo a siproc_delivery_logistics:\n- Rastreo GPS en tiempo real desde telefono con watchPosition.\n- Vista administrador con auto refresh cada 10 segundos.\n- Estado visual de GPS: En linea / Con retraso / Sin señal.\n
