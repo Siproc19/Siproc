@@ -23,7 +23,7 @@ class GtPayrollRun(models.Model):
         default="biweekly",
         tracking=True,
     )
-    parameter_id = fields.Many2one("gt.payroll.parameter", string="Parámetro GT", required=True)
+   parameter_id = fields.Many2one("l10n_gt.payroll.parameter", string="Parámetro")
     line_ids = fields.One2many("gt.payroll.run.line", "payroll_run_id", string="Líneas")
     state = fields.Selection(
         [
