@@ -11,7 +11,7 @@ class GtPayrollRunLine(models.Model):
     parameter_id = fields.Many2one(related="run_id.parameter_id", store=True)
 
     employee_id = fields.Many2one("hr.employee", string="Empleado", required=True)
-    contract_id = fields.Many2one("hr.contract", string="Contrato", required=True)
+    version_id = fields.Many2one("hr.version", string="Versión salarial")
 
     worked_days = fields.Float(string="Días Laborados", default=15.0)
     extra_hours = fields.Float(string="Horas Extra", default=0.0)
