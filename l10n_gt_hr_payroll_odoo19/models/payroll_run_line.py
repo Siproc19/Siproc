@@ -31,14 +31,24 @@ class GtPayrollRunLine(models.Model):
     total_deductions = fields.Float(string="Total Descuentos", compute="_compute_all_amounts", store=True)
     net_total = fields.Float(string="Neto a Pagar", compute="_compute_all_amounts", store=True)
 
-    @api.depends(
-        "worked_days", "extra_hours", "commissions", "bonuses", "other_income", "other_deductions",
-        "contract_id.wage", "contract_id.gt_has_incentive_bonus", "contract_id.gt_igss_enabled",
-        "contract_id.gt_isr_enabled", "contract_id.gt_hours_per_day", "contract_id.gt_days_per_month",
-        "parameter_id.incentive_bonus", "parameter_id.igss_employee_rate",
-        "parameter_id.extra_hour_rate_multiplier", "parameter_id.isr_exempt_monthly",
-        "parameter_id.isr_rate_low", "parameter_id.isr_rate_high", "parameter_id.isr_high_threshold",
-    )
+  @api.depends(
+    "worked_days",
+    "extra_hours",
+    "commissions",
+    "bonuses",
+    "other_income",
+    "other_deductions",
+    "version_id.wage",
+    "version_id.gt_apply_incentive_bonus",
+    "version_id.gt_apply_igss",
+    "parameter_id.incentive_bonus",
+    "parameter_id.igss_employee_rate",
+    "parameter_id.extra_hour_rate_multiplier",
+    "parameter_id.isr_exempt_monthly",
+    "parameter_id.isr_rate_low",
+    "parameter_id.isr_rate_high",
+    "parameter_id.isr_high_threshold",
+)
     def _compute_all_amounts(self):
         for rec in self:
             wage = rec.contract_id.wage or 0.0
