@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <record id="view_employee_form_gt_fields" model="ir.ui.view">
+        <field name="name">hr.employee.form.gt.fields</field>
+        <field name="model">hr.employee</field>
+        <field name="inherit_id" ref="hr.view_employee_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//sheet" position="inside">
+                <group string="Datos Guatemala">
+                    <group>
+                        <field name="gt_dpi"/>
+                        <field name="gt_nit"/>
+                        <field name="gt_igss_number"/>
+                        <field name="gt_employee_type"/>
+                        <field name="gt_hire_date"/>
+                        <field name="gt_labor_status"/>
+                    </group>
+                    <group>
+                        <field name="gt_bank_id"/>
+                        <field name="gt_bank_account"/>
+                        <field name="gt_payment_method"/>
+                        <field name="gt_cost_center_id"/>
+                        <field name="gt_termination_date"/>
+                        <field name="gt_termination_reason"/>
+                    </group>
+                </group>
+            </xpath>
+        </field>
+    </record>
+
+</odoo>

@@ -1,0 +1,4 @@
+id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
+access_gt_payroll_parameter_admin,gt.payroll.parameter.admin,model_l10n_gt_payroll_parameter,base.group_system,1,1,1,1
+access_gt_overtime_admin,gt.overtime.admin,model_l10n_gt_overtime,base.group_system,1,1,1,1
+access_gt_liquidation_admin,gt.liquidation.admin,model_l10n_gt_liquidation,base.group_system,1,1,1,1

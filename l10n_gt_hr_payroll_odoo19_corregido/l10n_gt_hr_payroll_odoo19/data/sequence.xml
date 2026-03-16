@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo noupdate="1">
+    <record id="seq_gt_overtime" model="ir.sequence">
+        <field name="name">GT Overtime</field>
+        <field name="code">l10n_gt.overtime</field>
+        <field name="prefix">OT/%(year)s/</field>
+        <field name="padding">5</field>
+    </record>
+
+    <record id="seq_gt_liquidation" model="ir.sequence">
+        <field name="name">GT Liquidation</field>
+        <field name="code">l10n_gt.liquidation</field>
+        <field name="prefix">LQ/%(year)s/</field>
+        <field name="padding">5</field>
+    </record>
+</odoo>
