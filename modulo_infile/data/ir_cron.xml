@@ -1,3 +1,4 @@
+<?xml version="1.0" encoding="UTF-8"?>
 <odoo>
     <data noupdate="1">
         <record id="ir_cron_fel_sync_sat_status" model="ir.cron">
@@ -7,8 +8,8 @@
             <field name="code">model.cron_actualizar_estado_fel_desde_sat()</field>
             <field name="interval_number">15</field>
             <field name="interval_type">minutes</field>
-            <field name="numbercall">-1</field>
-            <field name="active">True</field>
+            <field name="user_id" ref="base.user_root"/>
+            <field name="active" eval="True"/>
         </record>
     </data>
 </odoo>
