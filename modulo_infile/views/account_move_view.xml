@@ -37,6 +37,12 @@
                         class="btn-secondary"
                         icon="fa-file-pdf-o"
                         invisible="not fel_pdf_url"/>
+                <button name="action_consultar_fel"
+                        string="Consultar SAT"
+                        type="object"
+                        class="btn-secondary"
+                        icon="fa-refresh"
+                        invisible="not fel_uuid"/>
             </xpath>
 
             <!-- Campos FEL en la factura -->
@@ -49,6 +55,7 @@
                                decoration-success="fel_estado == 'certified'"
                                decoration-danger="fel_estado in ('error', 'cancelled')"
                                decoration-warning="fel_estado == 'pending'"/>
+                        <field name="fel_estado_sat" invisible="not fel_estado_sat" readonly="1"/>
                         <field name="fel_uuid" invisible="not fel_uuid"/>
                     </group>
                     <group>
@@ -56,6 +63,8 @@
                         <field name="fel_numero" invisible="not fel_numero"/>
                         <field name="fel_fecha_certificacion" invisible="not fel_fecha_certificacion"/>
                         <field name="fel_numero_acceso" invisible="not fel_numero_acceso"/>
+                        <field name="fel_ultima_consulta_sat" invisible="not fel_ultima_consulta_sat" readonly="1"/>
+                        <field name="fel_sync_ok" readonly="1"/>
                     </group>
                 </group>
             </xpath>

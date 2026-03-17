@@ -80,6 +80,22 @@ class AccountMove(models.Model):
         readonly=True,
         copy=False,
     )
+    fel_estado_sat = fields.Char(
+        string="Estado SAT Consultado",
+        readonly=True,
+        copy=False,
+    )
+    fel_ultima_consulta_sat = fields.Datetime(
+        string="Última consulta SAT",
+        readonly=True,
+        copy=False,
+    )
+    fel_sync_ok = fields.Boolean(
+        string="Sincronizado con SAT",
+        readonly=True,
+        copy=False,
+        default=False,
+    )
 
     # Campos computados para mostrar XML formateado
     fel_xml_enviado_formatted = fields.Html(
@@ -388,14 +404,57 @@ class AccountMove(models.Model):
 
         return True
 
+    def _normalizar_estado_sat(self, estado):
+        estado = (estado or '').strip()
+        estado_upper = estado.upper()
+        if any(token in estado_upper for token in ('ANUL', 'CANCEL')):
+            return 'cancelled'
+        if any(token in estado_upper for token in ('CERTIFIC', 'VIGENTE', 'ACTIVO', 'AUTORIZADO', 'ACEPTADO')):
+            return 'certified'
+        if any(token in estado_upper for token in ('ERROR', 'RECHAZ', 'INVALID')):
+            return 'error'
+        return False
+
+    def _aplicar_resultado_consulta_fel(self, resultado, automatico=False):
+        self.ensure_one()
+
+        estado_sat = (resultado.get('estado') or resultado.get('descripcion_estado') or resultado.get('mensaje') or '').strip()
+        nuevo_estado = self._normalizar_estado_sat(estado_sat)
+
+        vals = {
+            'fel_estado_sat': estado_sat or False,
+            'fel_ultima_consulta_sat': fields.Datetime.now(),
+            'fel_sync_ok': bool(resultado.get('resultado')),
+        }
+
+        if resultado.get('xml_respuesta'):
+            vals['fel_xml_respuesta'] = resultado.get('xml_respuesta')
+
+        cambios = []
+        if estado_sat:
+            cambios.append(_('Estado SAT: %s') % estado_sat)
+
+        if nuevo_estado and nuevo_estado != self.fel_estado:
+            vals['fel_estado'] = nuevo_estado
+            cambios.append(_('Estado interno actualizado a: %s') % dict(self._fields['fel_estado'].selection).get(nuevo_estado, nuevo_estado))
+
+        self.write(vals)
+
+        if cambios:
+            prefijo = _('Sincronización automática SAT') if automatico else _('Consulta manual SAT')
+            self.message_post(body='<b>%s</b><br/>%s' % (prefijo, '<br/>'.join(cambios)))
+
+        return vals
+
     def action_consultar_fel(self):
-        """Consulta el estado del documento en FEL"""
+        """Consulta el estado del documento en FEL y actualiza el registro."""
         self.ensure_one()
         if not self.fel_uuid:
             raise UserError(_("El documento no tiene UUID de certificación."))
 
         fel_service = self.env['fel.service']
         resultado = fel_service._consultar_dte(self.fel_uuid)
+        self._aplicar_resultado_consulta_fel(resultado, automatico=False)
 
         return {
             'type': 'ir.actions.client',
@@ -403,10 +462,29 @@ class AccountMove(models.Model):
             'params': {
                 'title': _('Consulta FEL'),
                 'message': resultado.get('mensaje', _('Consulta realizada')),
-                'type': 'info',
+                'type': 'success' if resultado.get('resultado') else 'warning',
                 'sticky': False,
             }
         }
+
+    @api.model
+    def cron_actualizar_estado_fel_desde_sat(self, limit=100):
+        domain = [
+            ('move_type', 'in', ('out_invoice', 'out_refund')),
+            ('state', '=', 'posted'),
+            ('fel_uuid', '!=', False),
+            ('fel_estado', 'in', ('certified', 'error')),
+        ]
+        records = self.search(domain, limit=limit, order='write_date desc')
+        fel_service = self.env['fel.service']
+
+        for move in records:
+            try:
+                resultado = fel_service._consultar_dte(move.fel_uuid)
+                move._aplicar_resultado_consulta_fel(resultado, automatico=True)
+            except Exception as e:
+                _logger.warning("FEL: No se pudo sincronizar %s con SAT: %s", move.name, e)
+        return True
 
     def action_ver_pdf_fel(self):
         """Abre el PDF del documento FEL"""

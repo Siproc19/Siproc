@@ -573,6 +573,8 @@ class FelService(models.AbstractModel):
             'LlaveFirma': llave_firma,
             'UsuarioApi': config['usuario_api'],
             'LlaveApi': config['llave_api'],
+            'usuario': config['usuario_api'],
+            'llave': config['llave_api'],
             'identificador': identificador,
             'Content-Type': 'application/xml',
         }
@@ -636,6 +638,8 @@ class FelService(models.AbstractModel):
         headers = {
             'UsuarioApi': config['usuario_api'],
             'LlaveApi': config['llave_api'],
+            'usuario': config['usuario_api'],
+            'llave': config['llave_api'],
             'Content-Type': 'application/json',
         }
 
@@ -692,35 +696,65 @@ class FelService(models.AbstractModel):
     # CONSULTA DE DTE
     # ============================================================
 
+    def _parse_consulta_dte_response(self, data, uuid_dte):
+        estado = (
+            data.get('estado')
+            or data.get('descripcion_estado')
+            or data.get('status')
+            or data.get('resultado_desc')
+            or data.get('resultado')
+            or ''
+        )
+        if isinstance(estado, bool):
+            estado = 'CERTIFICADO' if estado else ''
+
+        return {
+            'resultado': True,
+            'uuid': data.get('uuid', uuid_dte),
+            'estado': str(estado or '').strip(),
+            'descripcion_estado': data.get('descripcion_estado', ''),
+            'mensaje': _('Documento encontrado: %s') % (str(estado or 'OK').strip() or 'OK'),
+            'xml_respuesta': data.get('xml_certificado', '') or '',
+            'respuesta_raw': str(data),
+        }
+
     def _consultar_dte(self, uuid_dte):
-        """Consulta el estado de un DTE por su UUID"""
+        """Consulta el estado de un DTE por su UUID."""
         if not uuid_dte:
             raise UserError(_("Debe proporcionar un UUID para consultar."))
 
         config = self._get_config()
         token = self._get_token()
-        url = f"{config['url_base']}/feel/certificacion/v2/dte/{uuid_dte}"
+
+        posibles_urls = [
+            f"{config['url_base'].rstrip('/')}/feel/certificacion/v2/dte/{uuid_dte}",
+            f"{config['url_base'].rstrip('/')}/api/v2/servicios/externos/dte/{uuid_dte}",
+        ]
 
         headers = {
             'Authorization': f'Bearer {token}',
+            'usuario': config['usuario_api'],
+            'llave': config['llave_api'],
         }
 
-        try:
-            response = requests.get(url, headers=headers, timeout=30)
-            response.raise_for_status()
+        ultimo_error = None
+        for url in posibles_urls:
+            try:
+                _logger.info(f"FEL: Consultando DTE en {url}")
+                response = requests.get(url, headers=headers, timeout=30)
+                response.raise_for_status()
+                data = response.json()
+                return self._parse_consulta_dte_response(data, uuid_dte)
+            except requests.exceptions.RequestException as e:
+                ultimo_error = str(e)
+                _logger.warning(f"FEL: Consulta DTE falló en {url}: {e}")
+            except ValueError as e:
+                ultimo_error = str(e)
+                _logger.warning(f"FEL: Respuesta no JSON en consulta DTE {url}: {e}")
 
-            data = response.json()
-
-            return {
-                'resultado': True,
-                'uuid': data.get('uuid', uuid_dte),
-                'estado': data.get('estado', ''),
-                'mensaje': _("Documento encontrado: %s") % data.get('estado', 'OK'),
-            }
-
-        except requests.exceptions.RequestException as e:
-            _logger.error(f"FEL: Error al consultar DTE: {e}")
-            return {
-                'resultado': False,
-                'mensaje': _("Error al consultar: %s") % str(e),
-            }
+        return {
+            'resultado': False,
+            'uuid': uuid_dte,
+            'estado': '',
+            'mensaje': _('Error al consultar: %s') % (ultimo_error or _('sin detalle')),
+        }
