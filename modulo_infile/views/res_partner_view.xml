@@ -1,23 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
 <odoo>
-    <record id="view_partner_form_inherit_fel" model="ir.ui.view">
-        <field name="name">res.partner.form.inherit.fel</field>
+
+    <!-- ===================================================== -->
+    <!-- HERENCIA DE FORMULARIO DE CONTACTOS -->
+    <!-- ===================================================== -->
+    <record id="view_partner_form_inherit_infile" model="ir.ui.view">
+        <field name="name">res.partner.form.inherit.infile</field>
         <field name="model">res.partner</field>
         <field name="inherit_id" ref="base.view_partner_form"/>
         <field name="arch" type="xml">
-            <xpath expr="//field[@name='vat']" position="after">
-                <field name="cui"/>
-                <field name="infile_nombre_consultado" readonly="1"/>
-                <field name="infile_cui_fallecido" readonly="1"/>
-                <field name="infile_ultima_consulta" readonly="1"/>
 
+            <!-- ===================================================== -->
+            <!-- AGREGAR DESPUÉS DEL NIT -->
+            <!-- ===================================================== -->
+            <xpath expr="//field[@name='vat']" position="after">
+
+                <!-- RESULTADO DE CONSULTA -->
+                <field name="infile_resultado"
+                       string="Resultado INFILE"
+                       readonly="1"
+                       nolabel="0"
+                       placeholder="Aquí aparecerá el resultado de la consulta"/>
+
+                <!-- BOTÓN CONSULTA -->
                 <button name="action_consultar_nit_infile"
                         string="Consultar NIT INFILE"
-                        type="object"/>
+                        type="object"
+                        class="btn-primary"
+                        icon="fa-search"/>
 
-                <button name="action_consultar_cui_infile"
-                        string="Consultar CUI INFILE"
-                        type="object"/>
             </xpath>
+
         </field>
     </record>
+
 </odoo>
