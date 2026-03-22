@@ -1,37 +1,16 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <odoo>
-
-    <!-- ===================================================== -->
-    <!-- HERENCIA DE FORMULARIO DE CONTACTOS -->
-    <!-- ===================================================== -->
     <record id="view_partner_form_inherit_infile" model="ir.ui.view">
         <field name="name">res.partner.form.inherit.infile</field>
         <field name="model">res.partner</field>
         <field name="inherit_id" ref="base.view_partner_form"/>
         <field name="arch" type="xml">
-
-            <!-- ===================================================== -->
-            <!-- AGREGAR DESPUÉS DEL NIT -->
-            <!-- ===================================================== -->
             <xpath expr="//field[@name='vat']" position="after">
-
-                <!-- RESULTADO DE CONSULTA -->
-                <field name="infile_resultado"
-                       string="Resultado INFILE"
-                       readonly="1"
-                       nolabel="0"
-                       placeholder="Aquí aparecerá el resultado de la consulta"/>
-
-                <!-- BOTÓN CONSULTA -->
+                <field name="infile_resultado" readonly="1"/>
                 <button name="action_consultar_nit_infile"
                         string="Consultar NIT INFILE"
-                        type="object"
-                        class="btn-primary"
-                        icon="fa-search"/>
-
+                        type="object"/>
             </xpath>
-
         </field>
     </record>
-
 </odoo>
