@@ -59,7 +59,7 @@ class ResPartner(models.Model):
     def _consultar_nit_infile_data(self, nit):
         prefijo, llave = self._get_infile_config()
 
-        nit = (nit or '').replace('-', '').strip()
+        nit = (nit or '').replace('-', '').replace(' ', '').strip()
         if not nit:
             raise UserError("Debe ingresar un NIT válido.")
 
@@ -72,18 +72,31 @@ class ResPartner(models.Model):
 
         url = "https://consultareceptores.feel.com.gt/rest/action"
         headers = {
-            'Content-Type': 'application/xml; charset=utf-8',
+            "Content-Type": "application/xml; charset=utf-8",
+            "Accept": "application/xml, text/xml, application/json, text/plain",
         }
 
-        response = requests.post(
-            url,
-            data=xml_request.encode('utf-8'),
-            headers=headers,
-            timeout=30,
-        )
-        response.raise_for_status()
+        try:
+            response = requests.post(
+                url,
+                data=xml_request.encode("utf-8"),
+                headers=headers,
+                timeout=30,
+            )
+            response.raise_for_status()
+        except Exception as e:
+            raise UserError(f"Error HTTP al consultar NIT: {str(e)}")
 
-        raw = response.text.strip()
+        raw = (response.text or "").strip()
+
+        if raw.startswith("{"):
+            try:
+                data_json = response.json()
+                raise UserError(data_json.get("mensaje") or str(data_json))
+            except UserError:
+                raise
+            except Exception:
+                raise UserError(f"Respuesta no válida de consulta NIT: {raw}")
 
         try:
             root = ET.fromstring(raw)
@@ -128,12 +141,13 @@ class ResPartner(models.Model):
             data = rec._consultar_nit_infile_data(rec.vat)
 
             nombre = (
-                data.get('nombre')
-                or data.get('name')
-                or data.get('razon_social')
+                data.get("nombre")
+                or data.get("name")
+                or data.get("razon_social")
             )
 
-            mensaje = data.get('mensaje')
+            mensaje = data.get("mensaje")
+
             if mensaje and not nombre:
                 raise UserError(mensaje)
 
