@@ -16,12 +16,8 @@ class ResPartner(models.Model):
     def _sanitizar_nit(self, nit):
         return (nit or "").replace("-", "").replace(" ", "").strip().upper()
 
-    # =========================================================
-    # CONSULTA NIT (SIN MODIFICAR DATOS)
-    # =========================================================
     def action_consultar_nit_infile(self):
         for rec in self:
-
             nit = rec._sanitizar_nit(rec.vat)
 
             if not nit:
@@ -30,13 +26,11 @@ class ResPartner(models.Model):
             prefijo, llave = self._get_infile_config()
 
             url = "https://consultareceptores.feel.com.gt/rest/action"
-
             payload = {
                 "emisor_codigo": prefijo,
                 "emisor_clave": llave,
                 "nit_consultar": nit,
             }
-
             headers = {
                 "Content-Type": "application/json",
                 "Accept": "application/json",
@@ -50,14 +44,10 @@ class ResPartner(models.Model):
             except Exception:
                 raise UserError(f"Respuesta no válida: {response.text}")
 
-            # 🔥 SOLO MOSTRAR RESULTADO (NO CAMBIA NADA)
-            resultado = f"""
-NIT: {data.get('nit')}
-Nombre: {data.get('nombre')}
-Mensaje: {data.get('mensaje')}
-            """
+            resultado = (
+                f"NIT: {data.get('nit', '')}\n"
+                f"Nombre: {data.get('nombre', '')}\n"
+                f"Mensaje: {data.get('mensaje', '')}"
+            )
 
             rec.infile_resultado = resultado
-
-            # También lo mostramos en pantalla
-            raise UserError(resultado)
