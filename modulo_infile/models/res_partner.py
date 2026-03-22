@@ -19,18 +19,25 @@ class ResPartner(models.Model):
     def _sanitizar_nit(self, nit):
         return (nit or "").replace("-", "").replace(" ", "").strip().upper()
 
-    # =========================
-    # SOLO AUTOMÁTICO EN CUI
-    # =========================
-    @api.onchange('cui')
-    def _onchange_cui_infile(self):
-        cui = (self.cui or "").strip()
-        if cui and len(cui) >= 13:
-            self.action_consultar_cui_infile()
+    # =========================================================
+    # DESACTIVAR VALIDACIÓN ESTRICTA DE NIT PARA GUATEMALA
+    # =========================================================
+    @api.constrains('vat', 'country_id')
+    def check_vat(self):
+        partners_normal = self.browse()
+        for partner in self:
+            country = partner.country_id.code or partner.commercial_partner_id.country_id.code
+            if country == 'GT':
+                continue
+            partners_normal |= partner
 
-    # =========================
-    # LOGIN CUI
-    # =========================
+        if partners_normal:
+            return super(ResPartner, partners_normal).check_vat()
+        return True
+
+    # =========================================================
+    # LOGIN INFILE CUI
+    # =========================================================
     def _login_infile(self):
         prefijo, llave = self._get_infile_config()
 
@@ -55,9 +62,9 @@ class ResPartner(models.Model):
 
         return token
 
-    # =========================
+    # =========================================================
     # CONSULTA NIT
-    # =========================
+    # =========================================================
     def _consultar_nit_infile_data(self, nit):
         prefijo, llave = self._get_infile_config()
         nit = self._sanitizar_nit(nit)
@@ -86,9 +93,9 @@ class ResPartner(models.Model):
 
         return data
 
-    # =========================
+    # =========================================================
     # CONSULTA CUI
-    # =========================
+    # =========================================================
     def _consultar_cui_infile_data(self, cui):
         token = self._login_infile()
 
@@ -115,19 +122,17 @@ class ResPartner(models.Model):
 
         return data
 
-    # =========================
+    # =========================================================
     # BOTÓN NIT
-    # =========================
+    # =========================================================
     def action_consultar_nit_infile(self):
         for rec in self:
             nit = rec._sanitizar_nit(rec.vat)
-
             if not nit:
                 continue
 
             data = rec._consultar_nit_infile_data(nit)
 
-            # si INFILE sí devolvió nombre, usamos ese y no tronamos
             nombre = (
                 (data.get("nombre") or "").strip()
                 or (data.get("name") or "").strip()
@@ -143,9 +148,9 @@ class ResPartner(models.Model):
             elif mensaje:
                 raise UserError(mensaje)
 
-    # =========================
+    # =========================================================
     # BOTÓN CUI
-    # =========================
+    # =========================================================
     def action_consultar_cui_infile(self):
         for rec in self:
             if not rec.cui:
