@@ -16,16 +16,21 @@ class ResPartner(models.Model):
         llave = "BAB75DD76774CD825848325F38B98F3A"
         return prefijo, llave
 
-    @api.onchange('vat')
-    def _onchange_vat_infile(self):
-        if self.vat:
-            self.action_consultar_nit_infile()
+    def _sanitizar_nit(self, nit):
+        return (nit or "").replace("-", "").replace(" ", "").strip().upper()
 
+    # =========================
+    # SOLO AUTOMÁTICO EN CUI
+    # =========================
     @api.onchange('cui')
     def _onchange_cui_infile(self):
-        if self.cui:
+        cui = (self.cui or "").strip()
+        if cui and len(cui) >= 13:
             self.action_consultar_cui_infile()
 
+    # =========================
+    # LOGIN CUI
+    # =========================
     def _login_infile(self):
         prefijo, llave = self._get_infile_config()
 
@@ -50,10 +55,13 @@ class ResPartner(models.Model):
 
         return token
 
+    # =========================
+    # CONSULTA NIT
+    # =========================
     def _consultar_nit_infile_data(self, nit):
         prefijo, llave = self._get_infile_config()
+        nit = self._sanitizar_nit(nit)
 
-        nit = (nit or "").replace("-", "").replace(" ", "").strip()
         if not nit:
             raise UserError("Debe ingresar un NIT válido.")
 
@@ -76,14 +84,11 @@ class ResPartner(models.Model):
         except Exception:
             raise UserError(f"Respuesta no válida de consulta NIT: {response.text}")
 
-        mensaje = (data.get("mensaje") or "").strip()
-        if mensaje and mensaje.lower() not in ("", "ok"):
-            # si devuelve nombre sí dejamos pasar
-            if not data.get("nombre"):
-                raise UserError(mensaje)
-
         return data
 
+    # =========================
+    # CONSULTA CUI
+    # =========================
     def _consultar_cui_infile_data(self, cui):
         token = self._login_infile()
 
@@ -110,19 +115,37 @@ class ResPartner(models.Model):
 
         return data
 
+    # =========================
+    # BOTÓN NIT
+    # =========================
     def action_consultar_nit_infile(self):
         for rec in self:
-            if not rec.vat:
+            nit = rec._sanitizar_nit(rec.vat)
+
+            if not nit:
                 continue
 
-            data = rec._consultar_nit_infile_data(rec.vat)
-            nombre = (data.get("nombre") or "").strip()
+            data = rec._consultar_nit_infile_data(nit)
+
+            # si INFILE sí devolvió nombre, usamos ese y no tronamos
+            nombre = (
+                (data.get("nombre") or "").strip()
+                or (data.get("name") or "").strip()
+                or (data.get("razon_social") or "").strip()
+            )
+
+            mensaje = (data.get("mensaje") or "").strip()
 
             if nombre:
                 rec.name = nombre
                 rec.infile_nombre_consultado = nombre
                 rec.infile_ultima_consulta = fields.Datetime.now()
+            elif mensaje:
+                raise UserError(mensaje)
 
+    # =========================
+    # BOTÓN CUI
+    # =========================
     def action_consultar_cui_infile(self):
         for rec in self:
             if not rec.cui:
