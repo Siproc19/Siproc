@@ -13,43 +13,24 @@ class ResPartner(models.Model):
     infile_ultima_consulta = fields.Datetime(string="Última consulta")
 
     def _get_infile_config(self):
-        company = self.env.company
-
-        prefijo = (
-            getattr(company, 'fel_llave_prefijo', False)
-            or getattr(company, 'infile_prefijo', False)
-            or self.env['ir.config_parameter'].sudo().get_param('modulo_infile.prefijo')
-        )
-        llave = (
-            getattr(company, 'fel_llave', False)
-            or getattr(company, 'infile_llave', False)
-            or self.env['ir.config_parameter'].sudo().get_param('modulo_infile.llave')
-        )
+        prefijo = "120498219PRO"
+        llave = "BAB75DD76774CD825848325F38B98F3A"
 
         if not prefijo or not llave:
             raise UserError("No están configurados el prefijo y la llave de INFILE.")
 
         return prefijo, llave
 
-    # =========================
-    # AUTO AL CAMBIAR NIT
-    # =========================
     @api.onchange('vat')
     def _onchange_vat_infile(self):
         if self.vat:
             self.action_consultar_nit_infile()
 
-    # =========================
-    # AUTO AL CAMBIAR CUI
-    # =========================
     @api.onchange('cui')
     def _onchange_cui_infile(self):
         if self.cui:
             self.action_consultar_cui_infile()
 
-    # =========================
-    # LOGIN CUI
-    # =========================
     def _login_infile(self):
         prefijo, llave = self._get_infile_config()
 
@@ -75,16 +56,12 @@ class ResPartner(models.Model):
 
         return token
 
-    # =========================
-    # CONSULTA NIT
-    # Manual: XML a consultareceptores.feel.com.gt/rest/action
-    # =========================
     def _consultar_nit_infile_data(self, nit):
         prefijo, llave = self._get_infile_config()
 
         nit = (nit or '').replace('-', '').strip()
         if not nit:
-            raise UserError("Debe ingresar un NIT válido sin guiones.")
+            raise UserError("Debe ingresar un NIT válido.")
 
         xml_request = f"""<?xml version="1.0" encoding="UTF-8"?>
 <solicitud>
@@ -98,7 +75,12 @@ class ResPartner(models.Model):
             'Content-Type': 'application/xml; charset=utf-8',
         }
 
-        response = requests.post(url, data=xml_request.encode('utf-8'), headers=headers, timeout=30)
+        response = requests.post(
+            url,
+            data=xml_request.encode('utf-8'),
+            headers=headers,
+            timeout=30,
+        )
         response.raise_for_status()
 
         raw = response.text.strip()
@@ -111,10 +93,6 @@ class ResPartner(models.Model):
 
         return data
 
-    # =========================
-    # CONSULTA CUI
-    # Manual: bearer token + form-data cui
-    # =========================
     def _consultar_cui_infile_data(self, cui):
         token = self._login_infile()
 
@@ -142,9 +120,6 @@ class ResPartner(models.Model):
 
         return data
 
-    # =========================
-    # BOTÓN / MÉTODO NIT
-    # =========================
     def action_consultar_nit_infile(self):
         for rec in self:
             if not rec.vat:
@@ -167,9 +142,6 @@ class ResPartner(models.Model):
                 rec.infile_nombre_consultado = nombre
                 rec.infile_ultima_consulta = fields.Datetime.now()
 
-    # =========================
-    # BOTÓN / MÉTODO CUI
-    # =========================
     def action_consultar_cui_infile(self):
         for rec in self:
             if not rec.cui:
