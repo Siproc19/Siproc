@@ -1,4 +1,3 @@
-<?xml version="1.0" encoding="utf-8"?>
 <odoo>
     <record id="view_partner_form_inherit_fel" model="ir.ui.view">
         <field name="name">res.partner.form.inherit.fel</field>
@@ -7,39 +6,19 @@
         <field name="arch" type="xml">
             <xpath expr="//field[@name='vat']" position="after">
                 <field name="cui"/>
-            </xpath>
+                <field name="infile_nombre_consultado" readonly="1"/>
+                <field name="infile_cui_fallecido" readonly="1"/>
+                <field name="infile_ultima_consulta" readonly="1"/>
 
-            <xpath expr="//field[@name='vat']" position="attributes">
-                <attribute name="placeholder">NIT</attribute>
-            </xpath>
-
-            <xpath expr="//field[@name='vat']" position="after">
                 <button name="action_consultar_nit_infile"
                         string="Consultar NIT INFILE"
                         type="object"
-                        class="btn btn-secondary"
-                        invisible="not vat"/>
-                <button name="action_consultar_cui_infile"
-                        string="Consultar DPI INFILE"
-                        type="object"
-                        class="btn btn-secondary"
-                        invisible="not cui"/>
-            </xpath>
+                        class="btn-primary"/>
 
-            <xpath expr="//notebook" position="inside">
-                <page string="INFILE">
-                    <group>
-                        <group>
-                            <field name="vat" string="NIT"/>
-                            <field name="cui" string="CUI / DPI"/>
-                            <field name="infile_nombre_consultado" readonly="1"/>
-                        </group>
-                        <group>
-                            <field name="infile_cui_fallecido" readonly="1"/>
-                            <field name="infile_ultima_consulta" readonly="1"/>
-                        </group>
-                    </group>
-                </page>
+                <button name="action_consultar_cui_infile"
+                        string="Consultar CUI INFILE"
+                        type="object"
+                        class="btn-secondary"/>
             </xpath>
         </field>
     </record>
