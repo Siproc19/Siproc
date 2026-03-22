@@ -1,35 +1,36 @@
 from odoo import models, fields, api
+from odoo.exceptions import UserError
+from datetime import datetime
 
 class ResPartner(models.Model):
-    _inherit = 'res.partner'
+    _inherit = "res.partner"
 
     cui = fields.Char(string="CUI / DPI")
-    infile_nombre_consultado = fields.Char(string="Nombre INFILE")
+    infile_nombre_consultado = fields.Char(string="Nombre consultado")
     infile_cui_fallecido = fields.Boolean(string="Fallecido")
     infile_ultima_consulta = fields.Datetime(string="Última consulta")
 
-    # 🔥 AUTO CUANDO CAMBIA NIT
-    @api.onchange('vat')
-    def _onchange_vat_infile(self):
-        if self.vat:
-            self._consultar_nit_infile()
+    def action_consultar_nit_infile(self):
+        self.ensure_one()
+        if not self.vat:
+            raise UserError("Debe ingresar un NIT antes de consultar.")
 
-    # 🔥 AUTO CUANDO CAMBIA DPI
-    @api.onchange('cui')
-    def _onchange_cui_infile(self):
-        if self.cui:
-            self._consultar_cui_infile()
+        # Aquí va tu lógica real contra INFILE
+        nombre = self.name or "Nombre desde INFILE"
 
-    # 👇 MÉTODO NIT
-    def _consultar_nit_infile(self):
-        # Aquí va tu lógica actual de consulta INFILE
-        nombre = "Nombre desde INFILE"  # reemplazar por respuesta real
         self.name = nombre
         self.infile_nombre_consultado = nombre
+        self.infile_ultima_consulta = fields.Datetime.now()
 
-    # 👇 MÉTODO DPI
-    def _consultar_cui_infile(self):
-        # Aquí va tu lógica actual
-        nombre = "Nombre desde DPI"
+    def action_consultar_cui_infile(self):
+        self.ensure_one()
+        if not self.cui:
+            raise UserError("Debe ingresar un CUI / DPI antes de consultar.")
+
+        # Aquí va tu lógica real contra INFILE
+        nombre = self.name or "Nombre desde INFILE por CUI"
+
         self.name = nombre
         self.infile_nombre_consultado = nombre
+        self.infile_cui_fallecido = False
+        self.infile_ultima_consulta = fields.Datetime.now()
