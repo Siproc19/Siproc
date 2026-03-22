@@ -6,7 +6,7 @@ import requests
 class ResPartner(models.Model):
     _inherit = 'res.partner'
 
-    infile_resultado = fields.Text(string="Resultado INFILE", readonly=True)
+    cui = fields.Char(string="CUI / DPI")
 
     def _get_infile_config(self):
         prefijo = "120498219PRO"
@@ -19,7 +19,6 @@ class ResPartner(models.Model):
     def action_consultar_nit_infile(self):
         for rec in self:
             nit = rec._sanitizar_nit(rec.vat)
-
             if not nit:
                 raise UserError("Debe ingresar un NIT.")
 
@@ -50,4 +49,4 @@ class ResPartner(models.Model):
                 f"Mensaje: {data.get('mensaje', '')}"
             )
 
-            rec.infile_resultado = resultado
+            raise UserError(resultado)
