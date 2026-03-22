@@ -12,13 +12,11 @@
 
                 <button name="action_consultar_nit_infile"
                         string="Consultar NIT INFILE"
-                        type="object"
-                        class="btn-primary"/>
+                        type="object"/>
 
                 <button name="action_consultar_cui_infile"
                         string="Consultar CUI INFILE"
-                        type="object"
-                        class="btn-secondary"/>
+                        type="object"/>
             </xpath>
         </field>
     </record>
