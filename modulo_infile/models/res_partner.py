@@ -1,52 +1,49 @@
-from odoo import models, fields
+from odoo import models, fields, _
 from odoo.exceptions import UserError
-import requests
 
 
 class ResPartner(models.Model):
-    _inherit = 'res.partner'
+    _inherit = "res.partner"
 
-    cui = fields.Char(string="CUI / DPI")
-
-    def _get_infile_config(self):
-        prefijo = "120498219PRO"
-        llave = "BAB75DD76774CD825848325F38B98F3A"
-        return prefijo, llave
-
-    def _sanitizar_nit(self, nit):
-        return (nit or "").replace("-", "").replace(" ", "").strip().upper()
+    cui = fields.Char(string="CUI / DPI", copy=False)
+    infile_nombre_consultado = fields.Char(string="Nombre consultado INFILE", readonly=True, copy=False)
+    infile_cui_fallecido = fields.Boolean(string="Fallecido según INFILE", readonly=True, copy=False)
+    infile_ultima_consulta = fields.Datetime(string="Última consulta INFILE", readonly=True, copy=False)
 
     def action_consultar_nit_infile(self):
-        for rec in self:
-            nit = rec._sanitizar_nit(rec.vat)
-            if not nit:
-                raise UserError("Debe ingresar un NIT.")
-
-            prefijo, llave = self._get_infile_config()
-
-            url = "https://consultareceptores.feel.com.gt/rest/action"
-            payload = {
-                "emisor_codigo": prefijo,
-                "emisor_clave": llave,
-                "nit_consultar": nit,
+        for partner in self:
+            if not partner.vat:
+                raise UserError(_("Debe ingresar el NIT antes de consultar."))
+            resultado = self.env["fel.service"].consultar_nit(partner.vat)
+            vals = {
+                'infile_nombre_consultado': resultado.get('nombre') or False,
+                'infile_ultima_consulta': fields.Datetime.now(),
             }
-            headers = {
-                "Content-Type": "application/json",
-                "Accept": "application/json",
+            nombre = (resultado.get('nombre') or '').strip()
+            if nombre and (not partner.name or partner.name == partner.vat):
+                vals['name'] = nombre
+            if resultado.get('nit'):
+                vals['vat'] = resultado['nit']
+            partner.write(vals)
+            partner.message_post(body=_("Consulta NIT INFILE realizada. Resultado: %s") % (resultado.get('mensaje') or nombre or partner.vat))
+        return True
+
+    def action_consultar_cui_infile(self):
+        for partner in self:
+            if not partner.cui:
+                raise UserError(_("Debe ingresar el CUI / DPI antes de consultar."))
+            resultado = self.env["fel.service"].consultar_cui(partner.cui)
+            vals = {
+                'infile_nombre_consultado': resultado.get('nombre') or False,
+                'infile_cui_fallecido': bool(resultado.get('fallecido')),
+                'infile_ultima_consulta': fields.Datetime.now(),
             }
-
-            response = requests.post(url, json=payload, headers=headers, timeout=30)
-            response.raise_for_status()
-
-            try:
-                data = response.json()
-            except Exception:
-                raise UserError(f"Respuesta no válida: {response.text}")
-
-            resultado = (
-                f"NIT: {data.get('nit', '')}\n"
-                f"Nombre: {data.get('nombre', '')}\n"
-                f"Mensaje: {data.get('mensaje', '')}"
-            )
-
-            raise UserError(resultado)
+            nombre = (resultado.get('nombre') or '').strip()
+            if nombre and (not partner.name or partner.name == partner.cui):
+                vals['name'] = nombre
+            if resultado.get('cui'):
+                vals['cui'] = resultado['cui']
+            partner.write(vals)
+            estado = _("fallecido") if resultado.get('fallecido') else _("activo")
+            partner.message_post(body=_("Consulta CUI INFILE realizada. Nombre: %s. Estado: %s") % (nombre or '-', estado))
+        return True
