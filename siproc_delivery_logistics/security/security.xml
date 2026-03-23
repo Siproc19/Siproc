@@ -3,8 +3,9 @@
     <data noupdate="0">
 
         <record id="group_delivery_logistics_admin" model="res.groups">
-            <field name="name">Delivery Logistics / Administrador</field>
-        </record>
+    <field name="name">Delivery Logistics / Administrador</field>
+    <field name="category_id" ref="base.module_category_inventory"/>
+</record>
 
         <record id="group_delivery_logistics_coordinator" model="res.groups">
             <field name="name">Delivery Logistics / Coordinador</field>
