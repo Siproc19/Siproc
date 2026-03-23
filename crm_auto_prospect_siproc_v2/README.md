@@ -1,32 +1,22 @@
-# CRM Auto Prospect SIPROC v2
+# CRM SIPROC Flow
 
-Módulo integrado al CRM de Odoo 19 para prospección B2B.
+Módulo base para Odoo 19 que alinea CRM al flujo comercial SIPROC:
+
+Lead -> Solicitud de cotización -> Cotización enviada -> Commit -> Informal Won -> Formal Won -> Crédito -> Pagado
 
 ## Incluye
-- Extensión de `crm.lead`
-- Campos de prospección
+- Campos de prospección y calificación
 - Score automático
-- Calidad de dato
-- Actividad automática inicial
-- Cron de leads vencidos
-- Reglas configurables de asignación
-- Bitácora de prospección
-- Wizard de importación CSV
-- Dashboard base
-
-## No incluye todavía
-- Integraciones API externas (Google Maps, Hunter, Apollo, Clearbit)
-- Scraping de fuentes externas
-- Enriquecimiento automático web
-- WhatsApp / email marketing avanzado
+- Productos sugeridos por industria
+- Actividad inicial automática
+- Fechas automáticas por etapa
+- Cron para alertas de leads sin seguimiento
+- Etapas SIPROC globales
 
 ## Instalación
-1. Copiar carpeta a addons personalizados.
-2. Actualizar lista de apps.
-3. Instalar el módulo.
-4. Ir a CRM > Configuración > Reglas de asignación.
-5. Probar importando con el wizard.
+1. Copiar carpeta del módulo en addons personalizados.
+2. Actualizar Apps.
+3. Instalar "CRM SIPROC Flow".
 
-## CSV esperado
-Columnas sugeridas:
-name,partner_name,contact_name,email_from,phone,mobile,website,x_source_name,x_source_url,x_industry_type,x_zone,x_city,x_prospect_type
+## Nota
+Si ya tienes etapas con estos mismos nombres, Odoo puede mostrar ambas. En ese caso conviene limpiar etapas antiguas antes o después de instalar.

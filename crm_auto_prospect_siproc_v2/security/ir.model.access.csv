@@ -1,5 +1,1 @@
 id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
-access_crm_prospect_log_user,crm.prospect.log.user,model_crm_prospect_log,sales_team.group_sale_salesman_all_leads,1,0,0,0
-access_crm_prospect_log_manager,crm.prospect.log.manager,model_crm_prospect_log,crm_auto_prospect_siproc_v2.group_crm_auto_prospect_manager,1,1,1,1
-access_crm_prospect_rule_manager,crm.prospect.rule.manager,model_crm_prospect_rule,crm_auto_prospect_siproc_v2.group_crm_auto_prospect_manager,1,1,1,1
-access_prospect_import_wizard,prospect.import.wizard,model_prospect_import_wizard,sales_team.group_sale_manager,1,1,1,1

@@ -1,20 +1,15 @@
-import base64
-import csv
-import io
-import re
 from datetime import timedelta
 
-from odoo import _, api, fields, models
+from odoo import api, fields, models, _
+from odoo.tools import frozendict
 
 
 class CrmLead(models.Model):
     _inherit = "crm.lead"
 
-    x_company_name = fields.Char(string="Empresa", tracking=True)
-    x_contact_name = fields.Char(string="Contacto", tracking=True)
-    x_source_name = fields.Char(string="Fuente", tracking=True)
-    x_source_url = fields.Char(string="URL Fuente")
-    x_capture_date = fields.Datetime(string="Fecha Captura", default=fields.Datetime.now, tracking=True)
+    x_source_name = fields.Char(string="Fuente del lead", tracking=True)
+    x_source_url = fields.Char(string="URL fuente")
+    x_capture_date = fields.Datetime(string="Fecha de captura", default=fields.Datetime.now, tracking=True)
     x_industry_type = fields.Selection([
         ("construccion", "Construcción"),
         ("industria", "Industria"),
@@ -33,7 +28,10 @@ class CrmLead(models.Model):
         ("duplicate", "Duplicado"),
     ], string="Validación", default="pending", tracking=True)
     x_lead_score = fields.Integer(string="Score", default=0, tracking=True)
-    x_prospect_type = fields.Selection([
+    x_first_contact_deadline = fields.Datetime(string="Límite primer contacto", tracking=True)
+    x_days_without_management = fields.Integer(string="Días sin gestión", compute="_compute_days_without_management", store=False)
+    x_linea_producto_interes = fields.Char(string="Línea de producto interés", tracking=True)
+    x_tipo_cliente = fields.Selection([
         ("constructora", "Constructora"),
         ("fabrica", "Fábrica"),
         ("bodega", "Bodega"),
@@ -43,145 +41,64 @@ class CrmLead(models.Model):
         ("logistica", "Logística"),
         ("retail", "Retail"),
         ("otro", "Otro"),
-    ], string="Tipo de Prospecto", tracking=True)
+    ], string="Tipo de cliente", tracking=True)
+    x_monto_estimado = fields.Monetary(string="Monto estimado", tracking=True)
+    x_probabilidad_real = fields.Float(string="Probabilidad real", digits=(16, 2), tracking=True)
     x_suggested_products = fields.Text(string="Productos sugeridos")
-    x_duplicate_key = fields.Char(string="Llave duplicado", index=True)
-    x_first_contact_deadline = fields.Datetime(string="Límite primer contacto", tracking=True)
-    x_import_log = fields.Text(string="Bitácora importación")
-    x_source_batch = fields.Char(string="Lote importación")
-    x_last_auto_update = fields.Datetime(string="Última actualización automática")
-    x_data_quality = fields.Selection([
-        ("low", "Baja"),
-        ("medium", "Media"),
-        ("high", "Alta"),
-    ], string="Calidad de dato", tracking=True)
-    x_duplicate_of_id = fields.Many2one("crm.lead", string="Duplicado de", readonly=True)
-    x_followup_alert_sent = fields.Boolean(string="Alerta enviada", default=False)
+
+    x_fecha_primer_contacto = fields.Datetime(string="Fecha primer contacto", tracking=True)
+    x_fecha_solicitud_cotizacion = fields.Datetime(string="Fecha solicitud de cotización", tracking=True)
+    x_fecha_envio_cotizacion = fields.Datetime(string="Fecha cotización enviada", tracking=True)
+    x_fecha_commit = fields.Datetime(string="Fecha Commit", tracking=True)
+    x_fecha_informal_won = fields.Datetime(string="Fecha Informal Won", tracking=True)
+    x_fecha_formal_won = fields.Datetime(string="Fecha Formal Won", tracking=True)
+    x_fecha_credito = fields.Datetime(string="Fecha Crédito", tracking=True)
+    x_fecha_pagado = fields.Datetime(string="Fecha Pagado", tracking=True)
+
+    @api.depends("write_date", "create_date")
+    def _compute_days_without_management(self):
+        now = fields.Datetime.now()
+        for lead in self:
+            reference = lead.write_date or lead.create_date
+            lead.x_days_without_management = max((now - reference).days, 0) if reference else 0
 
     @api.model_create_multi
     def create(self, vals_list):
-        clean_vals_list = []
-        created_records = self.env["crm.lead"]
-        for vals in vals_list:
-            vals = dict(vals)
-            self._normalize_vals(vals)
-            duplicate = self._find_duplicate(vals)
-            if duplicate:
-                update_vals = self._prepare_update_vals(vals)
-                if update_vals:
-                    duplicate.write(update_vals)
-                duplicate.write({
-                    "x_validation_status": "duplicate",
-                    "x_duplicate_of_id": duplicate.id,
-                    "x_last_auto_update": fields.Datetime.now(),
-                })
-                duplicate.message_post(body=_("Coincidencia detectada. El registro fue actualizado en lugar de duplicarse."))
-                duplicate._create_prospect_log("duplicate", "Lead detectado como duplicado y actualizado.", vals.get("x_source_name"), vals.get("x_source_url"))
-                created_records |= duplicate
-                continue
-            clean_vals_list.append(vals)
-        new_records = super().create(clean_vals_list) if clean_vals_list else self.env["crm.lead"]
-        for lead in new_records:
-            lead._apply_prospect_rules()
-            lead._assign_using_rules()
+        leads = super().create([self._prepare_create_vals(vals) for vals in vals_list])
+        for lead in leads:
+            lead._apply_siproc_rules()
+            if not lead.x_first_contact_deadline:
+                lead.x_first_contact_deadline = fields.Datetime.now() + timedelta(hours=24)
             lead._schedule_initial_activity()
-            lead._create_prospect_log("created", "Lead creado por motor de prospección.", lead.x_source_name, lead.x_source_url)
-        created_records |= new_records
-        return created_records
+        return leads
 
     def write(self, vals):
-        vals = dict(vals)
-        self._normalize_vals(vals)
+        stage_changed = "stage_id" in vals
+        old_stage_names = {lead.id: (lead.stage_id.name or "").strip().lower() for lead in self}
         result = super().write(vals)
-        tracked_fields = {"email_from", "phone", "mobile", "website", "x_industry_type", "x_zone", "x_city", "x_source_name"}
-        if tracked_fields.intersection(vals.keys()):
-            for lead in self:
-                lead._apply_prospect_rules()
-                lead._assign_using_rules()
-                lead.x_last_auto_update = fields.Datetime.now()
-                lead._create_prospect_log("updated", "Lead recalculado por actualización automática.", lead.x_source_name, lead.x_source_url)
+        for lead in self:
+            lead._apply_siproc_rules()
+            if stage_changed:
+                old_name = old_stage_names.get(lead.id, "")
+                new_name = (lead.stage_id.name or "").strip().lower()
+                if old_name != new_name:
+                    lead._stamp_stage_date(new_name)
+                    lead._schedule_activity_for_stage(new_name)
         return result
 
-    @api.model
-    def _normalize_phone(self, phone):
-        if not phone:
-            return False
-        return re.sub(r"[^0-9+]", "", phone)
-
-    @api.model
-    def _normalize_website(self, website):
-        if not website:
-            return False
-        website = website.strip().lower()
-        for prefix in ("http://", "https://"):
-            if website.startswith(prefix):
-                website = website[len(prefix):]
-        return website.strip("/")
-
-    @api.model
-    def _normalize_vals(self, vals):
+    def _prepare_create_vals(self, vals):
+        vals = dict(vals)
         if vals.get("email_from"):
             vals["email_from"] = vals["email_from"].strip().lower()
         if vals.get("phone"):
-            vals["phone"] = self._normalize_phone(vals["phone"])
+            vals["phone"] = "".join(ch for ch in vals["phone"] if ch.isdigit() or ch == "+")
         if vals.get("mobile"):
-            vals["mobile"] = self._normalize_phone(vals["mobile"])
+            vals["mobile"] = "".join(ch for ch in vals["mobile"] if ch.isdigit() or ch == "+")
         if vals.get("website"):
-            vals["website"] = self._normalize_website(vals["website"])
-        company_name = vals.get("x_company_name") or vals.get("partner_name")
-        if company_name:
-            vals["x_company_name"] = company_name.strip()
-            vals["x_duplicate_key"] = company_name.strip().lower()
+            vals["website"] = vals["website"].strip().lower().replace("http://", "").replace("https://", "")
+        return vals
 
-    @api.model
-    def _find_duplicate(self, vals):
-        checks = []
-        if vals.get("email_from"):
-            checks.append([("email_from", "=", vals["email_from"]), ("type", "=", "lead")])
-        if vals.get("phone"):
-            checks.append([("phone", "=", vals["phone"]), ("type", "=", "lead")])
-        if vals.get("mobile"):
-            checks.append([("mobile", "=", vals["mobile"]), ("type", "=", "lead")])
-        if vals.get("website"):
-            checks.append([("website", "=", vals["website"]), ("type", "=", "lead")])
-        if vals.get("x_duplicate_key"):
-            checks.append([("x_duplicate_key", "=", vals["x_duplicate_key"]), ("type", "=", "lead")])
-
-        for domain in checks:
-            lead = self.search(domain, limit=1)
-            if lead:
-                return lead
-        return False
-
-    @api.model
-    def _prepare_update_vals(self, vals):
-        allowed = [
-            "name", "partner_name", "contact_name", "email_from", "phone", "mobile",
-            "website", "x_source_name", "x_source_url", "x_capture_date", "x_industry_type",
-            "x_zone", "x_city", "x_validation_status", "x_lead_score", "x_prospect_type",
-            "x_suggested_products", "x_import_log", "x_source_batch", "x_company_name",
-        ]
-        return {k: v for k, v in vals.items() if k in allowed and v not in (False, None, "")}
-
-    def _compute_quality(self):
-        for lead in self:
-            score = lead.x_lead_score or 0
-            if score >= 70:
-                lead.x_data_quality = "high"
-            elif score >= 40:
-                lead.x_data_quality = "medium"
-            else:
-                lead.x_data_quality = "low"
-
-    def _apply_prospect_rules(self):
-        suggestions = {
-            "construccion": "Cascos, chalecos, botas, línea de vida, señalización vial",
-            "industria": "Guantes, lentes, respiradores, protección auditiva",
-            "alimentos": "Cofia, guantes, mascarilla, botas de hule",
-            "logistica": "Chalecos, conos, señalización, cintas reflectivas",
-            "retail": "Lentes, guantes, señalización interna, chalecos",
-            "gobierno": "Conos, trafitambos, topes, postes y señalización vial",
-        }
+    def _apply_siproc_rules(self):
         for lead in self:
             score = 0
             if lead.email_from:
@@ -192,156 +109,145 @@ class CrmLead(models.Model):
                 score += 15
             if lead.x_industry_type:
                 score += 15
-            if lead.x_city or lead.x_zone:
+            if lead.city or lead.x_city or lead.x_zone:
                 score += 10
             if lead.x_source_name:
                 score += 5
-            if lead.partner_name or lead.x_company_name:
+            if lead.contact_name or lead.partner_name:
                 score += 10
-            lead.x_lead_score = score
+            lead.x_lead_score = min(score, 100)
 
-            if lead.email_from or lead.phone or lead.mobile:
-                lead.x_validation_status = "valid"
-            else:
-                lead.x_validation_status = "incomplete"
+            lead.x_validation_status = "valid" if (lead.email_from or lead.phone or lead.mobile) else "incomplete"
+            lead.x_suggested_products = self._get_products_by_industry(lead.x_industry_type)
 
-            if lead.x_industry_type in suggestions:
-                lead.x_suggested_products = suggestions[lead.x_industry_type]
+    def _get_products_by_industry(self, industry):
+        suggestions = {
+            "construccion": "Cascos, chalecos reflectivos, botas de seguridad, línea de vida, señalización vial",
+            "industria": "Guantes, lentes, respiradores, protección auditiva, botas de seguridad",
+            "alimentos": "Cofia, guantes, mascarilla, botas PVC, delantal",
+            "logistica": "Chalecos reflectivos, conos, señalización, guantes, fajas",
+            "retail": "Señalización, guantes, chalecos, cintas de seguridad",
+            "gobierno": "Conos, trafitambos, topes, postes viales, señalización",
+        }
+        return suggestions.get(industry, "")
 
-            if not lead.x_first_contact_deadline:
-                lead.x_first_contact_deadline = fields.Datetime.now() + timedelta(hours=24)
-            lead._compute_quality()
+    def _stage_xmlids(self):
+        return {
+            "lead": "crm_siproc_flow.stage_siproc_lead",
+            "solicitud de cotizacion": "crm_siproc_flow.stage_siproc_solicitud",
+            "cotizacion enviada": "crm_siproc_flow.stage_siproc_cotizacion_enviada",
+            "commit": "crm_siproc_flow.stage_siproc_commit",
+            "informal won": "crm_siproc_flow.stage_siproc_informal_won",
+            "formal won": "crm_siproc_flow.stage_siproc_formal_won",
+            "credito": "crm_siproc_flow.stage_siproc_credito",
+            "pagado": "crm_siproc_flow.stage_siproc_pagado",
+        }
 
-    def _assign_using_rules(self):
-        rules = self.env["crm.prospect.rule"].search([("active", "=", True)], order="sequence asc")
-        for lead in self:
-            if lead.user_id and lead.team_id:
-                continue
-            zone = (lead.x_zone or "").lower()
-            city = (lead.x_city or "").lower()
-            for rule in rules:
-                matches = True
-                if rule.zone_keyword and rule.zone_keyword.lower() not in zone:
-                    matches = False
-                if rule.city_keyword and rule.city_keyword.lower() not in city:
-                    matches = False
-                if rule.industry_type and rule.industry_type != lead.x_industry_type:
-                    matches = False
-                if rule.prospect_type and rule.prospect_type != lead.x_prospect_type:
-                    matches = False
-                if not matches:
-                    continue
-
-                vals = {"priority": rule.priority}
-                if rule.user_id:
-                    vals["user_id"] = rule.user_id.id
-                if rule.team_id:
-                    vals["team_id"] = rule.team_id.id
-                lead.write(vals)
-                lead._create_prospect_log("assigned", f"Asignación automática aplicada por regla: {rule.name}", lead.x_source_name, lead.x_source_url)
-                break
+    def _stamp_stage_date(self, stage_name):
+        now = fields.Datetime.now()
+        mapping = {
+            "lead": "x_fecha_primer_contacto",
+            "solicitud de cotizacion": "x_fecha_solicitud_cotizacion",
+            "cotizacion enviada": "x_fecha_envio_cotizacion",
+            "commit": "x_fecha_commit",
+            "informal won": "x_fecha_informal_won",
+            "formal won": "x_fecha_formal_won",
+            "credito": "x_fecha_credito",
+            "pagado": "x_fecha_pagado",
+        }
+        field_name = mapping.get(stage_name)
+        if field_name and not self[field_name]:
+            self[field_name] = now
 
     def _schedule_initial_activity(self):
-        activity_type_call = self.env.ref("mail.mail_activity_data_call", raise_if_not_found=False)
-        activity_type_email = self.env.ref("mail.mail_activity_data_email", raise_if_not_found=False)
-        activity_type_todo = self.env.ref("mail.mail_activity_data_todo", raise_if_not_found=False)
-        model_id = self.env["ir.model"]._get_id("crm.lead")
         for lead in self:
             if lead.activity_ids:
                 continue
-            activity_type = activity_type_email if lead.email_from else activity_type_call
-            if not activity_type:
-                activity_type = activity_type_todo
+            activity_type = self.env.ref("mail.mail_activity_data_email", raise_if_not_found=False) if lead.email_from else self.env.ref("mail.mail_activity_data_call", raise_if_not_found=False)
             if not activity_type:
                 continue
             self.env["mail.activity"].create({
-                "res_model_id": model_id,
+                "res_model_id": self.env["ir.model"]._get_id("crm.lead"),
                 "res_id": lead.id,
                 "activity_type_id": activity_type.id,
-                "summary": "Primer contacto automático",
-                "note": "Lead captado automáticamente. Validar necesidad y generar acercamiento inicial.",
+                "summary": _("Primer contacto SIPROC"),
+                "note": _("Lead nuevo. Realizar contacto inicial y calificar necesidad."),
                 "date_deadline": fields.Date.today(),
                 "user_id": lead.user_id.id or self.env.user.id,
             })
-            lead._create_prospect_log("activity", "Se creó actividad inicial automática.", lead.x_source_name, lead.x_source_url)
 
-    def _create_prospect_log(self, event_type, message, source_name=None, source_url=None):
-        for lead in self:
-            self.env["crm.prospect.log"].create({
-                "lead_id": lead.id,
-                "event_type": event_type,
-                "message": message,
-                "source_name": source_name or lead.x_source_name,
-                "source_url": source_url or lead.x_source_url,
-            })
+    def _schedule_activity_for_stage(self, stage_name):
+        stage_map = {
+            "solicitud de cotizacion": (_("Preparar cotización"), _("Revisar requerimiento y preparar propuesta."), "mail.mail_activity_data_todo"),
+            "cotizacion enviada": (_("Seguimiento a cotización"), _("Dar seguimiento a la cotización enviada."), "mail.mail_activity_data_email"),
+            "commit": (_("Cerrar negocio"), _("Confirmar fecha tentativa y condiciones de cierre."), "mail.mail_activity_data_todo"),
+            "informal won": (_("Formalizar venta"), _("Cerrar aprobación formal, orden o documento de respaldo."), "mail.mail_activity_data_todo"),
+            "formal won": (_("Coordinar entrega/facturación"), _("Validar entrega, facturación y siguiente paso administrativo."), "mail.mail_activity_data_todo"),
+            "credito": (_("Seguimiento de cobro"), _("Venta en crédito. Dar seguimiento al cobro."), "mail.mail_activity_data_todo"),
+            "pagado": (_("Cierre final"), _("Venta pagada. Verificar cierre completo y documentación."), "mail.mail_activity_data_todo"),
+        }
+        config = stage_map.get(stage_name)
+        if not config:
+            return
+        summary, note, xmlid = config
+        activity_type = self.env.ref(xmlid, raise_if_not_found=False)
+        if not activity_type:
+            return
+        existing = self.activity_ids.filtered(lambda a: a.summary == summary and not a.date_done)
+        if existing:
+            return
+        self.env["mail.activity"].create({
+            "res_model_id": self.env["ir.model"]._get_id("crm.lead"),
+            "res_id": self.id,
+            "activity_type_id": activity_type.id,
+            "summary": summary,
+            "note": note,
+            "date_deadline": fields.Date.today(),
+            "user_id": self.user_id.id or self.env.user.id,
+        })
 
     @api.model
-    def cron_flag_unattended_leads(self):
-        now = fields.Datetime.now()
+    def cron_create_followup_activities(self):
         leads = self.search([
-            ("type", "=", "lead"),
+            ("active", "=", True),
             ("x_validation_status", "=", "valid"),
+            ("stage_id.name", "!=", "Pagado"),
             ("x_first_contact_deadline", "!=", False),
-            ("x_first_contact_deadline", "<", now),
-            ("x_followup_alert_sent", "=", False),
         ], limit=200)
-        todo = self.env.ref("mail.mail_activity_data_todo", raise_if_not_found=False)
-        model_id = self.env["ir.model"]._get_id("crm.lead")
+        now = fields.Datetime.now()
         for lead in leads:
-            if todo:
+            if lead.x_first_contact_deadline and lead.x_first_contact_deadline <= now and not lead.activity_ids.filtered(lambda a: not a.date_done):
+                activity_type = self.env.ref("mail.mail_activity_data_call", raise_if_not_found=False)
+                if not activity_type:
+                    continue
                 self.env["mail.activity"].create({
-                    "res_model_id": model_id,
+                    "res_model_id": self.env["ir.model"]._get_id("crm.lead"),
                     "res_id": lead.id,
-                    "activity_type_id": todo.id,
-                    "summary": "Lead vencido sin atención",
-                    "note": "El lead superó el tiempo máximo de primer contacto. Revisar y accionar hoy.",
+                    "activity_type_id": activity_type.id,
+                    "summary": _("Lead sin seguimiento"),
+                    "note": _("El lead venció su primer contacto. Dar seguimiento de inmediato."),
                     "date_deadline": fields.Date.today(),
                     "user_id": lead.user_id.id or self.env.user.id,
                 })
-            lead.priority = "3"
-            lead.x_followup_alert_sent = True
-            lead.message_post(body=_("Alerta automática: lead sin seguimiento dentro del tiempo objetivo."))
-            lead._create_prospect_log("alert", "Lead vencido sin seguimiento. Se elevó prioridad y se generó alerta.")
+                lead.message_post(body=_("Alerta automática: lead sin gestión dentro del plazo establecido."))
 
     @api.model
-    def cron_refresh_existing_leads(self):
-        leads = self.search([("type", "=", "lead")], order="write_date desc", limit=500)
-        for lead in leads:
-            lead._apply_prospect_rules()
-
-    @api.model
-    def import_csv_payload(self, file_content, filename="import.csv", source_name="CSV"):
-        decoded = base64.b64decode(file_content)
-        text = decoded.decode("utf-8-sig")
-        reader = csv.DictReader(io.StringIO(text))
-        created = 0
-        updated = 0
-        for row in reader:
-            vals = {
-                "name": row.get("name") or row.get("partner_name") or row.get("x_company_name") or "Lead importado",
-                "partner_name": row.get("partner_name") or row.get("x_company_name"),
-                "contact_name": row.get("contact_name"),
-                "email_from": row.get("email_from"),
-                "phone": row.get("phone"),
-                "mobile": row.get("mobile"),
-                "website": row.get("website"),
-                "x_company_name": row.get("x_company_name") or row.get("partner_name"),
-                "x_contact_name": row.get("x_contact_name") or row.get("contact_name"),
-                "x_source_name": row.get("x_source_name") or source_name,
-                "x_source_url": row.get("x_source_url"),
-                "x_industry_type": row.get("x_industry_type"),
-                "x_zone": row.get("x_zone"),
-                "x_city": row.get("x_city"),
-                "x_prospect_type": row.get("x_prospect_type"),
-                "x_import_log": f"Importado desde {filename}",
-                "x_source_batch": filename,
-            }
-            duplicate = self._find_duplicate(vals)
-            if duplicate:
-                duplicate.write(self._prepare_update_vals(vals))
-                duplicate._create_prospect_log("import", f"Registro actualizado desde importación {filename}", vals.get("x_source_name"), vals.get("x_source_url"))
-                updated += 1
-            else:
-                self.create(vals)
-                created += 1
-        return {"created": created, "updated": updated}
+    def cron_force_siproc_stage_order(self):
+        """Optional helper: ensure SIPROC stages exist. Does not move records automatically."""
+        stage_names = [
+            "Lead",
+            "Solicitud de cotización",
+            "Cotización enviada",
+            "Commit",
+            "Informal Won",
+            "Formal Won",
+            "Crédito",
+            "Pagado",
+        ]
+        stage_model = self.env["crm.stage"]
+        sequence = 1
+        for name in stage_names:
+            stage = stage_model.search([("name", "=", name)], limit=1)
+            if not stage:
+                stage_model.create({"name": name, "sequence": sequence})
+            sequence += 1
