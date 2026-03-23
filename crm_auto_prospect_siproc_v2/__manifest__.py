@@ -1,6 +1,6 @@
 {
     "name": "CRM SIPROC Flow",
-    "version": "19.0.1.0.0",
+    "version": "19.0.1.0.1",
     "summary": "Flujo comercial SIPROC y automatización básica de prospección",
     "category": "Sales/CRM",
     "author": "OpenAI",

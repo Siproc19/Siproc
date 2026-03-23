@@ -1,8 +1,6 @@
+
 from datetime import timedelta
-
 from odoo import api, fields, models, _
-from odoo.tools import frozendict
-
 
 class CrmLead(models.Model):
     _inherit = "crm.lead"
@@ -42,7 +40,7 @@ class CrmLead(models.Model):
         ("retail", "Retail"),
         ("otro", "Otro"),
     ], string="Tipo de cliente", tracking=True)
-    x_monto_estimado = fields.Monetary(string="Monto estimado", tracking=True)
+    x_monto_estimado = fields.Float(string="Monto estimado", tracking=True)
     x_probabilidad_real = fields.Float(string="Probabilidad real", digits=(16, 2), tracking=True)
     x_suggested_products = fields.Text(string="Productos sugeridos")
 
@@ -131,27 +129,16 @@ class CrmLead(models.Model):
         }
         return suggestions.get(industry, "")
 
-    def _stage_xmlids(self):
-        return {
-            "lead": "crm_siproc_flow.stage_siproc_lead",
-            "solicitud de cotizacion": "crm_siproc_flow.stage_siproc_solicitud",
-            "cotizacion enviada": "crm_siproc_flow.stage_siproc_cotizacion_enviada",
-            "commit": "crm_siproc_flow.stage_siproc_commit",
-            "informal won": "crm_siproc_flow.stage_siproc_informal_won",
-            "formal won": "crm_siproc_flow.stage_siproc_formal_won",
-            "credito": "crm_siproc_flow.stage_siproc_credito",
-            "pagado": "crm_siproc_flow.stage_siproc_pagado",
-        }
-
     def _stamp_stage_date(self, stage_name):
         now = fields.Datetime.now()
         mapping = {
             "lead": "x_fecha_primer_contacto",
-            "solicitud de cotizacion": "x_fecha_solicitud_cotizacion",
-            "cotizacion enviada": "x_fecha_envio_cotizacion",
+            "solicitud de cotización": "x_fecha_solicitud_cotizacion",
+            "cotización enviada": "x_fecha_envio_cotizacion",
             "commit": "x_fecha_commit",
             "informal won": "x_fecha_informal_won",
             "formal won": "x_fecha_formal_won",
+            "crédito": "x_fecha_credito",
             "credito": "x_fecha_credito",
             "pagado": "x_fecha_pagado",
         }
@@ -178,11 +165,12 @@ class CrmLead(models.Model):
 
     def _schedule_activity_for_stage(self, stage_name):
         stage_map = {
-            "solicitud de cotizacion": (_("Preparar cotización"), _("Revisar requerimiento y preparar propuesta."), "mail.mail_activity_data_todo"),
-            "cotizacion enviada": (_("Seguimiento a cotización"), _("Dar seguimiento a la cotización enviada."), "mail.mail_activity_data_email"),
+            "solicitud de cotización": (_("Preparar cotización"), _("Revisar requerimiento y preparar propuesta."), "mail.mail_activity_data_todo"),
+            "cotización enviada": (_("Seguimiento a cotización"), _("Dar seguimiento a la cotización enviada."), "mail.mail_activity_data_email"),
             "commit": (_("Cerrar negocio"), _("Confirmar fecha tentativa y condiciones de cierre."), "mail.mail_activity_data_todo"),
             "informal won": (_("Formalizar venta"), _("Cerrar aprobación formal, orden o documento de respaldo."), "mail.mail_activity_data_todo"),
             "formal won": (_("Coordinar entrega/facturación"), _("Validar entrega, facturación y siguiente paso administrativo."), "mail.mail_activity_data_todo"),
+            "crédito": (_("Seguimiento de cobro"), _("Venta en crédito. Dar seguimiento al cobro."), "mail.mail_activity_data_todo"),
             "credito": (_("Seguimiento de cobro"), _("Venta en crédito. Dar seguimiento al cobro."), "mail.mail_activity_data_todo"),
             "pagado": (_("Cierre final"), _("Venta pagada. Verificar cierre completo y documentación."), "mail.mail_activity_data_todo"),
         }
@@ -211,11 +199,12 @@ class CrmLead(models.Model):
         leads = self.search([
             ("active", "=", True),
             ("x_validation_status", "=", "valid"),
-            ("stage_id.name", "!=", "Pagado"),
             ("x_first_contact_deadline", "!=", False),
         ], limit=200)
         now = fields.Datetime.now()
         for lead in leads:
+            if (lead.stage_id.name or "").strip().lower() == "pagado":
+                continue
             if lead.x_first_contact_deadline and lead.x_first_contact_deadline <= now and not lead.activity_ids.filtered(lambda a: not a.date_done):
                 activity_type = self.env.ref("mail.mail_activity_data_call", raise_if_not_found=False)
                 if not activity_type:
@@ -233,7 +222,6 @@ class CrmLead(models.Model):
 
     @api.model
     def cron_force_siproc_stage_order(self):
-        """Optional helper: ensure SIPROC stages exist. Does not move records automatically."""
         stage_names = [
             "Lead",
             "Solicitud de cotización",

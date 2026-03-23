@@ -4,43 +4,36 @@
         <field name="sequence">1</field>
         <field name="fold">False</field>
     </record>
-
     <record id="stage_siproc_solicitud" model="crm.stage">
         <field name="name">Solicitud de cotización</field>
         <field name="sequence">2</field>
         <field name="fold">False</field>
     </record>
-
     <record id="stage_siproc_cotizacion_enviada" model="crm.stage">
         <field name="name">Cotización enviada</field>
         <field name="sequence">3</field>
         <field name="fold">False</field>
     </record>
-
     <record id="stage_siproc_commit" model="crm.stage">
         <field name="name">Commit</field>
         <field name="sequence">4</field>
         <field name="fold">False</field>
     </record>
-
     <record id="stage_siproc_informal_won" model="crm.stage">
         <field name="name">Informal Won</field>
         <field name="sequence">5</field>
         <field name="fold">False</field>
     </record>
-
     <record id="stage_siproc_formal_won" model="crm.stage">
         <field name="name">Formal Won</field>
         <field name="sequence">6</field>
         <field name="fold">False</field>
     </record>
-
     <record id="stage_siproc_credito" model="crm.stage">
         <field name="name">Crédito</field>
         <field name="sequence">7</field>
         <field name="fold">False</field>
     </record>
-
     <record id="stage_siproc_pagado" model="crm.stage">
         <field name="name">Pagado</field>
         <field name="sequence">8</field>

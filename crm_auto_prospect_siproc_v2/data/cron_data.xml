@@ -9,7 +9,6 @@
         <field name="numbercall">-1</field>
         <field name="active">True</field>
     </record>
-
     <record id="ir_cron_siproc_ensure_stages" model="ir.cron">
         <field name="name">SIPROC CRM - Verificar etapas SIPROC</field>
         <field name="model_id" ref="crm.model_crm_lead"/>
