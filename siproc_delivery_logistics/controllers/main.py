@@ -1,6 +1,20 @@
-import base64
+import math
 from odoo import http
 from odoo.http import request
+
+
+def _haversine_km(lat1, lon1, lat2, lon2):
+    if any(v in (False, None) for v in [lat1, lon1, lat2, lon2]):
+        return 0.0
+    if not all([lat1, lon1, lat2, lon2]):
+        return 0.0
+    r = 6371.0
+    p1 = math.radians(lat1)
+    p2 = math.radians(lat2)
+    d1 = math.radians(lat2 - lat1)
+    d2 = math.radians(lon2 - lon1)
+    a = math.sin(d1 / 2) ** 2 + math.cos(p1) * math.cos(p2) * math.sin(d2 / 2) ** 2
+    return 2 * r * math.atan2(math.sqrt(a), math.sqrt(1 - a))
 
 
 class DeliveryGpsController(http.Controller):
@@ -26,8 +40,9 @@ class DeliveryGpsController(http.Controller):
             return {"success": False, "message": "Ruta no encontrada"}
 
         points = []
+        planned_path = []
         for line in route.line_ids.sorted("sequence"):
-            points.append({
+            point_vals = {
                 "id": line.id,
                 "sequence": line.sequence,
                 "name": line.partner_id.name or "Punto",
@@ -45,7 +60,31 @@ class DeliveryGpsController(http.Controller):
                 "delivered_at": str(line.delivered_at) if line.delivered_at else "",
                 "google_maps_url": line.google_maps_url or "",
                 "waze_url": line.waze_url or "",
-            })
+            }
+            points.append(point_vals)
+            if line.planned_latitude and line.planned_longitude:
+                planned_path.append([line.planned_latitude, line.planned_longitude])
+
+        gps_history = []
+        for gps in route.gps_log_ids.sorted(lambda g: (g.gps_datetime or g.create_date or False, g.id)):
+            if gps.latitude and gps.longitude:
+                gps_history.append([gps.latitude, gps.longitude])
+
+        active_line = route.active_line_id
+        deviation_km = 0.0
+        deviated = False
+        deviation_message = ""
+        if active_line and route.current_latitude and route.current_longitude and active_line.planned_latitude and active_line.planned_longitude:
+            deviation_km = _haversine_km(
+                route.current_latitude, route.current_longitude, active_line.planned_latitude, active_line.planned_longitude
+            )
+            deviated = deviation_km >= 0.80
+            if deviated:
+                deviation_message = f"El piloto está a {deviation_km:.2f} km del punto esperado."
+
+        total = len(route.line_ids)
+        delivered = len(route.line_ids.filtered(lambda l: l.delivery_status == "delivered"))
+        progress = round((delivered / total) * 100, 2) if total else 0.0
 
         return {
             "success": True,
@@ -63,8 +102,17 @@ class DeliveryGpsController(http.Controller):
                 "waze_url": route.waze_url or "",
                 "warehouse_latitude": route.warehouse_latitude,
                 "warehouse_longitude": route.warehouse_longitude,
+                "total_points": total,
+                "delivered_points": delivered,
+                "pending_points": total - delivered,
+                "progress_percent": progress,
+                "deviation_km": round(deviation_km, 3),
+                "deviated": deviated,
+                "deviation_message": deviation_message,
             },
             "points": points,
+            "planned_path": planned_path,
+            "gps_history": gps_history,
         }
 
     @http.route('/delivery/line_action', type='jsonrpc', auth='user')

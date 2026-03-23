@@ -1,6 +1,6 @@
 {
     "name": "SIPROC Delivery Logistics",
-    "version": "19.0.3.0.0",
+    "version": "19.0.4.0.0",
     "summary": "Logística de entregas con rutas optimizadas, panel de piloto y mapa en tiempo real",
     "description": """
 SIPROC Delivery Logistics para Odoo 19.

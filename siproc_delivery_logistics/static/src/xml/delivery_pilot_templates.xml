@@ -6,14 +6,19 @@
                 <div style="font-size:24px; font-weight:700;"><t t-esc="state.route.name || 'Ruta'"/></div>
                 <div style="font-size:13px; opacity:.85;">Panel piloto · GPS cada <t t-esc="state.route.gps_interval_seconds || 15"/> seg</div>
                 <div style="margin-top:8px; font-size:14px;">Punto actual: <strong><t t-esc="activePoint?.name || 'Sin punto'"/></strong></div>
+                <div t-if="state.route.deviated" style="margin-top:8px; background:#7f1d1d; color:white; border-radius:12px; padding:10px; font-weight:600;">
+                    ⚠️ <t t-esc="state.route.deviation_message || 'Te estás desviando de la ruta.'"/>
+                </div>
             </div>
             <div style="display:grid; grid-template-columns:1fr; gap:12px;">
                 <div style="background:white; border-radius:18px; padding:12px; box-shadow:0 1px 6px rgba(0,0,0,.08);">
+                    <div style="font-size:12px; color:#6b7280; margin-bottom:8px;">Azul: ruta planificada · Verde punteado: recorrido real</div>
                     <div t-ref="mapRoot" style="width:100%; min-height:320px; border-radius:12px;"></div>
                 </div>
                 <div style="background:white; border-radius:18px; padding:14px; box-shadow:0 1px 6px rgba(0,0,0,.08);">
                     <div style="font-size:18px; font-weight:700; margin-bottom:6px;"><t t-esc="activePoint?.sequence || ''"/>. <t t-esc="activePoint?.name || 'Sin punto activo'"/></div>
                     <div style="color:#4b5563; margin-bottom:8px;"><t t-esc="activePoint?.address || ''"/></div>
+                    <div style="font-size:12px; color:#374151; margin-bottom:8px;">Tiempo en este punto: <t t-esc="activePoint?.elapsed_minutes || 0"/> min</div>
                     <div style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:10px;">
                         <button class="btn btn-secondary" t-on-click="() => this.openNav('google')">Google Maps</button>
                         <button class="btn btn-secondary" t-on-click="() => this.openNav('waze')">Waze</button>
