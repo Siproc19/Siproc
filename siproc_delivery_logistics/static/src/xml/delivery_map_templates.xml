@@ -5,7 +5,7 @@
             <div style="display:flex; justify-content:space-between; align-items:center; gap:12px; flex-wrap:wrap;">
                 <div>
                     <div style="font-size:24px; font-weight:700;">Mapa de reparto</div>
-                    <div style="color:#6b7280;">Control de ruta en vivo, puntos planificados y seguimiento del piloto desde teléfono.</div>
+                    <div style="color:#6b7280;">Visualiza la ruta, la dirección y la ubicación real desde el teléfono.</div>
                 </div>
                 <div style="display:flex; gap:8px; flex-wrap:wrap;">
                     <button class="btn btn-primary" t-on-click="takeLocationNow">Tomar ubicación</button>
@@ -20,9 +20,8 @@
 
             <div style="display:grid; grid-template-columns: 360px 1fr; gap:16px; min-height:620px;">
                 <div style="background:white; border-radius:14px; padding:12px; overflow:auto; box-shadow:0 1px 4px rgba(0,0,0,.08);">
-                    <div style="font-weight:700; margin-bottom:8px;">Puntos de la ruta</div>
-                    <div t-if="state.route.current_task_name" style="font-size:13px; color:#374151; margin-bottom:10px;">Punto actual: <strong><t t-esc="state.route.current_task_name"/></strong></div>
-                    <div t-if="!state.points.length" style="color:#6b7280;">No hay puntos cargados.</div>
+                    <div style="font-weight:700; margin-bottom:8px;">Paradas de la ruta</div>
+                    <div t-if="!state.points.length" style="color:#6b7280;">No hay puntos de entrega cargados.</div>
                     <t t-foreach="state.points" t-as="point" t-key="point.id">
                         <button t-on-click="() => this.selectPoint(point, state.points.indexOf(point))"
                                 style="width:100%; text-align:left; border:1px solid #e5e7eb; background:#fff; border-radius:12px; padding:12px; margin-bottom:10px; cursor:pointer;">
@@ -30,7 +29,6 @@
                                 <strong><t t-esc="point.sequence"/>. <t t-esc="point.name"/></strong>
                                 <span style="font-size:12px; padding:4px 8px; border-radius:999px; background:#f3f4f6;"><t t-esc="point.status"/></span>
                             </div>
-                            <div style="font-size:12px; color:#2563eb; margin-top:4px;"><t t-esc="point.task_type"/></div>
                             <div style="font-size:13px; color:#4b5563; margin-top:6px;"><t t-esc="point.address"/></div>
                             <div style="font-size:12px; color:#6b7280; margin-top:4px;">
                                 <t t-esc="point.zone"/> <t t-if="point.zone and point.municipality">•</t>
@@ -47,17 +45,13 @@
                         <div>
                             <div style="font-weight:700; font-size:18px;"><t t-esc="state.route.name || 'Ruta'"/></div>
                             <div style="color:#6b7280;">Estado: <t t-esc="state.route.state || 'draft'"/></div>
-                            <div style="color:#6b7280;">Tipo: <t t-esc="state.route.route_type || 'delivery'"/></div>
-                            <div style="color:#6b7280;">Resumen: <t t-esc="state.route.route_summary || 'Sin datos'"/></div>
                             <div style="margin-top:6px; display:flex; gap:8px; align-items:center;">
                                 <span style="display:inline-block; width:10px; height:10px; border-radius:999px;" t-att-style="'background:' + state.gpsStatusColor"></span>
                                 <span style="font-size:13px; color:#374151;"><t t-esc="state.gpsStatusLabel"/></span>
                             </div>
                         </div>
-                        <div style="font-size:13px; color:#6b7280; text-align:right;">
-                            <div>Lat: <t t-esc="state.route.current_latitude || 0"/></div>
-                            <div>Lon: <t t-esc="state.route.current_longitude || 0"/></div>
-                            <div>Último GPS: <t t-esc="state.route.last_gps_datetime || 'Sin registro'"/></div>
+                        <div style="font-size:13px; color:#6b7280;">
+                            Lat: <t t-esc="state.route.current_latitude || 0"/> | Lon: <t t-esc="state.route.current_longitude || 0"/>
                         </div>
                     </div>
                     <iframe t-att-src="state.mapUrl"

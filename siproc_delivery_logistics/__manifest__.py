@@ -1,6 +1,6 @@
 {
     "name": "SIPROC Delivery Logistics",
-    "version": "19.0.2.0.0",
+    "version": "19.0.3.0.0",
     "summary": "Logística de entregas con rutas, vehículos, pilotos, dirección y ubicación",
     "description": """
 Módulo de logística de entregas para Odoo 19.

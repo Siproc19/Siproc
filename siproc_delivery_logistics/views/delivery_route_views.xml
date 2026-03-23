@@ -12,12 +12,9 @@
             <list string="Rutas">
                 <field name="name"/>
                 <field name="date"/>
-                <field name="route_type"/>
                 <field name="vehicle_id"/>
                 <field name="driver_id"/>
                 <field name="state"/>
-                <field name="gps_status"/>
-                <field name="total_stops"/>
                 <field name="total_deliveries"/>
                 <field name="delivered_deliveries"/>
                 <field name="pending_deliveries"/>
@@ -32,9 +29,8 @@
             <form string="Ruta de Entrega">
                 <header>
                     <button name="action_plan" type="object" string="Planificar" class="btn-primary" invisible="state != 'draft'"/>
+                    <button name="action_optimize_route" type="object" string="Optimizar secuencia" class="btn-secondary" invisible="not line_ids"/>
                     <button name="action_start" type="object" string="Iniciar Ruta" class="btn-primary" invisible="state not in ('planned')"/>
-                    <button name="action_resume_tracking" type="object" string="Activar GPS" class="btn-secondary" invisible="state not in ('planned','in_progress','partial') or gps_tracking_active"/>
-                    <button name="action_stop_tracking" type="object" string="Detener GPS" class="btn-secondary" invisible="not gps_tracking_active"/>
                     <button name="%(action_delivery_route_map)d" type="action" string="Ver mapa" class="btn-secondary" invisible="not id" context="{'active_id': id}"/>
                     <button name="action_open_google_maps" type="object" string="Google Maps" class="btn-secondary" invisible="not current_latitude or not current_longitude"/>
                     <button name="action_open_waze" type="object" string="Waze" class="btn-secondary" invisible="not current_latitude or not current_longitude"/>
@@ -48,76 +44,80 @@
                         <group>
                             <field name="name" readonly="1"/>
                             <field name="date"/>
-                            <field name="route_type"/>
                             <field name="vehicle_id"/>
                             <field name="driver_id"/>
                         </group>
                         <group>
                             <field name="warehouse_id"/>
                             <field name="company_id"/>
-                            <field name="current_task_id"/>
-                            <field name="start_datetime" readonly="1"/>
-                            <field name="end_datetime" readonly="1"/>
+                            <field name="route_type"/>
+                            <field name="optimized_at" readonly="1"/>
                         </group>
                     </group>
 
-                    <group string="Control GPS y resumen">
+                    <group string="Origen / salida de ruta">
                         <group>
-                            <field name="gps_tracking_active" readonly="1"/>
-                            <field name="gps_status" readonly="1"/>
-                            <field name="last_gps_datetime" readonly="1"/>
-                            <field name="route_summary" readonly="1"/>
+                            <field name="start_latitude"/>
+                            <field name="start_longitude"/>
                         </group>
+                        <group>
+                            <field name="start_datetime" readonly="1"/>
+                            <field name="end_datetime" readonly="1"/>
+                            <button name="action_set_start_from_current_location" type="object" string="Tomar ubicación actual" class="btn-secondary"/>
+                        </group>
+                    </group>
+
+                    <group string="Ubicación actual de la ruta">
                         <group>
                             <field name="current_latitude" readonly="1"/>
                             <field name="current_longitude" readonly="1"/>
+                        </group>
+                        <group>
+                            <field name="last_gps_datetime" readonly="1"/>
                             <field name="google_maps_url" readonly="1" widget="url"/>
-                            <field name="waze_url" readonly="1" widget="url"/>
                         </group>
                     </group>
 
-                    <group string="Indicadores">
+                    <group string="Resumen">
                         <group>
-                            <field name="total_stops" readonly="1"/>
                             <field name="total_deliveries" readonly="1"/>
-                        </group>
-                        <group>
                             <field name="delivered_deliveries" readonly="1"/>
                             <field name="pending_deliveries" readonly="1"/>
+                            <field name="route_summary" readonly="1"/>
                         </group>
                     </group>
 
                     <notebook>
-                        <page string="Puntos de ruta">
+                        <page string="Puntos de entrega">
                             <field name="line_ids">
                                 <list editable="bottom">
                                     <field name="sequence" widget="handle"/>
-                                    <field name="task_type"/>
-                                    <field name="task_name"/>
                                     <field name="partner_id"/>
                                     <field name="sale_order_id"/>
                                     <field name="picking_id"/>
+                                    <field name="point_type"/>
                                     <field name="delivery_address"/>
+                                    <field name="zone"/>
+                                    <field name="municipality"/>
                                     <field name="planned_latitude"/>
                                     <field name="planned_longitude"/>
                                     <field name="delivery_status"/>
-                                    <button name="action_set_current_task" type="object" string="Punto actual"/>
                                     <button name="action_copy_partner_address" type="object" string="Copiar dirección"/>
+                                    <button name="action_apply_manual_location" type="object" string="Aplicar pin"/>
                                     <button name="action_use_route_location" type="object" string="Usar ubicación actual"/>
                                     <button name="action_set_on_the_way" type="object" string="En camino"/>
-                                    <button name="action_mark_delivered" type="object" string="Realizado"/>
+                                    <button name="action_mark_delivered" type="object" string="Entregado"/>
                                 </list>
-                                <form string="Punto de Ruta">
+                                <form string="Punto de Entrega">
                                     <sheet>
                                         <group>
                                             <group>
                                                 <field name="sequence"/>
-                                                <field name="task_type"/>
-                                                <field name="task_name"/>
                                                 <field name="partner_id"/>
                                                 <field name="sale_order_id"/>
                                                 <field name="picking_id"/>
                                                 <field name="delivery_status"/>
+                                                <field name="point_type"/>
                                             </group>
                                             <group>
                                                 <field name="receiver_name"/>
@@ -126,7 +126,7 @@
                                             </group>
                                         </group>
 
-                                        <group string="Dirección / referencia">
+                                        <group string="Dirección de entrega">
                                             <group>
                                                 <field name="delivery_address"/>
                                                 <field name="zone"/>
@@ -137,6 +137,7 @@
                                                 <field name="state_name"/>
                                                 <field name="country_id"/>
                                                 <field name="reference"/>
+                                                <field name="location_input" placeholder="Pega aquí URL o coordenadas: 14.123,-90.123"/>
                                             </group>
                                         </group>
 
@@ -144,6 +145,7 @@
                                             <group>
                                                 <field name="planned_latitude"/>
                                                 <field name="planned_longitude"/>
+                                                <field name="has_manual_coordinates" readonly="1"/>
                                             </group>
                                             <group>
                                                 <field name="google_maps_url" readonly="1" widget="url"/>
@@ -151,7 +153,7 @@
                                             </group>
                                         </group>
 
-                                        <group string="Ubicación real del punto">
+                                        <group string="Ubicación real de entrega">
                                             <group>
                                                 <field name="delivered_latitude" readonly="1"/>
                                                 <field name="delivered_longitude" readonly="1"/>
@@ -173,13 +175,14 @@
                                         </group>
 
                                         <footer>
-                                            <button name="action_set_current_task" type="object" string="Marcar punto actual" class="btn-secondary"/>
                                             <button name="action_copy_partner_address" type="object" string="Copiar dirección" class="btn-secondary"/>
                                             <button name="action_use_route_location" type="object" string="Usar ubicación actual" class="btn-secondary"/>
+                                            <button name="action_apply_manual_location" type="object" string="Aplicar pin / URL" class="btn-secondary"/>
+                                            <button name="action_clear_manual_location" type="object" string="Limpiar coordenadas" class="btn-secondary"/>
                                             <button name="action_open_google_maps" type="object" string="Google Maps" class="btn-secondary"/>
                                             <button name="action_open_waze" type="object" string="Waze" class="btn-secondary"/>
                                             <button name="action_set_on_the_way" type="object" string="En camino" class="btn-secondary"/>
-                                            <button name="action_mark_delivered" type="object" string="Marcar realizado" class="btn-primary"/>
+                                            <button name="action_mark_delivered" type="object" string="Marcar entregado" class="btn-primary"/>
                                             <button name="action_mark_rejected" type="object" string="Rechazado"/>
                                             <button name="action_mark_not_found" type="object" string="No localizado"/>
                                             <button name="action_mark_rescheduled" type="object" string="Reprogramado"/>
@@ -195,7 +198,6 @@
                                     <field name="gps_datetime"/>
                                     <field name="vehicle_id"/>
                                     <field name="driver_id"/>
-                                    <field name="delivery_line_id"/>
                                     <field name="latitude"/>
                                     <field name="longitude"/>
                                     <field name="speed"/>
