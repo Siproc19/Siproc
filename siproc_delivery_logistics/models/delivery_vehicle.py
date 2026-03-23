@@ -1,4 +1,5 @@
-from odoo import api, fields, models
+from odoo import api, fields, models, _
+from odoo.exceptions import ValidationError
 
 
 class DeliveryVehicle(models.Model):
@@ -15,6 +16,8 @@ class DeliveryVehicle(models.Model):
         [
             ("panel", "Panel"),
             ("camion", "Camión"),
+            ("pickup", "Pickup"),
+            ("moto", "Moto"),
         ],
         string="Tipo de Vehículo",
         required=True,
@@ -46,11 +49,6 @@ class DeliveryVehicle(models.Model):
     active_route_count = fields.Integer(compute="_compute_active_route_count")
     display_name = fields.Char(compute="_compute_display_name", store=True)
 
-    _sql_constraints = [
-        ("delivery_vehicle_plate_unique", "unique(plate)", "La placa del vehículo debe ser única."),
-        ("delivery_vehicle_name_unique", "unique(name)", "El código interno del vehículo debe ser único."),
-    ]
-
     @api.depends("name", "plate", "vehicle_type")
     def _compute_display_name(self):
         for rec in self:
@@ -60,6 +58,18 @@ class DeliveryVehicle(models.Model):
     def _compute_active_route_count(self):
         for rec in self:
             rec.active_route_count = len(rec.route_ids.filtered(lambda r: r.state in ("planned", "in_progress", "partial")))
+
+    @api.constrains("plate", "name")
+    def _check_unique_fields(self):
+        for rec in self:
+            if rec.plate:
+                dup_plate = self.search([("id", "!=", rec.id), ("plate", "=", rec.plate)], limit=1)
+                if dup_plate:
+                    raise ValidationError(_("La placa del vehículo debe ser única."))
+            if rec.name:
+                dup_name = self.search([("id", "!=", rec.id), ("name", "=", rec.name)], limit=1)
+                if dup_name:
+                    raise ValidationError(_("El código interno del vehículo debe ser único."))
 
     def action_set_available(self):
         self.write({"state": "available"})

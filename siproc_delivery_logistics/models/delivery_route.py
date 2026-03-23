@@ -1,34 +1,17 @@
-from math import radians, sin, cos, sqrt, atan2
+import json
 import re
+from math import radians, sin, cos, sqrt, atan2
+from urllib.parse import quote
+from urllib.request import Request, urlopen
 
 from odoo import api, fields, models, _
 from odoo.exceptions import ValidationError, UserError
 
 
+GOOGLE_RE = re.compile(r"[?&](?:q|query|ll|destination)=(-?\d+\.?\d*),\s*(-?\d+\.?\d*)")
+WAZE_RE = re.compile(r"[?&]ll=(-?\d+\.?\d*),\s*(-?\d+\.?\d*)")
+COORD_RE = re.compile(r"(-?\d+\.?\d*)\s*,\s*(-?\d+\.?\d*)")
 
-
-def _parse_coordinates_from_text(value):
-    if not value:
-        return (False, False)
-    value = (value or '').strip()
-    patterns = [
-        r'(-?\d+(?:\.\d+)?)\s*,\s*(-?\d+(?:\.\d+)?)',
-        r'[?&](?:q|ll|query|destination)=(-?\d+(?:\.\d+)?)%2C(-?\d+(?:\.\d+)?)',
-        r'[?&](?:q|ll|query|destination)=(-?\d+(?:\.\d+)?),(-?\d+(?:\.\d+)?)',
-        r'@(-?\d+(?:\.\d+)?),(-?\d+(?:\.\d+)?)',
-    ]
-    for pattern in patterns:
-        match = re.search(pattern, value)
-        if match:
-            lat = float(match.group(1))
-            lng = float(match.group(2))
-            if -90 <= lat <= 90 and -180 <= lng <= 180:
-                return (lat, lng)
-    return (False, False)
-
-
-def _sequence_start(index):
-    return (index + 1) * 10
 
 def _haversine_distance_km(lat1, lon1, lat2, lon2):
     if any(v in (False, None) for v in [lat1, lon1, lat2, lon2]):
@@ -45,6 +28,40 @@ def _haversine_distance_km(lat1, lon1, lat2, lon2):
     return r * c
 
 
+def _extract_coordinates(raw_value):
+    if not raw_value:
+        return (None, None)
+    value = (raw_value or "").strip()
+    for regex in (GOOGLE_RE, WAZE_RE, COORD_RE):
+        match = regex.search(value)
+        if match:
+            return float(match.group(1)), float(match.group(2))
+    return (None, None)
+
+
+def _build_full_address(line):
+    parts = [
+        line.delivery_address,
+        line.zone and ("Zona %s" % line.zone if not str(line.zone).lower().startswith("zona") else line.zone),
+        line.municipality or line.city,
+        line.state_name,
+        line.country_id.name if line.country_id else None,
+    ]
+    return ", ".join([p.strip() for p in parts if p and str(p).strip()])
+
+
+def _nominatim_geocode(text):
+    if not text:
+        return (None, None)
+    url = "https://nominatim.openstreetmap.org/search?q=%s&format=jsonv2&limit=1" % quote(text)
+    req = Request(url, headers={"User-Agent": "Odoo SIPROC Delivery/19.0"})
+    with urlopen(req, timeout=10) as resp:  # nosec B310
+        payload = json.loads(resp.read().decode("utf-8"))
+    if payload:
+        return float(payload[0]["lat"]), float(payload[0]["lon"])
+    return (None, None)
+
+
 class DeliveryRoute(models.Model):
     _name = "delivery.route"
     _description = "Ruta de Entrega"
@@ -59,15 +76,16 @@ class DeliveryRoute(models.Model):
     company_id = fields.Many2one("res.company", string="Compañía", default=lambda self: self.env.company)
     note = fields.Text(string="Observaciones")
     route_type = fields.Selection(
-        [("delivery", "Solo entregas"), ("mixed", "Ruta mixta"), ("shopping", "Compras"), ("errand", "Mandados")],
-        string="Tipo de ruta",
-        default="delivery",
+        [
+            ("delivery", "Solo entregas"),
+            ("mixed", "Mixta"),
+            ("purchase", "Compras"),
+            ("errand", "Mandados"),
+        ],
+        string="Tipo de Ruta",
+        default="mixed",
         tracking=True,
     )
-    start_latitude = fields.Float(string="Latitud de salida", digits=(10, 6))
-    start_longitude = fields.Float(string="Longitud de salida", digits=(10, 6))
-    optimized_at = fields.Datetime(string="Optimizada el", readonly=True)
-    route_summary = fields.Char(string="Resumen operativo", compute="_compute_route_summary")
 
     state = fields.Selection(
         [
@@ -86,12 +104,14 @@ class DeliveryRoute(models.Model):
     start_datetime = fields.Datetime(string="Inicio")
     end_datetime = fields.Datetime(string="Fin")
 
-    line_ids = fields.One2many("delivery.route.line", "route_id", string="Puntos de Entrega")
+    line_ids = fields.One2many("delivery.route.line", "route_id", string="Puntos de Ruta")
     gps_log_ids = fields.One2many("delivery.gps.log", "route_id", string="Logs GPS")
 
     total_deliveries = fields.Integer(compute="_compute_counts")
     delivered_deliveries = fields.Integer(compute="_compute_counts")
     pending_deliveries = fields.Integer(compute="_compute_counts")
+    total_purchases = fields.Integer(compute="_compute_counts")
+    total_errands = fields.Integer(compute="_compute_counts")
 
     current_latitude = fields.Float(string="Latitud Actual", digits=(10, 6))
     current_longitude = fields.Float(string="Longitud Actual", digits=(10, 6))
@@ -99,12 +119,26 @@ class DeliveryRoute(models.Model):
     google_maps_url = fields.Char(string="Google Maps", compute="_compute_navigation_urls")
     waze_url = fields.Char(string="Waze", compute="_compute_navigation_urls")
 
-    @api.depends("line_ids.delivery_status")
+    origin_partner_id = fields.Many2one("res.partner", string="Origen", compute="_compute_origin", store=False)
+    origin_address = fields.Char(string="Salida desde", compute="_compute_origin", store=False)
+    origin_latitude = fields.Float(string="Latitud salida", compute="_compute_origin", store=False, digits=(10, 6))
+    origin_longitude = fields.Float(string="Longitud salida", compute="_compute_origin", store=False, digits=(10, 6))
+    current_line_id = fields.Many2one("delivery.route.line", string="Punto actual", compute="_compute_current_line", store=False)
+    gps_status = fields.Selection(
+        [("offline", "Sin señal"), ("delay", "Con retraso"), ("online", "En línea")],
+        string="Estado GPS",
+        compute="_compute_gps_status",
+        store=False,
+    )
+
+    @api.depends("line_ids.delivery_status", "line_ids.stop_type")
     def _compute_counts(self):
         for rec in self:
-            rec.total_deliveries = len(rec.line_ids)
+            rec.total_deliveries = len(rec.line_ids.filtered(lambda l: l.stop_type == "delivery"))
             rec.delivered_deliveries = len(rec.line_ids.filtered(lambda l: l.delivery_status == "delivered"))
             rec.pending_deliveries = len(rec.line_ids.filtered(lambda l: l.delivery_status in ("pending", "on_the_way", "rescheduled")))
+            rec.total_purchases = len(rec.line_ids.filtered(lambda l: l.stop_type == "purchase"))
+            rec.total_errands = len(rec.line_ids.filtered(lambda l: l.stop_type == "errand"))
 
     @api.depends("current_latitude", "current_longitude")
     def _compute_navigation_urls(self):
@@ -116,78 +150,35 @@ class DeliveryRoute(models.Model):
                 rec.google_maps_url = False
                 rec.waze_url = False
 
-    @api.depends("route_type", "line_ids.point_type", "line_ids.delivery_status")
-    def _compute_route_summary(self):
+    @api.depends("warehouse_id", "company_id")
+    def _compute_origin(self):
         for rec in self:
-            counts = {
-                "delivery": len(rec.line_ids.filtered(lambda l: l.point_type == "delivery")),
-                "shopping": len(rec.line_ids.filtered(lambda l: l.point_type == "shopping")),
-                "errand": len(rec.line_ids.filtered(lambda l: l.point_type == "errand")),
-                "other": len(rec.line_ids.filtered(lambda l: l.point_type == "other")),
-            }
-            rec.route_summary = _("Entregas: %(d)s | Compras: %(c)s | Mandados: %(m)s | Otros: %(o)s") % {
-                "d": counts["delivery"], "c": counts["shopping"], "m": counts["errand"], "o": counts["other"]
-            }
+            partner = rec.warehouse_id.partner_id if rec.warehouse_id and rec.warehouse_id.partner_id else rec.company_id.partner_id
+            rec.origin_partner_id = partner
+            rec.origin_address = partner.contact_address if partner else False
+            rec.origin_latitude = partner.partner_latitude if partner and "partner_latitude" in partner._fields else 0.0
+            rec.origin_longitude = partner.partner_longitude if partner and "partner_longitude" in partner._fields else 0.0
 
-    def _get_route_origin_coordinates(self):
-        self.ensure_one()
-        candidates = []
-        if self.start_latitude and self.start_longitude:
-            candidates.append((self.start_latitude, self.start_longitude))
-        if self.current_latitude and self.current_longitude:
-            candidates.append((self.current_latitude, self.current_longitude))
-        wh_partner = self.warehouse_id.partner_id if self.warehouse_id and hasattr(self.warehouse_id, 'partner_id') else False
-        if wh_partner:
-            lat = getattr(wh_partner, 'partner_latitude', 0.0) or 0.0
-            lng = getattr(wh_partner, 'partner_longitude', 0.0) or 0.0
-            if lat and lng:
-                candidates.append((lat, lng))
-        company_partner = self.company_id.partner_id if self.company_id and hasattr(self.company_id, 'partner_id') else False
-        if company_partner:
-            lat = getattr(company_partner, 'partner_latitude', 0.0) or 0.0
-            lng = getattr(company_partner, 'partner_longitude', 0.0) or 0.0
-            if lat and lng:
-                candidates.append((lat, lng))
-        return candidates[0] if candidates else (False, False)
-
-    def action_optimize_route(self):
+    @api.depends("last_gps_datetime")
+    def _compute_gps_status(self):
+        now = fields.Datetime.now()
         for rec in self:
-            lines_with_geo = rec.line_ids.filtered(lambda l: l.planned_latitude and l.planned_longitude)
-            lines_without_geo = rec.line_ids - lines_with_geo
-            if not lines_with_geo:
-                raise UserError(_("No hay puntos con coordenadas planificadas. Puedes ingresarlas manualmente o pegando el pin de Google Maps/Waze."))
+            if not rec.last_gps_datetime:
+                rec.gps_status = "offline"
+                continue
+            delta = now - rec.last_gps_datetime
+            if delta.total_seconds() <= 30:
+                rec.gps_status = "online"
+            elif delta.total_seconds() <= 120:
+                rec.gps_status = "delay"
+            else:
+                rec.gps_status = "offline"
 
-            origin_lat, origin_lng = rec._get_route_origin_coordinates()
-            ordered = self.env["delivery.route.line"]
-            remaining = lines_with_geo
-
-            if not origin_lat or not origin_lng:
-                first = remaining.sorted(key=lambda l: (l.sequence, l.id))[0]
-                ordered |= first
-                remaining -= first
-                origin_lat, origin_lng = first.planned_latitude, first.planned_longitude
-
-            while remaining:
-                next_line = min(remaining, key=lambda l: _haversine_distance_km(origin_lat, origin_lng, l.planned_latitude, l.planned_longitude))
-                ordered |= next_line
-                remaining -= next_line
-                origin_lat, origin_lng = next_line.planned_latitude, next_line.planned_longitude
-
-            final_order = list(ordered) + list(lines_without_geo.sorted(key=lambda l: (l.sequence, l.id)))
-            for idx, line in enumerate(final_order):
-                line.sequence = _sequence_start(idx)
-            rec.optimized_at = fields.Datetime.now()
-        return True
-
-    def action_set_start_from_current_location(self):
+    @api.depends("line_ids.delivery_status", "line_ids.sequence")
+    def _compute_current_line(self):
         for rec in self:
-            if not rec.current_latitude or not rec.current_longitude:
-                raise UserError(_("Primero debes captar la ubicación actual desde el teléfono."))
-            rec.write({
-                "start_latitude": rec.current_latitude,
-                "start_longitude": rec.current_longitude,
-            })
-        return True
+            current = rec.line_ids.filtered(lambda l: l.delivery_status in ("on_the_way", "pending", "rescheduled")).sorted("sequence")[:1]
+            rec.current_line_id = current.id if current else False
 
     @api.model_create_multi
     def create(self, vals_list):
@@ -200,7 +191,7 @@ class DeliveryRoute(models.Model):
     @api.constrains("vehicle_id", "state")
     def _check_active_vehicle_route(self):
         for rec in self:
-            if rec.state in ("planned", "in_progress", "partial"):
+            if rec.state in ("planned", "in_progress", "partial") and rec.vehicle_id:
                 other = self.search([
                     ("id", "!=", rec.id),
                     ("vehicle_id", "=", rec.vehicle_id.id),
@@ -212,7 +203,7 @@ class DeliveryRoute(models.Model):
     @api.constrains("driver_id", "state")
     def _check_active_driver_route(self):
         for rec in self:
-            if rec.state in ("planned", "in_progress", "partial"):
+            if rec.state in ("planned", "in_progress", "partial") and rec.driver_id:
                 other = self.search([
                     ("id", "!=", rec.id),
                     ("driver_id", "=", rec.driver_id.id),
@@ -221,16 +212,25 @@ class DeliveryRoute(models.Model):
                 if other:
                     raise ValidationError(_("El piloto ya tiene otra ruta activa: %s") % other.name)
 
+    def _ensure_all_points_geolocated(self):
+        self.ensure_one()
+        missing = self.line_ids.filtered(lambda l: not l.planned_latitude or not l.planned_longitude)
+        if missing:
+            names = ", ".join(missing.mapped(lambda l: l.partner_id.name or l.delivery_address or str(l.id)))
+            raise UserError(_("No se puede optimizar porque faltan coordenadas en: %s") % names)
+
     def action_plan(self):
         for rec in self:
             if not rec.line_ids:
-                raise UserError(_("Debe agregar al menos un punto de entrega a la ruta."))
+                raise UserError(_("Debe agregar al menos un punto a la ruta."))
             rec.state = "planned"
 
     def action_start(self):
         for rec in self:
             if not rec.vehicle_id or not rec.driver_id:
                 raise UserError(_("Debe asignar vehículo y piloto antes de iniciar la ruta."))
+            if not rec.line_ids:
+                raise UserError(_("Debe agregar puntos a la ruta antes de iniciarla."))
             rec.state = "in_progress"
             rec.start_datetime = fields.Datetime.now()
             rec.vehicle_id.state = "in_route"
@@ -239,7 +239,7 @@ class DeliveryRoute(models.Model):
     def action_done(self):
         for rec in self:
             if rec.line_ids.filtered(lambda l: l.delivery_status not in ("delivered", "rejected", "not_found")):
-                raise UserError(_("Aún hay entregas pendientes o en proceso."))
+                raise UserError(_("Aún hay puntos pendientes o en proceso."))
             rec.state = "done"
             rec.end_datetime = fields.Datetime.now()
             rec.vehicle_id.state = "available"
@@ -250,6 +250,51 @@ class DeliveryRoute(models.Model):
             rec.state = "cancelled"
             rec.vehicle_id.state = "available"
             rec.driver_id.state = "available"
+
+    def action_geolocate_all_points(self):
+        for rec in self:
+            for line in rec.line_ids:
+                line.action_fill_coordinates()
+        return True
+
+    def action_optimize_route(self):
+        for rec in self:
+            rec._ensure_all_points_geolocated()
+            pending = rec.line_ids.sorted("sequence")
+            if not pending:
+                continue
+            current_lat = rec.origin_latitude
+            current_lng = rec.origin_longitude
+            if not current_lat or not current_lng:
+                first = pending[:1]
+                current_lat = first.planned_latitude
+                current_lng = first.planned_longitude
+            ordered = self.env["delivery.route.line"]
+            pool = pending
+            while pool:
+                nearest = min(
+                    pool,
+                    key=lambda l: _haversine_distance_km(current_lat, current_lng, l.planned_latitude, l.planned_longitude)
+                )
+                ordered |= nearest
+                pool -= nearest
+                current_lat = nearest.planned_latitude
+                current_lng = nearest.planned_longitude
+            for idx, line in enumerate(ordered, start=1):
+                line.sequence = idx * 10
+        return True
+
+    def action_open_google_maps(self):
+        self.ensure_one()
+        if not self.google_maps_url:
+            raise UserError(_("La ruta aún no tiene ubicación actual."))
+        return {"type": "ir.actions.act_url", "url": self.google_maps_url, "target": "new"}
+
+    def action_open_waze(self):
+        self.ensure_one()
+        if not self.waze_url:
+            raise UserError(_("La ruta aún no tiene ubicación actual."))
+        return {"type": "ir.actions.act_url", "url": self.waze_url, "target": "new"}
 
     def update_gps_position(self, latitude, longitude, speed=0.0, user_id=False, delivery_line_id=False):
         self.ensure_one()
@@ -277,42 +322,6 @@ class DeliveryRoute(models.Model):
                 "last_gps_datetime": fields.Datetime.now(),
             })
 
-    @api.onchange("location_input")
-    def _onchange_location_input(self):
-        for rec in self:
-            if rec.location_input:
-                lat, lng = _parse_coordinates_from_text(rec.location_input)
-                if lat is not False and lng is not False:
-                    rec.planned_latitude = lat
-                    rec.planned_longitude = lng
-
-    def action_apply_manual_location(self):
-        for rec in self:
-            lat, lng = _parse_coordinates_from_text(rec.location_input)
-            if lat is False or lng is False:
-                raise UserError(_("Pega una URL de Google Maps/Waze o unas coordenadas con formato lat,long."))
-            rec.write({
-                "planned_latitude": lat,
-                "planned_longitude": lng,
-            })
-        return True
-
-    def action_clear_manual_location(self):
-        self.write({"planned_latitude": 0.0, "planned_longitude": 0.0, "location_input": False})
-        return True
-
-    def action_open_google_maps(self):
-        self.ensure_one()
-        if not self.google_maps_url:
-            raise UserError(_("La ruta aún no tiene ubicación actual."))
-        return {"type": "ir.actions.act_url", "url": self.google_maps_url, "target": "new"}
-
-    def action_open_waze(self):
-        self.ensure_one()
-        if not self.waze_url:
-            raise UserError(_("La ruta aún no tiene ubicación actual."))
-        return {"type": "ir.actions.act_url", "url": self.waze_url, "target": "new"}
-
 
 class DeliveryRouteLine(models.Model):
     _name = "delivery.route.line"
@@ -324,7 +333,13 @@ class DeliveryRouteLine(models.Model):
     company_id = fields.Many2one(related="route_id.company_id", store=True)
     sale_order_id = fields.Many2one("sale.order", string="Orden de Venta")
     picking_id = fields.Many2one("stock.picking", string="Transferencia de Entrega")
-    partner_id = fields.Many2one("res.partner", string="Cliente", required=True)
+    partner_id = fields.Many2one("res.partner", string="Cliente / Destino")
+    stop_type = fields.Selection(
+        [("delivery", "Entrega"), ("purchase", "Compra"), ("errand", "Mandado"), ("other", "Otro")],
+        string="Tipo de punto",
+        default="delivery",
+        required=True,
+    )
 
     delivery_address = fields.Char(string="Dirección de Entrega")
     zone = fields.Char(string="Zona")
@@ -333,14 +348,13 @@ class DeliveryRouteLine(models.Model):
     state_name = fields.Char(string="Departamento")
     country_id = fields.Many2one("res.country", string="País")
     reference = fields.Char(string="Referencia")
-    point_type = fields.Selection(
-        [("delivery", "Entrega"), ("shopping", "Compra"), ("errand", "Mandado"), ("other", "Otro")],
-        string="Tipo de punto",
-        default="delivery",
-        required=True,
+    location_input = fields.Char(string="Ubicación (Google/Waze/Coordenadas)")
+    full_address = fields.Char(string="Dirección completa", compute="_compute_full_address", store=False)
+    geocode_source = fields.Selection(
+        [("manual", "Manual"), ("partner", "Cliente"), ("nominatim", "Dirección")],
+        string="Origen coordenadas",
+        readonly=True,
     )
-    location_input = fields.Char(string="Pin / URL de ubicación")
-    has_manual_coordinates = fields.Boolean(string="Coordenadas manuales", compute="_compute_has_manual_coordinates")
 
     planned_latitude = fields.Float(string="Latitud Planificada", digits=(10, 6))
     planned_longitude = fields.Float(string="Longitud Planificada", digits=(10, 6))
@@ -376,10 +390,10 @@ class DeliveryRouteLine(models.Model):
         store=False,
     )
 
-    @api.depends("planned_latitude", "planned_longitude")
-    def _compute_has_manual_coordinates(self):
+    @api.depends("delivery_address", "zone", "municipality", "city", "state_name", "country_id")
+    def _compute_full_address(self):
         for rec in self:
-            rec.has_manual_coordinates = bool(rec.planned_latitude and rec.planned_longitude)
+            rec.full_address = _build_full_address(rec)
 
     @api.depends("planned_latitude", "planned_longitude")
     def _compute_navigation_urls(self):
@@ -411,52 +425,75 @@ class DeliveryRouteLine(models.Model):
         for rec in self:
             if not rec.partner_id:
                 continue
-            rec.delivery_address = rec.partner_id.street or rec.partner_id.contact_address or ""
+            rec.delivery_address = rec.partner_id.street or rec.partner_id.contact_address or rec.partner_id.name or ""
             rec.city = rec.partner_id.city or ""
             rec.municipality = rec.partner_id.city or ""
             rec.state_name = rec.partner_id.state_id.name or ""
             rec.country_id = rec.partner_id.country_id.id or False
             rec.reference = rec.partner_id.street2 or ""
-            lat = getattr(rec.partner_id, 'partner_latitude', 0.0) or 0.0
-            lng = getattr(rec.partner_id, 'partner_longitude', 0.0) or 0.0
-            if lat and lng and (not rec.planned_latitude or not rec.planned_longitude):
-                rec.planned_latitude = lat
-                rec.planned_longitude = lng
+            if "partner_latitude" in rec.partner_id._fields and rec.partner_id.partner_latitude and rec.partner_id.partner_longitude:
+                rec.planned_latitude = rec.partner_id.partner_latitude
+                rec.planned_longitude = rec.partner_id.partner_longitude
+                rec.geocode_source = "partner"
 
-    @api.onchange("location_input")
-    def _onchange_location_input(self):
-        for rec in self:
-            if rec.location_input:
-                lat, lng = _parse_coordinates_from_text(rec.location_input)
-                if lat is not False and lng is not False:
-                    rec.planned_latitude = lat
-                    rec.planned_longitude = lng
+    def _apply_coordinates(self, latitude, longitude, source="manual"):
+        self.ensure_one()
+        self.write({
+            "planned_latitude": latitude,
+            "planned_longitude": longitude,
+            "geocode_source": source,
+        })
 
-    def action_apply_manual_location(self):
+    def action_apply_location_input(self):
         for rec in self:
-            lat, lng = _parse_coordinates_from_text(rec.location_input)
-            if lat is False or lng is False:
-                raise UserError(_("Pega una URL de Google Maps/Waze o unas coordenadas con formato lat,long."))
-            rec.write({
-                "planned_latitude": lat,
-                "planned_longitude": lng,
-            })
+            lat, lng = _extract_coordinates(rec.location_input)
+            if lat is None or lng is None:
+                raise UserError(_("No se pudieron leer coordenadas. Pega coordenadas, link de Google Maps o link de Waze."))
+            rec._apply_coordinates(lat, lng, source="manual")
         return True
 
-    def action_clear_manual_location(self):
-        self.write({"planned_latitude": 0.0, "planned_longitude": 0.0, "location_input": False})
+    def action_geolocate_address(self):
+        for rec in self:
+            text = rec.full_address or rec.location_input
+            if not text:
+                raise UserError(_("Primero debes escribir una dirección o pegar una ubicación."))
+            lat, lng = _extract_coordinates(text)
+            source = "manual"
+            if lat is None or lng is None:
+                try:
+                    lat, lng = _nominatim_geocode(text)
+                    source = "nominatim"
+                except Exception as exc:
+                    raise UserError(_("No se pudo geolocalizar la dirección. Revisa la dirección o pega un pin/manual. Detalle: %s") % exc)
+            if lat is None or lng is None:
+                raise UserError(_("No se encontraron coordenadas para esta dirección."))
+            rec._apply_coordinates(lat, lng, source=source)
+        return True
+
+    def action_fill_coordinates(self):
+        for rec in self:
+            if rec.location_input:
+                try:
+                    rec.action_apply_location_input()
+                    continue
+                except Exception:
+                    pass
+            if rec.partner_id and "partner_latitude" in rec.partner_id._fields and rec.partner_id.partner_latitude and rec.partner_id.partner_longitude:
+                rec._apply_coordinates(rec.partner_id.partner_latitude, rec.partner_id.partner_longitude, source="partner")
+                continue
+            rec.action_geolocate_address()
         return True
 
     def action_open_google_maps(self):
         self.ensure_one()
         if not self.google_maps_url:
-            raise UserError(_("Esta entrega aún no tiene coordenadas planificadas."))
+            raise UserError(_("Este punto aún no tiene coordenadas planificadas."))
         return {"type": "ir.actions.act_url", "url": self.google_maps_url, "target": "new"}
 
     def action_open_waze(self):
         self.ensure_one()
         if not self.waze_url:
-            raise UserError(_("Esta entrega aún no tiene coordenadas planificadas."))
+            raise UserError(_("Este punto aún no tiene coordenadas planificadas."))
         return {"type": "ir.actions.act_url", "url": self.waze_url, "target": "new"}
 
     def action_use_route_location(self):
@@ -466,6 +503,7 @@ class DeliveryRouteLine(models.Model):
             rec.write({
                 "planned_latitude": rec.route_id.current_latitude,
                 "planned_longitude": rec.route_id.current_longitude,
+                "geocode_source": "manual",
             })
 
     def action_set_on_the_way(self):
@@ -477,7 +515,7 @@ class DeliveryRouteLine(models.Model):
             if not rec.route_id:
                 raise UserError(_("La línea debe pertenecer a una ruta."))
             if rec.route_id.state not in ("in_progress", "partial"):
-                raise UserError(_("La ruta debe estar En Ruta o Parcial para marcar entregas."))
+                raise UserError(_("La ruta debe estar En Ruta o Parcial para marcar puntos."))
 
             rec.write({
                 "delivery_status": "delivered",
@@ -489,6 +527,7 @@ class DeliveryRouteLine(models.Model):
             if rec.picking_id:
                 rec.picking_id.write({
                     "x_delivery_route_id": rec.route_id.id,
+                    "x_delivery_route_line_id": rec.id,
                     "x_delivery_status": "delivered",
                     "x_delivered_at": rec.delivered_at,
                     "x_delivered_latitude": rec.delivered_latitude,
@@ -500,7 +539,7 @@ class DeliveryRouteLine(models.Model):
                 rec.sale_order_id._compute_delivery_logistics_status()
 
             route = rec.route_id
-            if route.line_ids and all(l.delivery_status == "delivered" for l in route.line_ids):
+            if route.line_ids and all(l.delivery_status in ("delivered", "rejected", "not_found") for l in route.line_ids):
                 route.state = "done"
                 route.end_datetime = fields.Datetime.now()
                 route.vehicle_id.state = "available"
