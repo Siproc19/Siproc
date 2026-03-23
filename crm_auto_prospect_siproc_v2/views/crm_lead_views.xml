@@ -44,27 +44,27 @@
         </field>
     </record>
 
-    <record id="view_crm_lead_search_siproc_flow" model="ir.ui.view">
-        <field name="name">crm.lead.search.siproc.flow</field>
-        <field name="model">crm.lead</field>
-        <field name="inherit_id" ref="crm.crm_lead_view_search"/>
-        <field name="arch" type="xml">
-            <xpath expr="//search" position="inside">
-                <filter string="Leads válidos" name="siproc_valid_leads" domain="[('x_validation_status','=','valid')]"/>
-                <filter string="Sin seguimiento" name="siproc_without_activity" domain="[('activity_ids','=',False)]"/>
-                <separator/>
-                <field name="x_source_name"/>
-                <field name="x_industry_type"/>
-                <field name="x_zone"/>
-                <field name="x_tipo_cliente"/>
-                <group expand="0" string="Agrupar por SIPROC">
-                    <filter string="Fuente" name="siproc_group_source" context="{'group_by':'x_source_name'}"/>
-                    <filter string="Industria" name="siproc_group_industry" context="{'group_by':'x_industry_type'}"/>
-                    <filter string="Zona" name="siproc_group_zone" context="{'group_by':'x_zone'}"/>
-                    <filter string="Asesor" name="siproc_group_user" context="{'group_by':'user_id'}"/>
-                    <filter string="Etapa" name="siproc_group_stage" context="{'group_by':'stage_id'}"/>
-                </group>
-            </xpath>
-        </field>
-    </record>
+   <record id="view_crm_lead_search_siproc_flow" model="ir.ui.view">
+    <field name="name">crm.lead.search.siproc.flow</field>
+    <field name="model">crm.lead</field>
+    <field name="inherit_id" ref="crm.view_crm_lead_filter"/>
+    <field name="arch" type="xml">
+        <xpath expr="//search" position="inside">
+            <filter string="Leads válidos" name="siproc_valid_leads" domain="[('x_validation_status','=','valid')]"/>
+            <filter string="Sin seguimiento" name="siproc_without_activity" domain="[('activity_ids','=',False)]"/>
+            <separator/>
+            <field name="x_source_name"/>
+            <field name="x_industry_type"/>
+            <field name="x_zone"/>
+            <field name="x_tipo_cliente"/>
+            <group expand="0" string="Agrupar por SIPROC">
+                <filter string="Fuente" name="siproc_group_source" context="{'group_by':'x_source_name'}"/>
+                <filter string="Industria" name="siproc_group_industry" context="{'group_by':'x_industry_type'}"/>
+                <filter string="Zona" name="siproc_group_zone" context="{'group_by':'x_zone'}"/>
+                <filter string="Asesor" name="siproc_group_user" context="{'group_by':'user_id'}"/>
+                <filter string="Etapa" name="siproc_group_stage" context="{'group_by':'stage_id'}"/>
+            </group>
+        </xpath>
+    </field>
+</record>
 </odoo>
