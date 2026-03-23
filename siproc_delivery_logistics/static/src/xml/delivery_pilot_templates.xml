@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates xml:space="preserve">
+    <t t-name="siproc_delivery_logistics.DeliveryPilotAction">
+        <div class="o_action" style="height:100%; background:#eef2f7; padding:12px; display:flex; flex-direction:column; gap:12px;">
+            <div style="background:#111827; color:white; border-radius:18px; padding:14px;">
+                <div style="font-size:24px; font-weight:700;"><t t-esc="state.route.name || 'Ruta'"/></div>
+                <div style="font-size:13px; opacity:.85;">Panel piloto · GPS cada <t t-esc="state.route.gps_interval_seconds || 15"/> seg</div>
+                <div style="margin-top:8px; font-size:14px;">Punto actual: <strong><t t-esc="activePoint?.name || 'Sin punto'"/></strong></div>
+            </div>
+            <div style="display:grid; grid-template-columns:1fr; gap:12px;">
+                <div style="background:white; border-radius:18px; padding:12px; box-shadow:0 1px 6px rgba(0,0,0,.08);">
+                    <div t-ref="mapRoot" style="width:100%; min-height:320px; border-radius:12px;"></div>
+                </div>
+                <div style="background:white; border-radius:18px; padding:14px; box-shadow:0 1px 6px rgba(0,0,0,.08);">
+                    <div style="font-size:18px; font-weight:700; margin-bottom:6px;"><t t-esc="activePoint?.sequence || ''"/>. <t t-esc="activePoint?.name || 'Sin punto activo'"/></div>
+                    <div style="color:#4b5563; margin-bottom:8px;"><t t-esc="activePoint?.address || ''"/></div>
+                    <div style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:10px;">
+                        <button class="btn btn-secondary" t-on-click="() => this.openNav('google')">Google Maps</button>
+                        <button class="btn btn-secondary" t-on-click="() => this.openNav('waze')">Waze</button>
+                        <button class="btn btn-secondary" t-on-click="startTracking" t-if="!state.tracking">Iniciar GPS</button>
+                        <button class="btn btn-secondary" t-on-click="stopTracking" t-if="state.tracking">Detener GPS</button>
+                    </div>
+                    <div style="display:flex; flex-direction:column; gap:8px;">
+                        <button class="btn btn-primary" t-on-click="() => this.pointAction('on_the_way')">Marcar en camino</button>
+                        <label style="font-weight:600; margin-top:4px;">Foto de evidencia</label>
+                        <input type="file" accept="image/*" capture="environment" t-on-change="onFileChange"/>
+                        <div t-if="state.photoName" style="font-size:12px; color:#16a34a;">Foto lista: <t t-esc="state.photoName"/></div>
+                        <button class="btn btn-success" t-on-click="() => this.pointAction('delivered')">Marcar entregado</button>
+                        <button class="btn btn-warning" t-on-click="() => this.pointAction('rescheduled')">Reprogramado</button>
+                        <button class="btn btn-secondary" t-on-click="() => this.pointAction('not_found')">No localizado</button>
+                    </div>
+                </div>
+                <div style="background:white; border-radius:18px; padding:14px; box-shadow:0 1px 6px rgba(0,0,0,.08);">
+                    <div style="font-weight:700; margin-bottom:8px;">Siguientes puntos</div>
+                    <t t-foreach="state.points" t-as="point" t-key="point.id">
+                        <button t-on-click="() => this.choosePoint(point.id)" style="width:100%; text-align:left; border:1px solid #e5e7eb; background:#fff; border-radius:12px; padding:10px; margin-bottom:8px;">
+                            <strong><t t-esc="point.sequence"/>. <t t-esc="point.name"/></strong>
+                            <div style="font-size:12px; color:#6b7280;"><t t-esc="point.stop_type"/> · <t t-esc="point.status"/></div>
+                            <div style="font-size:12px; color:#374151;"><t t-esc="point.address"/></div>
+                            <div style="font-size:12px; color:#374151;">Tiempo en punto: <t t-esc="point.elapsed_minutes || 0"/> min</div>
+                        </button>
+                    </t>
+                </div>
+            </div>
+        </div>
+    </t>
+</templates>

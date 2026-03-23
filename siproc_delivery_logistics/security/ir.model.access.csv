@@ -1,22 +1,6 @@
 id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
-access_delivery_vehicle_admin,delivery.vehicle admin,model_delivery_vehicle,siproc_delivery_logistics.group_delivery_logistics_admin,1,1,1,1
-access_delivery_vehicle_coord,delivery.vehicle coord,model_delivery_vehicle,siproc_delivery_logistics.group_delivery_logistics_coordinator,1,1,1,0
-access_delivery_vehicle_driver,delivery.vehicle driver,model_delivery_vehicle,siproc_delivery_logistics.group_delivery_logistics_driver,1,0,0,0
-
-access_delivery_driver_admin,delivery.driver admin,model_delivery_driver,siproc_delivery_logistics.group_delivery_logistics_admin,1,1,1,1
-access_delivery_driver_coord,delivery.driver coord,model_delivery_driver,siproc_delivery_logistics.group_delivery_logistics_coordinator,1,1,1,0
-access_delivery_driver_driver,delivery.driver driver,model_delivery_driver,siproc_delivery_logistics.group_delivery_logistics_driver,1,0,0,0
-
-access_delivery_route_admin,delivery.route admin,model_delivery_route,siproc_delivery_logistics.group_delivery_logistics_admin,1,1,1,1
-access_delivery_route_coord,delivery.route coord,model_delivery_route,siproc_delivery_logistics.group_delivery_logistics_coordinator,1,1,1,0
-access_delivery_route_driver,delivery.route driver,model_delivery_route,siproc_delivery_logistics.group_delivery_logistics_driver,1,1,0,0
-access_delivery_route_sales,delivery.route sales,model_delivery_route,siproc_delivery_logistics.group_delivery_logistics_sales,1,0,0,0
-
-access_delivery_route_line_admin,delivery.route.line admin,model_delivery_route_line,siproc_delivery_logistics.group_delivery_logistics_admin,1,1,1,1
-access_delivery_route_line_coord,delivery.route.line coord,model_delivery_route_line,siproc_delivery_logistics.group_delivery_logistics_coordinator,1,1,1,0
-access_delivery_route_line_driver,delivery.route.line driver,model_delivery_route_line,siproc_delivery_logistics.group_delivery_logistics_driver,1,1,0,0
-access_delivery_route_line_sales,delivery.route.line sales,model_delivery_route_line,siproc_delivery_logistics.group_delivery_logistics_sales,1,0,0,0
-
-access_delivery_gps_log_admin,delivery.gps.log admin,model_delivery_gps_log,siproc_delivery_logistics.group_delivery_logistics_admin,1,1,1,1
-access_delivery_gps_log_coord,delivery.gps.log coord,model_delivery_gps_log,siproc_delivery_logistics.group_delivery_logistics_coordinator,1,1,1,0
-access_delivery_gps_log_driver,delivery.gps.log driver,model_delivery_gps_log,siproc_delivery_logistics.group_delivery_logistics_driver,1,1,1,0
+access_delivery_vehicle,delivery.vehicle,model_delivery_vehicle,,1,1,1,1
+access_delivery_driver,delivery.driver,model_delivery_driver,,1,1,1,1
+access_delivery_route,delivery.route,model_delivery_route,,1,1,1,1
+access_delivery_route_line,delivery.route.line,model_delivery_route_line,,1,1,1,1
+access_delivery_gps_log,delivery.gps.log,model_delivery_gps_log,,1,1,1,1

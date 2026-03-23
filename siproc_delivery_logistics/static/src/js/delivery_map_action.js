@@ -5,32 +5,8 @@ import { registry } from "@web/core/registry";
 import { useService } from "@web/core/utils/hooks";
 import { rpc } from "@web/core/network/rpc";
 
-function buildEmbedUrl(lat, lng) {
-    if (!lat || !lng) {
-        return "https://www.openstreetmap.org/export/embed.html?bbox=-90.6,14.5,-90.4,14.7&layer=mapnik";
-    }
-    const delta = 0.01;
-    const left = lng - delta;
-    const right = lng + delta;
-    const top = lat + delta;
-    const bottom = lat - delta;
-    return `https://www.openstreetmap.org/export/embed.html?bbox=${left},${bottom},${right},${top}&layer=mapnik&marker=${lat},${lng}`;
-}
-
-function gpsStatus(lastGpsDatetime) {
-    if (!lastGpsDatetime) {
-        return { label: "Sin señal", color: "#ef4444" };
-    }
-    const last = new Date(lastGpsDatetime);
-    const now = new Date();
-    const diffSec = Math.floor((now - last) / 1000);
-    if (diffSec <= 30) {
-        return { label: "En línea", color: "#16a34a" };
-    }
-    if (diffSec <= 120) {
-        return { label: "Con retraso", color: "#d97706" };
-    }
-    return { label: "Sin señal", color: "#ef4444" };
+function lineColor(status) {
+    return status === 'delivered' ? '#16a34a' : status === 'on_the_way' ? '#2563eb' : '#f59e0b';
 }
 
 export class DeliveryMapAction extends Component {
@@ -38,166 +14,65 @@ export class DeliveryMapAction extends Component {
 
     setup() {
         this.notification = useService("notification");
-        this.state = useState({
-            routeId: null,
-            route: {},
-            points: [],
-            selectedPointIndex: null,
-            mapUrl: buildEmbedUrl(),
-            tracking: false,
-            adminAutoRefresh: true,
-            gpsStatusLabel: "Sin señal",
-            gpsStatusColor: "#ef4444",
-        });
-
+        this.state = useState({ routeId: null, route: {}, points: [], autoRefresh: true });
         onMounted(async () => {
-            const activeId =
-                this.props?.action?.context?.active_id ||
-                this.props?.action?.params?.active_id ||
-                this.props?.action?.resId;
-
+            const activeId = this.props?.action?.context?.active_id || this.props?.action?.params?.active_id || this.props?.action?.resId;
             if (!activeId) {
                 this.notification.add("No se recibió una ruta activa.", { type: "danger" });
                 return;
             }
-
             this.state.routeId = activeId;
+            this.map = L.map(this.refs.mapRoot).setView([14.6349, -90.5069], 11);
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '&copy; OpenStreetMap' }).addTo(this.map);
+            this.pointLayer = L.layerGroup().addTo(this.map);
+            this.routeLayer = L.layerGroup().addTo(this.map);
             await this.loadRouteData();
-
             this.refreshTimer = window.setInterval(async () => {
-                if (this.state.adminAutoRefresh && this.state.routeId) {
+                if (this.state.autoRefresh) {
                     await this.loadRouteData(false);
                 }
             }, 10000);
         });
-
         onWillUnmount(() => {
-            if (this.watchId) {
-                navigator.geolocation.clearWatch(this.watchId);
-                this.watchId = null;
-            }
-            if (this.refreshTimer) {
-                window.clearInterval(this.refreshTimer);
-                this.refreshTimer = null;
-            }
+            if (this.refreshTimer) window.clearInterval(this.refreshTimer);
+            if (this.map) this.map.remove();
         });
     }
 
-    async loadRouteData(resetFocus = true) {
+    async loadRouteData(fit=true) {
         const data = await rpc(`/delivery/route_map_data/${this.state.routeId}`, {});
-        if (!data || !data.success) {
-            this.notification.add((data && data.message) || "Error cargando datos del mapa", {
-                type: "danger",
-            });
-            return;
-        }
+        if (!data?.success) return;
         this.state.route = data.route || {};
         this.state.points = data.points || [];
+        this.renderMap(fit);
+    }
 
-        const status = gpsStatus(this.state.route.last_gps_datetime);
-        this.state.gpsStatusLabel = status.label;
-        this.state.gpsStatusColor = status.color;
-
-        const selected = this.state.selectedPointIndex !== null ? this.state.points[this.state.selectedPointIndex] : null;
-        if (!resetFocus && selected) {
-            return;
+    renderMap(fit=true) {
+        if (!this.map) return;
+        this.pointLayer.clearLayers();
+        this.routeLayer.clearLayers();
+        const latlngs = [];
+        for (const point of this.state.points) {
+            if (!point.lat || !point.lng) continue;
+            const ll = [point.lat, point.lng];
+            latlngs.push(ll);
+            const marker = L.circleMarker(ll, { radius: 8, color: lineColor(point.status), fillOpacity: 0.8 }).addTo(this.pointLayer);
+            marker.bindPopup(`<b>${point.sequence}. ${point.name}</b><br/>${point.address || ''}<br/>Estado: ${point.status}<br/>Tipo: ${point.stop_type}`);
         }
-
-        const lat = this.state.route.current_latitude || this.state.points[0]?.lat;
-        const lng = this.state.route.current_longitude || this.state.points[0]?.lng;
-        this.state.mapUrl = buildEmbedUrl(lat, lng);
-    }
-
-    selectPoint(point, index) {
-        this.state.selectedPointIndex = index;
-        this.state.mapUrl = buildEmbedUrl(point.lat, point.lng);
-    }
-
-    focusCurrentRoute() {
-        const lat = this.state.route.current_latitude || this.state.points[0]?.lat;
-        const lng = this.state.route.current_longitude || this.state.points[0]?.lng;
-        this.state.selectedPointIndex = null;
-        this.state.mapUrl = buildEmbedUrl(lat, lng);
-    }
-
-    toggleAutoRefresh() {
-        this.state.adminAutoRefresh = !this.state.adminAutoRefresh;
-        this.notification.add(
-            this.state.adminAutoRefresh ? "Actualización automática activada." : "Actualización automática detenida.",
-            { type: "info" }
-        );
-    }
-
-    async takeLocationNow() {
-        if (!navigator.geolocation) {
-            this.notification.add("Este teléfono no soporta geolocalización.", { type: "danger" });
-            return;
+        if (this.state.route.current_latitude && this.state.route.current_longitude) {
+            const current = [this.state.route.current_latitude, this.state.route.current_longitude];
+            latlngs.push(current);
+            L.marker(current).addTo(this.pointLayer).bindPopup('Ubicación actual del piloto');
         }
-        navigator.geolocation.getCurrentPosition(
-            async (pos) => {
-                await rpc("/delivery/update_gps", {
-                    route_id: this.state.routeId,
-                    latitude: pos.coords.latitude,
-                    longitude: pos.coords.longitude,
-                    speed: pos.coords.speed || 0,
-                });
-                this.notification.add("Ubicación actualizada.", { type: "success" });
-                await this.loadRouteData();
-            },
-            () => this.notification.add("No se pudo obtener la ubicación.", { type: "danger" }),
-            { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
-        );
-    }
-
-    startTracking() {
-        if (!navigator.geolocation) {
-            this.notification.add("Este teléfono no soporta geolocalización.", { type: "danger" });
-            return;
+        if (latlngs.length > 1) {
+            L.polyline(latlngs, { color: '#2563eb', weight: 4 }).addTo(this.routeLayer);
         }
-        if (this.watchId) {
-            return;
-        }
-        this.watchId = navigator.geolocation.watchPosition(
-            async (pos) => {
-                await rpc("/delivery/update_gps", {
-                    route_id: this.state.routeId,
-                    latitude: pos.coords.latitude,
-                    longitude: pos.coords.longitude,
-                    speed: pos.coords.speed || 0,
-                });
-                this.state.tracking = true;
-                await this.loadRouteData(false);
-            },
-            () => this.notification.add("No se pudo rastrear la ubicación.", { type: "warning" }),
-            { enableHighAccuracy: true, timeout: 15000, maximumAge: 5000 }
-        );
-        this.notification.add("Rastreo iniciado.", { type: "success" });
-    }
-
-    stopTracking() {
-        if (this.watchId) {
-            navigator.geolocation.clearWatch(this.watchId);
-            this.watchId = null;
-        }
-        this.state.tracking = false;
-        this.notification.add("Rastreo detenido.", { type: "info" });
-    }
-
-    openGoogleMaps() {
-        const selected = this.state.selectedPointIndex !== null ? this.state.points[this.state.selectedPointIndex] : null;
-        const url = selected?.google_maps_url || this.state.route.google_maps_url;
-        if (url) {
-            window.open(url, "_blank");
+        if (fit && latlngs.length) {
+            this.map.fitBounds(latlngs, { padding: [30, 30] });
         }
     }
 
-    openWaze() {
-        const selected = this.state.selectedPointIndex !== null ? this.state.points[this.state.selectedPointIndex] : null;
-        const url = selected?.waze_url || this.state.route.waze_url;
-        if (url) {
-            window.open(url, "_blank");
-        }
-    }
+    toggleAutoRefresh() { this.state.autoRefresh = !this.state.autoRefresh; }
 }
 
 registry.category("actions").add("siproc_delivery_logistics.delivery_map", DeliveryMapAction);
