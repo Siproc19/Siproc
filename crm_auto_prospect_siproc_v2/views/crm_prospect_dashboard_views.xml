@@ -1,0 +1,11 @@
+<odoo>
+    <record id="action_crm_auto_prospect_dashboard" model="ir.actions.act_window">
+        <field name="name">Dashboard Prospección</field>
+        <field name="res_model">crm.lead</field>
+        <field name="view_mode">graph,pivot,list</field>
+        <field name="domain">[("type","=","lead")]</field>
+        <field name="context">{'search_default_group_source': 1}</field>
+    </record>
+
+    <menuitem id="menu_crm_auto_prospect_dashboard" name="Dashboard Prospección" parent="crm.crm_menu_root" action="action_crm_auto_prospect_dashboard" sequence="30"/>
+</odoo>

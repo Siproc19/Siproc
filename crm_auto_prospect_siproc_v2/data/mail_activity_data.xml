@@ -1,0 +1,10 @@
+<odoo>
+    <record id="mail_activity_type_initial_b2b" model="mail.activity.type">
+        <field name="name">Primer contacto B2B</field>
+        <field name="category">phonecall</field>
+        <field name="summary">Validar lead y necesidad</field>
+        <field name="delay_count">0</field>
+        <field name="delay_unit">days</field>
+        <field name="res_model">crm.lead</field>
+    </record>
+</odoo>
