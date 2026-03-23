@@ -17,7 +17,12 @@ class DeliveryGpsController(http.Controller):
             user_id=request.env.user.id,
             delivery_line_id=int(delivery_line_id) if delivery_line_id else False,
         )
-        return {"success": True, "message": "Ubicación actualizada"}
+        return {
+            "success": True,
+            "message": "Ubicación actualizada",
+            "last_gps_datetime": str(route.last_gps_datetime) if route.last_gps_datetime else "",
+            "gps_tracking_active": route.gps_tracking_active,
+        }
 
     @http.route("/delivery/route_map_data/<int:route_id>", type="jsonrpc", auth="user")
     def route_map_data(self, route_id):
@@ -30,7 +35,8 @@ class DeliveryGpsController(http.Controller):
             points.append({
                 "id": line.id,
                 "sequence": line.sequence,
-                "name": line.partner_id.name or "Entrega",
+                "name": line.display_name,
+                "task_type": line.task_type,
                 "address": line.delivery_address or "",
                 "reference": line.reference or "",
                 "municipality": line.municipality or "",
@@ -51,6 +57,12 @@ class DeliveryGpsController(http.Controller):
                 "id": route.id,
                 "name": route.name,
                 "state": route.state,
+                "route_type": route.route_type,
+                "route_summary": route.route_summary or "",
+                "gps_tracking_active": route.gps_tracking_active,
+                "gps_status": route.gps_status,
+                "current_task_id": route.current_task_id.id if route.current_task_id else False,
+                "current_task_name": route.current_task_id.display_name if route.current_task_id else "",
                 "current_latitude": route.current_latitude,
                 "current_longitude": route.current_longitude,
                 "last_gps_datetime": str(route.last_gps_datetime) if route.last_gps_datetime else "",

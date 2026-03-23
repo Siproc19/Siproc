@@ -24,10 +24,10 @@ function gpsStatus(lastGpsDatetime) {
     const last = new Date(lastGpsDatetime);
     const now = new Date();
     const diffSec = Math.floor((now - last) / 1000);
-    if (diffSec <= 30) {
+    if (diffSec <= 45) {
         return { label: "En línea", color: "#16a34a" };
     }
-    if (diffSec <= 120) {
+    if (diffSec <= 180) {
         return { label: "Con retraso", color: "#d97706" };
     }
     return { label: "Sin señal", color: "#ef4444" };
@@ -38,6 +38,7 @@ export class DeliveryMapAction extends Component {
 
     setup() {
         this.notification = useService("notification");
+        this.orm = useService("orm");
         this.state = useState({
             routeId: null,
             route: {},
@@ -68,7 +69,7 @@ export class DeliveryMapAction extends Component {
                 if (this.state.adminAutoRefresh && this.state.routeId) {
                     await this.loadRouteData(false);
                 }
-            }, 10000);
+            }, 5000);
         });
 
         onWillUnmount(() => {
@@ -140,6 +141,7 @@ export class DeliveryMapAction extends Component {
                     latitude: pos.coords.latitude,
                     longitude: pos.coords.longitude,
                     speed: pos.coords.speed || 0,
+                    delivery_line_id: this.state.route.current_task_id || false,
                 });
                 this.notification.add("Ubicación actualizada.", { type: "success" });
                 await this.loadRouteData();
@@ -147,6 +149,12 @@ export class DeliveryMapAction extends Component {
             () => this.notification.add("No se pudo obtener la ubicación.", { type: "danger" }),
             { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
         );
+    }
+
+    async toggleServerTracking(active) {
+        const method = active ? "action_resume_tracking" : "action_stop_tracking";
+        await this.orm.call("delivery.route", method, [[this.state.routeId]]);
+        await this.loadRouteData(false);
     }
 
     startTracking() {
@@ -157,6 +165,7 @@ export class DeliveryMapAction extends Component {
         if (this.watchId) {
             return;
         }
+        this.toggleServerTracking(true);
         this.watchId = navigator.geolocation.watchPosition(
             async (pos) => {
                 await rpc("/delivery/update_gps", {
@@ -164,12 +173,13 @@ export class DeliveryMapAction extends Component {
                     latitude: pos.coords.latitude,
                     longitude: pos.coords.longitude,
                     speed: pos.coords.speed || 0,
+                    delivery_line_id: this.state.route.current_task_id || false,
                 });
                 this.state.tracking = true;
                 await this.loadRouteData(false);
             },
             () => this.notification.add("No se pudo rastrear la ubicación.", { type: "warning" }),
-            { enableHighAccuracy: true, timeout: 15000, maximumAge: 5000 }
+            { enableHighAccuracy: true, timeout: 12000, maximumAge: 1000 }
         );
         this.notification.add("Rastreo iniciado.", { type: "success" });
     }
@@ -179,6 +189,7 @@ export class DeliveryMapAction extends Component {
             navigator.geolocation.clearWatch(this.watchId);
             this.watchId = null;
         }
+        this.toggleServerTracking(false);
         this.state.tracking = false;
         this.notification.add("Rastreo detenido.", { type: "info" });
     }
