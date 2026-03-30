@@ -33,6 +33,7 @@
                     <field name="state" widget="statusbar"
                         statusbar_visible="draft,confirmed,in_progress,done"/>
                 </header>
+
                 <sheet>
                     <div class="oe_button_box" name="button_box">
                         <button type="object" class="oe_stat_button" icon="fa-map-marker"
@@ -44,18 +45,21 @@
                             <field name="completed_tasks" widget="statinfo" string="Completadas"/>
                         </button>
                     </div>
+
                     <div class="oe_title">
-                        <h1><field name="name" readonly="1"/></h1>
+                        <h1>
+                            <field name="name" readonly="1"/>
+                        </h1>
                     </div>
-                    <!-- Barra de progreso -->
-                    <!-- Barra de progreso -->
+
                     <!-- Barra de progreso -->
                     <div class="o_field_widget" invisible="state == 'draft'">
-                    <div class="o_progress" style="margin-bottom:16px;">
-                     <div class="o_form_label">Progreso de la Ruta</div>
-                    <field name="progress_percentage" widget="progressbar"/>
+                        <div class="o_progress" style="margin-bottom:16px;">
+                            <div class="o_form_label">Progreso de la Ruta</div>
+                            <field name="progress_percentage" widget="progressbar"/>
+                        </div>
                     </div>
-                    </div>
+
                     <group>
                         <group string="Información General">
                             <field name="date"/>
@@ -71,34 +75,36 @@
                             <field name="traffic_updated_at" readonly="1" string="Tráfico actualizado"/>
                         </group>
                     </group>
+
                     <!-- Widget del mapa -->
                     <div class="logistics_map_container" invisible="state == 'draft'">
-                        <div id="logistics_route_map" data-route-id="{record.id}"
+                        <div id="logistics_route_map" data-route-id="0"
                              style="width:100%; height:450px; border-radius:12px; border:2px solid #dee2e6; margin-bottom:16px;">
                         </div>
                         <div class="logistics_map_controls" style="display:flex; gap:8px; margin-bottom:16px; flex-wrap:wrap;">
-                            <button class="btn btn-sm btn-outline-primary" id="btn_center_driver">
+                            <button class="btn btn-sm btn-outline-primary" id="btn_center_driver" type="button">
                                 🎯 Centrar en Piloto
                             </button>
-                            <button class="btn btn-sm btn-outline-success" id="btn_show_traffic">
+                            <button class="btn btn-sm btn-outline-success" id="btn_show_traffic" type="button">
                                 🚦 Mostrar Tráfico
                             </button>
-                            <button class="btn btn-sm btn-outline-info" id="btn_show_route">
+                            <button class="btn btn-sm btn-outline-info" id="btn_show_route" type="button">
                                 🗺️ Mostrar Ruta
                             </button>
-                            <button class="btn btn-sm btn-outline-warning" id="btn_open_waze">
+                            <button class="btn btn-sm btn-outline-warning" id="btn_open_waze" type="button">
                                 Abrir en Waze
                             </button>
-                            <button class="btn btn-sm btn-outline-danger" id="btn_open_gmaps">
+                            <button class="btn btn-sm btn-outline-danger" id="btn_open_gmaps" type="button">
                                 Abrir en Google Maps
                             </button>
                         </div>
                     </div>
+
                     <!-- Lista de tareas / paradas -->
                     <notebook>
                         <page string="📍 Paradas y Tareas" name="tasks">
                             <field name="task_ids" widget="one2many_list"
-                                context="{'default_route_id': active_id}">
+                                context="{'default_route_id': id}">
                                 <list string="Paradas" editable="bottom"
                                     decoration-success="state == 'completed'"
                                     decoration-danger="state == 'failed'"
@@ -121,11 +127,13 @@
                                 </list>
                             </field>
                         </page>
+
                         <page string="📝 Observaciones" name="notes">
                             <field name="notes" placeholder="Observaciones adicionales para la ruta..."/>
                         </page>
                     </notebook>
                 </sheet>
+
                 <chatter/>
             </form>
         </field>
@@ -138,7 +146,8 @@
         <field name="name">logistics.route.list</field>
         <field name="model">logistics.route</field>
         <field name="arch" type="xml">
-            <list string="Rutas Logísticas" decoration-success="state == 'done'"
+            <list string="Rutas Logísticas"
+                decoration-success="state == 'done'"
                 decoration-danger="state == 'cancelled'"
                 decoration-info="state == 'in_progress'"
                 decoration-warning="state == 'confirmed'">
