@@ -49,10 +49,9 @@
                     </div>
                     <!-- Barra de progreso -->
                     <div class="o_field_widget" invisible="state == 'draft'">
-                        <div class="o_progress" style="margin-bottom:16px;">
-                            <label>Progreso de la Ruta</label>
-                            <field name="progress_percentage" widget="progressbar"/>
-                        </div>
+                    <div class="o_progress" style="margin-bottom:16px;">
+                     <div class="o_form_label">Progreso de la Ruta</div>
+                    <field name="progress_percentage" widget="progressbar"/>
                     </div>
                     <group>
                         <group string="Información General">
