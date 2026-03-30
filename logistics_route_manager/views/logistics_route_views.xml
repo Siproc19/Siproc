@@ -1,0 +1,246 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- ═══════════════════════════════════════════════
+         VISTA FORMULARIO DE RUTA
+    ═══════════════════════════════════════════════ -->
+    <record id="logistics_route_form_view" model="ir.ui.view">
+        <field name="name">logistics.route.form</field>
+        <field name="model">logistics.route</field>
+        <field name="arch" type="xml">
+            <form string="Ruta Logística">
+                <header>
+                    <button name="action_confirm" string="✔️ Confirmar Ruta"
+                        type="object" class="btn-primary"
+                        invisible="state != 'draft'"/>
+                    <button name="action_start_route" string="🚗 Iniciar Ruta"
+                        type="object" class="btn-success"
+                        invisible="state != 'confirmed'"/>
+                    <button name="action_optimize_route" string="🗺️ Optimizar Ruta"
+                        type="object" class="btn-secondary"
+                        invisible="state not in ('draft','confirmed')"/>
+                    <button name="action_update_traffic" string="🚦 Actualizar Tráfico"
+                        type="object" class="btn-info"
+                        invisible="state != 'in_progress'"/>
+                    <button name="action_complete_route" string="✅ Completar Ruta"
+                        type="object"
+                        invisible="state != 'in_progress'"/>
+                    <button name="action_cancel" string="Cancelar"
+                        type="object" class="btn-danger"
+                        invisible="state in ('done','cancelled')"/>
+                    <button name="action_reset_draft" string="Restablecer"
+                        type="object"
+                        invisible="state != 'cancelled'"/>
+                    <field name="state" widget="statusbar"
+                        statusbar_visible="draft,confirmed,in_progress,done"/>
+                </header>
+                <sheet>
+                    <div class="oe_button_box" name="button_box">
+                        <button type="object" class="oe_stat_button" icon="fa-map-marker"
+                            name="action_open_map_view">
+                            <field name="total_tasks" widget="statinfo" string="Paradas"/>
+                        </button>
+                        <button type="object" class="oe_stat_button" icon="fa-check-circle"
+                            name="action_open_map_view">
+                            <field name="completed_tasks" widget="statinfo" string="Completadas"/>
+                        </button>
+                    </div>
+                    <div class="oe_title">
+                        <h1><field name="name" readonly="1"/></h1>
+                    </div>
+                    <!-- Barra de progreso -->
+                    <div class="o_field_widget" invisible="state == 'draft'">
+                        <div class="o_progress" style="margin-bottom:16px;">
+                            <label>Progreso de la Ruta</label>
+                            <field name="progress_percentage" widget="progressbar"/>
+                        </div>
+                    </div>
+                    <group>
+                        <group string="Información General">
+                            <field name="date"/>
+                            <field name="driver_id" options="{'no_create': True}"/>
+                            <field name="vehicle_id" options="{'no_create': True}"/>
+                            <field name="responsible_id"/>
+                        </group>
+                        <group string="Métricas de Ruta">
+                            <field name="estimated_distance_km" string="Distancia Est. (km)"/>
+                            <field name="estimated_duration_min" string="Duración Est. (min)"/>
+                            <field name="actual_start_time" readonly="1"/>
+                            <field name="actual_end_time" readonly="1"/>
+                            <field name="traffic_updated_at" readonly="1" string="Tráfico actualizado"/>
+                        </group>
+                    </group>
+                    <!-- Widget del mapa -->
+                    <div class="logistics_map_container" invisible="state == 'draft'">
+                        <div id="logistics_route_map" data-route-id="{record.id}"
+                             style="width:100%; height:450px; border-radius:12px; border:2px solid #dee2e6; margin-bottom:16px;">
+                        </div>
+                        <div class="logistics_map_controls" style="display:flex; gap:8px; margin-bottom:16px; flex-wrap:wrap;">
+                            <button class="btn btn-sm btn-outline-primary" id="btn_center_driver">
+                                🎯 Centrar en Piloto
+                            </button>
+                            <button class="btn btn-sm btn-outline-success" id="btn_show_traffic">
+                                🚦 Mostrar Tráfico
+                            </button>
+                            <button class="btn btn-sm btn-outline-info" id="btn_show_route">
+                                🗺️ Mostrar Ruta
+                            </button>
+                            <button class="btn btn-sm btn-outline-warning" id="btn_open_waze">
+                                Abrir en Waze
+                            </button>
+                            <button class="btn btn-sm btn-outline-danger" id="btn_open_gmaps">
+                                Abrir en Google Maps
+                            </button>
+                        </div>
+                    </div>
+                    <!-- Lista de tareas / paradas -->
+                    <notebook>
+                        <page string="📍 Paradas y Tareas" name="tasks">
+                            <field name="task_ids" widget="one2many_list"
+                                context="{'default_route_id': active_id}">
+                                <list string="Paradas" editable="bottom"
+                                    decoration-success="state == 'completed'"
+                                    decoration-danger="state == 'failed'"
+                                    decoration-warning="state == 'arrived'"
+                                    decoration-info="state == 'in_transit'">
+                                    <field name="sequence" widget="handle"/>
+                                    <field name="task_type"/>
+                                    <field name="name"/>
+                                    <field name="address"/>
+                                    <field name="contact_name"/>
+                                    <field name="contact_phone"/>
+                                    <field name="priority" widget="priority"/>
+                                    <field name="estimated_arrival"/>
+                                    <field name="state" widget="badge"
+                                        decoration-success="state == 'completed'"
+                                        decoration-danger="state == 'failed'"
+                                        decoration-warning="state == 'arrived'"
+                                        decoration-info="state == 'in_transit'"
+                                        decoration-muted="state == 'pending'"/>
+                                </list>
+                            </field>
+                        </page>
+                        <page string="📝 Observaciones" name="notes">
+                            <field name="notes" placeholder="Observaciones adicionales para la ruta..."/>
+                        </page>
+                    </notebook>
+                </sheet>
+                <chatter/>
+            </form>
+        </field>
+    </record>
+
+    <!-- ═══════════════════════════════════════════════
+         VISTA LISTA DE RUTAS
+    ═══════════════════════════════════════════════ -->
+    <record id="logistics_route_list_view" model="ir.ui.view">
+        <field name="name">logistics.route.list</field>
+        <field name="model">logistics.route</field>
+        <field name="arch" type="xml">
+            <list string="Rutas Logísticas" decoration-success="state == 'done'"
+                decoration-danger="state == 'cancelled'"
+                decoration-info="state == 'in_progress'"
+                decoration-warning="state == 'confirmed'">
+                <field name="name"/>
+                <field name="date"/>
+                <field name="driver_id"/>
+                <field name="vehicle_id"/>
+                <field name="total_tasks"/>
+                <field name="completed_tasks"/>
+                <field name="progress_percentage" widget="progressbar"/>
+                <field name="estimated_distance_km" string="Km"/>
+                <field name="state" widget="badge"
+                    decoration-success="state == 'done'"
+                    decoration-danger="state == 'cancelled'"
+                    decoration-info="state == 'in_progress'"
+                    decoration-warning="state == 'confirmed'"
+                    decoration-muted="state == 'draft'"/>
+            </list>
+        </field>
+    </record>
+
+    <!-- ═══════════════════════════════════════════════
+         VISTA KANBAN DE RUTAS
+    ═══════════════════════════════════════════════ -->
+    <record id="logistics_route_kanban_view" model="ir.ui.view">
+        <field name="name">logistics.route.kanban</field>
+        <field name="model">logistics.route</field>
+        <field name="arch" type="xml">
+            <kanban class="o_kanban_mobile" default_group_by="state" group_create="false">
+                <field name="name"/>
+                <field name="state"/>
+                <field name="driver_id"/>
+                <field name="vehicle_id"/>
+                <field name="progress_percentage"/>
+                <field name="total_tasks"/>
+                <field name="completed_tasks"/>
+                <field name="date"/>
+                <field name="color"/>
+                <templates>
+                    <t t-name="card">
+                        <div class="oe_kanban_card oe_kanban_global_click" style="border-left:4px solid #0d6efd;">
+                            <div class="o_kanban_card_header">
+                                <strong><field name="name"/></strong>
+                                <span class="badge bg-primary float-end"><field name="date"/></span>
+                            </div>
+                            <div class="o_kanban_card_content" style="margin-top:8px;">
+                                <div>🚗 <field name="driver_id"/></div>
+                                <div>🚙 <field name="vehicle_id"/></div>
+                                <div style="margin-top:8px;">
+                                    📍 <field name="completed_tasks"/>/<field name="total_tasks"/> paradas
+                                </div>
+                                <div class="progress" style="margin-top:6px; height:8px;">
+                                    <div class="progress-bar bg-success"
+                                        t-attf-style="width: #{record.progress_percentage.raw_value}%">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </t>
+                </templates>
+            </kanban>
+        </field>
+    </record>
+
+    <!-- ═══════════════════════════════════════════════
+         FILTROS DE BÚSQUEDA
+    ═══════════════════════════════════════════════ -->
+    <record id="logistics_route_search_view" model="ir.ui.view">
+        <field name="name">logistics.route.search</field>
+        <field name="model">logistics.route</field>
+        <field name="arch" type="xml">
+            <search string="Buscar Rutas">
+                <field name="name" string="Número de Ruta"/>
+                <field name="driver_id" string="Piloto"/>
+                <field name="vehicle_id" string="Vehículo"/>
+                <filter name="today" string="Hoy"
+                    domain="[('date','=', context_today().strftime('%Y-%m-%d'))]"/>
+                <filter name="in_progress" string="En Progreso"
+                    domain="[('state','=','in_progress')]"/>
+                <filter name="confirmed" string="Confirmadas"
+                    domain="[('state','=','confirmed')]"/>
+                <filter name="done" string="Completadas"
+                    domain="[('state','=','done')]"/>
+                <separator/>
+                <group expand="0" string="Agrupar por">
+                    <filter name="group_driver" string="Piloto" context="{'group_by':'driver_id'}"/>
+                    <filter name="group_date" string="Fecha" context="{'group_by':'date'}"/>
+                    <filter name="group_state" string="Estado" context="{'group_by':'state'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <!-- Acción principal de rutas -->
+    <record id="action_logistics_routes" model="ir.actions.act_window">
+        <field name="name">Rutas Logísticas</field>
+        <field name="res_model">logistics.route</field>
+        <field name="view_mode">kanban,list,form</field>
+        <field name="context">{'search_default_today': 1}</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">
+                ¡Crea tu primera ruta logística!
+            </p>
+            <p>Asigna un piloto, un vehículo y agrega las paradas del día.</p>
+        </field>
+    </record>
+</odoo>

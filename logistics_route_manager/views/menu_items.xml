@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Menú raíz -->
+    <menuitem id="menu_logistics_root"
+        name="Logística"
+        sequence="55"
+        web_icon="logistics_route_manager,static/src/img/icon-menu.png"
+        groups="logistics_route_manager.group_logistics_manager,
+                logistics_route_manager.group_logistics_user,
+                logistics_route_manager.group_logistics_driver"/>
+
+    <!-- Dashboard -->
+    <menuitem id="menu_logistics_dashboard"
+        name="🏠 Dashboard"
+        parent="menu_logistics_root"
+        action="logistics_dashboard_action"
+        sequence="1"
+        groups="logistics_route_manager.group_logistics_manager,
+                logistics_route_manager.group_logistics_user"/>
+
+    <!-- Rutas -->
+    <menuitem id="menu_logistics_routes"
+        name="🚗 Rutas"
+        parent="menu_logistics_root"
+        action="action_logistics_routes"
+        sequence="5"
+        groups="logistics_route_manager.group_logistics_manager,
+                logistics_route_manager.group_logistics_user,
+                logistics_route_manager.group_logistics_driver"/>
+
+    <!-- Tareas -->
+    <menuitem id="menu_logistics_tasks"
+        name="📋 Tareas"
+        parent="menu_logistics_root"
+        action="action_logistics_tasks"
+        sequence="10"
+        groups="logistics_route_manager.group_logistics_manager,
+                logistics_route_manager.group_logistics_user"/>
+
+    <!-- Configuración sub-menú -->
+    <menuitem id="menu_logistics_config"
+        name="⚙️ Configuración"
+        parent="menu_logistics_root"
+        sequence="90"
+        groups="logistics_route_manager.group_logistics_manager"/>
+
+    <menuitem id="menu_logistics_drivers"
+        name="👤 Pilotos"
+        parent="menu_logistics_config"
+        action="action_logistics_drivers"
+        sequence="10"/>
+
+    <menuitem id="menu_logistics_vehicles"
+        name="🚙 Vehículos"
+        parent="menu_logistics_config"
+        action="action_logistics_vehicles"
+        sequence="20"/>
+
+    <menuitem id="menu_logistics_locations"
+        name="📍 Lugares Frecuentes"
+        parent="menu_logistics_config"
+        action="action_logistics_locations"
+        sequence="30"/>
+</odoo>
