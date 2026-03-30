@@ -4,19 +4,9 @@
     <menuitem id="menu_logistics_root"
         name="Logística"
         sequence="55"
-        web_icon="logistics_route_manager,static/src/img/icon-menu.png"
         groups="logistics_route_manager.group_logistics_manager,
                 logistics_route_manager.group_logistics_user,
                 logistics_route_manager.group_logistics_driver"/>
-
-    <!-- Dashboard -->
-    <menuitem id="menu_logistics_dashboard"
-        name="🏠 Dashboard"
-        parent="menu_logistics_root"
-        action="logistics_dashboard_action"
-        sequence="1"
-        groups="logistics_route_manager.group_logistics_manager,
-                logistics_route_manager.group_logistics_user"/>
 
     <!-- Rutas -->
     <menuitem id="menu_logistics_routes"

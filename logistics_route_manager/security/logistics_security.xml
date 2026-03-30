@@ -12,7 +12,6 @@
     <!-- Jefe de Logística: acceso total -->
     <record id="group_logistics_manager" model="res.groups">
         <field name="name">Jefe de Logística</field>
-        <field name="category_id" ref="module_category_logistics"/>
         <field name="implied_ids" eval="[(4, ref('base.group_user'))]"/>
         <field name="comment">Acceso completo: crear, editar, eliminar rutas, ver mapa en tiempo real, configurar módulo.</field>
     </record>
@@ -20,7 +19,6 @@
     <!-- Coordinador: crear y editar, sin eliminar -->
     <record id="group_logistics_user" model="res.groups">
         <field name="name">Coordinador de Logística</field>
-        <field name="category_id" ref="module_category_logistics"/>
         <field name="implied_ids" eval="[(4, ref('base.group_user'))]"/>
         <field name="comment">Puede crear y editar rutas y tareas, pero no eliminar ni acceder a configuración.</field>
     </record>
@@ -28,7 +26,6 @@
     <!-- Piloto: solo ver sus rutas y actualizar estado -->
     <record id="group_logistics_driver" model="res.groups">
         <field name="name">Piloto Logístico</field>
-        <field name="category_id" ref="module_category_logistics"/>
         <field name="implied_ids" eval="[(4, ref('base.group_user'))]"/>
         <field name="comment">Solo puede ver sus rutas asignadas y actualizar el estado de las tareas.</field>
     </record>
