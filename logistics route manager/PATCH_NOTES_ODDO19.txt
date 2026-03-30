@@ -1,9 +1,0 @@
-Cambios aplicados para una primera compatibilidad con Odoo 19:
-
-1. Se quitaron los campos category_id en res.groups porque en tu entorno Odoo 19 estaban provocando el error de instalación.
-2. Se corrigió la vista de res.config.settings para heredar de base.res_config_settings_view_form en lugar de una acción.
-3. Se movió el bloque de ajustes a position="inside" para evitar una inserción inválida.
-4. Se removió el menú Dashboard porque la acción cliente no tenía implementación JS registrada y podía romper la navegación.
-5. Se removió el web_icon del menú raíz porque el archivo no existe dentro del módulo.
-
-OJO: Este parche no corrige todavía toda la parte de mapa/dashboard/PWA. Es un parche inicial para reducir errores de instalación y de menú.
