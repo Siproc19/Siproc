@@ -212,46 +212,45 @@
         </field>
     </record>
 
-    <!-- ═══════════════════════════════════════════════
-         FILTROS DE BÚSQUEDA
-    ═══════════════════════════════════════════════ -->
-    <record id="logistics_route_search_view" model="ir.ui.view">
-        <field name="name">logistics.route.search</field>
-        <field name="model">logistics.route</field>
-        <field name="arch" type="xml">
-            <search string="Buscar Rutas">
-                <field name="name" string="Número de Ruta"/>
-                <field name="driver_id" string="Piloto"/>
-                <field name="vehicle_id" string="Vehículo"/>
-                <filter name="today" string="Hoy"
-                    domain="[('date','=', context_today().strftime('%Y-%m-%d'))]"/>
-                <filter name="in_progress" string="En Progreso"
-                    domain="[('state','=','in_progress')]"/>
-                <filter name="confirmed" string="Confirmadas"
-                    domain="[('state','=','confirmed')]"/>
-                <filter name="done" string="Completadas"
-                    domain="[('state','=','done')]"/>
-                <separator/>
-                <group expand="0" string="Agrupar por">
-                    <filter name="group_driver" string="Piloto" context="{'group_by':'driver_id'}"/>
-                    <filter name="group_date" string="Fecha" context="{'group_by':'date'}"/>
-                    <filter name="group_state" string="Estado" context="{'group_by':'state'}"/>
-                </group>
-            </search>
-        </field>
-    </record>
+  <!-- ═══════════════════════════════════════════════
+     FILTROS DE BÚSQUEDA
+═══════════════════════════════════════════════ -->
+<record id="logistics_route_search_view" model="ir.ui.view">
+    <field name="name">logistics.route.search</field>
+    <field name="model">logistics.route</field>
+    <field name="arch" type="xml">
+        <search>
+            <field name="name"/>
+            <field name="driver_id"/>
+            <field name="vehicle_id"/>
+            <field name="date"/>
+
+            <filter name="filter_draft" string="Borrador" domain="[('state', '=', 'draft')]"/>
+            <filter name="filter_confirmed" string="Confirmadas" domain="[('state', '=', 'confirmed')]"/>
+            <filter name="filter_in_progress" string="En Progreso" domain="[('state', '=', 'in_progress')]"/>
+            <filter name="filter_done" string="Completadas" domain="[('state', '=', 'done')]"/>
+            <filter name="filter_cancelled" string="Canceladas" domain="[('state', '=', 'cancelled')]"/>
+
+            <separator/>
+
+            <filter name="group_by_driver" string="Piloto" context="{'group_by': 'driver_id'}"/>
+            <filter name="group_by_vehicle" string="Vehículo" context="{'group_by': 'vehicle_id'}"/>
+            <filter name="group_by_date" string="Fecha" context="{'group_by': 'date'}"/>
+            <filter name="group_by_state" string="Estado" context="{'group_by': 'state'}"/>
+        </search>
+    </field>
+</record>
 
     <!-- Acción principal de rutas -->
-    <record id="action_logistics_routes" model="ir.actions.act_window">
-        <field name="name">Rutas Logísticas</field>
-        <field name="res_model">logistics.route</field>
-        <field name="view_mode">kanban,list,form</field>
-        <field name="context">{'search_default_today': 1}</field>
-        <field name="help" type="html">
-            <p class="o_view_nocontent_smiling_face">
-                ¡Crea tu primera ruta logística!
-            </p>
-            <p>Asigna un piloto, un vehículo y agrega las paradas del día.</p>
-        </field>
-    </record>
+  <record id="action_logistics_routes" model="ir.actions.act_window">
+    <field name="name">Rutas Logísticas</field>
+    <field name="res_model">logistics.route</field>
+    <field name="view_mode">kanban,list,form</field>
+    <field name="help" type="html">
+        <p class="o_view_nocontent_smiling_face">
+            ¡Crea tu primera ruta logística!
+        </p>
+        <p>Asigna un piloto, un vehículo y agrega las paradas del día.</p>
+    </field>
+</record>
 </odoo>
