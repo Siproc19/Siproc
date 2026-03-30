@@ -20,51 +20,44 @@
                     <button name="action_navigate_google_maps" string="🗺️ Google Maps"
                         type="object" class="btn-primary"/>
                     <field name="state" widget="statusbar"
-                        statusbar_visible="pending,in_transit,arrived,completed"/>
+                        statusbar_visible="pending,in_transit,arrived,completed,failed"/>
                 </header>
+
                 <sheet>
                     <div class="oe_title">
-                        <label class="o_label_optional" for="task_type"/>
+                        <label for="task_type" class="o_form_label"/>
                         <field name="task_type" widget="radio" options="{'horizontal': true}"/>
-                        <h1><field name="name" placeholder="Descripción de la tarea..."/></h1>
+                        <h1>
+                            <field name="name" placeholder="Descripción de la tarea..."/>
+                        </h1>
                     </div>
+
                     <group>
-                        <group string="📍 Ubicación">
+                        <group string="Ubicación">
+                            <field name="route_id" options="{'no_create': True}"/>
                             <field name="location_id" options="{'no_create': True}"/>
                             <field name="address"/>
                             <field name="latitude"/>
                             <field name="longitude"/>
                         </group>
-                        <group string="👤 Contacto">
+                        <group string="Contacto">
                             <field name="contact_name"/>
                             <field name="contact_phone" widget="phone"/>
                             <field name="priority" widget="priority"/>
                             <field name="estimated_arrival"/>
                         </group>
                     </group>
-                    <!-- Botones de navegación grandes (estilo móvil) -->
-                    <div class="logistics_nav_buttons" style="display:flex; gap:12px; padding:16px 0; flex-wrap:wrap;">
-                        <button class="btn btn-lg logistics-waze-btn"
-                            style="background:linear-gradient(135deg,#05C8F7,#0099CC);color:white;border:none;border-radius:12px;padding:14px 24px;font-size:16px;font-weight:700;flex:1;min-width:160px;"
-                            onclick="window.open('waze://?ll=' + document.querySelector('[name=latitude] input').value + ',' + document.querySelector('[name=longitude] input').value + '&amp;navigate=yes', '_blank')">
-                            🚗 Navegar con Waze
-                        </button>
-                        <button class="btn btn-lg logistics-gmaps-btn"
-                            style="background:linear-gradient(135deg,#4285F4,#1A56CC);color:white;border:none;border-radius:12px;padding:14px 24px;font-size:16px;font-weight:700;flex:1;min-width:160px;"
-                            onclick="window.open('https://www.google.com/maps/dir/?api=1&amp;destination=' + document.querySelector('[name=latitude] input').value + ',' + document.querySelector('[name=longitude] input').value + '&amp;travelmode=driving&amp;dir_action=navigate', '_blank')">
-                            🗺️ Navegar con Google Maps
-                        </button>
-                    </div>
+
                     <notebook>
-                        <!-- Campos por tipo de tarea -->
                         <page string="📦 Entrega" name="delivery"
                             invisible="task_type != 'delivery'">
                             <group>
                                 <field name="stock_picking_id"/>
-                                <field name="delivery_products" widget="text"/>
+                                <field name="delivery_products"/>
                                 <field name="delivery_weight_kg"/>
                             </group>
                         </page>
+
                         <page string="🛒 Compra" name="purchase"
                             invisible="task_type != 'purchase'">
                             <group>
@@ -74,19 +67,21 @@
                                     <field name="spent_amount" string="Monto Gastado (Q)"/>
                                 </group>
                                 <group>
-                                    <field name="shopping_list" widget="text" string="Lista de Compras"/>
+                                    <field name="shopping_list" string="Lista de Compras"/>
                                     <field name="invoice_photo" widget="image" string="Foto Factura"/>
                                 </group>
                             </group>
                         </page>
+
                         <page string="📋 Mandado" name="errand"
                             invisible="task_type != 'errand'">
                             <group>
-                                <field name="errand_description" widget="text"/>
+                                <field name="errand_description"/>
                                 <field name="requested_by"/>
                                 <field name="errand_amount" string="Monto para Gastos (Q)"/>
                             </group>
                         </page>
+
                         <page string="🏦 Banco" name="bank"
                             invisible="task_type != 'bank'">
                             <group>
@@ -101,6 +96,7 @@
                                 </group>
                             </group>
                         </page>
+
                         <page string="📸 Evidencias" name="evidence">
                             <group>
                                 <group>
@@ -114,6 +110,7 @@
                                 </group>
                             </group>
                         </page>
+
                         <page string="📝 Notas" name="notes">
                             <field name="notes" placeholder="Instrucciones especiales, indicaciones de acceso, etc."/>
                             <group invisible="state != 'failed'">
@@ -127,6 +124,7 @@
                         </page>
                     </notebook>
                 </sheet>
+
                 <chatter/>
             </form>
         </field>
@@ -200,33 +198,39 @@
         </field>
     </record>
 
-    <!-- Búsqueda tareas -->
+    <!-- ═══════════════════════════════════════════════
+         BÚSQUEDA TAREAS
+    ═══════════════════════════════════════════════ -->
     <record id="logistics_task_search_view" model="ir.ui.view">
         <field name="name">logistics.task.search</field>
         <field name="model">logistics.task</field>
         <field name="arch" type="xml">
-            <search string="Buscar Tareas">
+            <search>
                 <field name="name"/>
                 <field name="route_id"/>
+                <field name="task_type"/>
+                <field name="contact_name"/>
                 <field name="address"/>
-                <filter name="delivery" string="Entregas" domain="[('task_type','=','delivery')]"/>
-                <filter name="purchase" string="Compras" domain="[('task_type','=','purchase')]"/>
-                <filter name="errand" string="Mandados" domain="[('task_type','=','errand')]"/>
-                <filter name="bank" string="Bancos" domain="[('task_type','=','bank')]"/>
+                <field name="state"/>
+
+                <filter name="filter_pending" string="Pendientes" domain="[('state', '=', 'pending')]"/>
+                <filter name="filter_in_transit" string="En Tránsito" domain="[('state', '=', 'in_transit')]"/>
+                <filter name="filter_arrived" string="Llegó" domain="[('state', '=', 'arrived')]"/>
+                <filter name="filter_completed" string="Completadas" domain="[('state', '=', 'completed')]"/>
+                <filter name="filter_failed" string="Fallidas" domain="[('state', '=', 'failed')]"/>
+
                 <separator/>
-                <filter name="pending" string="Pendientes" domain="[('state','=','pending')]"/>
-                <filter name="in_transit" string="En Camino" domain="[('state','=','in_transit')]"/>
-                <filter name="completed" string="Completadas" domain="[('state','=','completed')]"/>
-                <group expand="0" string="Agrupar por">
-                    <filter name="group_type" string="Tipo" context="{'group_by':'task_type'}"/>
-                    <filter name="group_route" string="Ruta" context="{'group_by':'route_id'}"/>
-                    <filter name="group_state" string="Estado" context="{'group_by':'state'}"/>
-                </group>
+
+                <filter name="group_by_route" string="Ruta" context="{'group_by': 'route_id'}"/>
+                <filter name="group_by_state" string="Estado" context="{'group_by': 'state'}"/>
+                <filter name="group_by_task_type" string="Tipo" context="{'group_by': 'task_type'}"/>
             </search>
         </field>
     </record>
 
-    <!-- Acción de tareas -->
+    <!-- ═══════════════════════════════════════════════
+         ACCIÓN DE TAREAS
+    ═══════════════════════════════════════════════ -->
     <record id="action_logistics_tasks" model="ir.actions.act_window">
         <field name="name">Tareas Logísticas</field>
         <field name="res_model">logistics.task</field>
