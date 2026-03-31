@@ -13,7 +13,7 @@ class LogisticsGpsController(http.Controller):
     y retornar el estado de la ruta en tiempo real.
     """
 
-    @http.route('/logistics/gps/update', type='json', auth='user', methods=['POST'], csrf=False)
+    @http.route('/logistics/gps/update', type='jsonrpc', auth='user', methods=['POST'], csrf=False)
     def update_gps_position(self, **kwargs):
         """
         Recibe la posición GPS del celular del piloto.
@@ -56,7 +56,7 @@ class LogisticsGpsController(http.Controller):
             _logger.error(f"Error actualizando GPS: {e}")
             return {'success': False, 'error': str(e)}
 
-    @http.route('/logistics/route/<int:route_id>/status', type='json', auth='user', methods=['GET'])
+    @http.route('/logistics/route/<int:route_id>/status', type='jsonrpc', auth='user', methods=['GET'])
     def get_route_status(self, route_id, **kwargs):
         """
         Retorna el estado completo de una ruta para el dashboard del jefe.
@@ -74,7 +74,7 @@ class LogisticsGpsController(http.Controller):
             _logger.error(f"Error obteniendo estado de ruta: {e}")
             return {'success': False, 'error': str(e)}
 
-    @http.route('/logistics/driver/<int:driver_id>/position', type='json', auth='user', methods=['GET'])
+    @http.route('/logistics/driver/<int:driver_id>/position', type='jsonrpc', auth='user', methods=['GET'])
     def get_driver_position(self, driver_id, **kwargs):
         """Retorna la posición actual de un piloto específico."""
         try:
@@ -85,7 +85,7 @@ class LogisticsGpsController(http.Controller):
         except Exception as e:
             return {'success': False, 'error': str(e)}
 
-    @http.route('/logistics/routes/active', type='json', auth='user', methods=['GET'])
+    @http.route('/logistics/routes/active', type='jsonrpc', auth='user', methods=['GET'])
     def get_active_routes(self, **kwargs):
         """Retorna todas las rutas activas del día para el dashboard del jefe."""
         try:
