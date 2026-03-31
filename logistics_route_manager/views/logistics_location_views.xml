@@ -10,14 +10,19 @@
             <form string="Ubicación Logística">
                 <sheet>
                     <div class="oe_button_box" name="button_box">
-                        <button type="object" class="oe_stat_button" icon="fa-tasks"
-                            name="action_open_map_view">
+                        <button type="action" class="oe_stat_button" icon="fa-tasks"
+                            name="%(action_logistics_tasks)d"
+                            context="{'default_location_id': id}">
                             <field name="task_count" widget="statinfo" string="Tareas"/>
                         </button>
                     </div>
+
                     <div class="oe_title">
-                        <h1><field name="name" placeholder="Nombre del lugar..."/></h1>
+                        <h1>
+                            <field name="name" placeholder="Nombre del lugar..."/>
+                        </h1>
                     </div>
+
                     <group>
                         <group string="Información">
                             <field name="location_type"/>
@@ -26,26 +31,19 @@
                             <field name="contact_phone" widget="phone"/>
                             <field name="active"/>
                         </group>
+
                         <group string="Coordenadas GPS">
                             <field name="latitude"/>
                             <field name="longitude"/>
-                            <div colspan="2" style="display:flex; gap:8px; margin-top:8px;">
-                                <button type="object" name="action_open_in_google_maps"
-                                    class="btn btn-sm btn-primary">
-                                    🗺️ Ver en Google Maps
-                                </button>
-                                <button type="object" name="action_open_in_waze"
-                                    class="btn btn-sm btn-info" style="color:white;">
-                                    🚗 Ver en Waze
-                                </button>
-                            </div>
                         </group>
                     </group>
+
                     <group string="Notas e Indicaciones">
                         <field name="notes" nolabel="1"
                             placeholder="Indicaciones de acceso, referencias, horarios de atención..."/>
                     </group>
                 </sheet>
+
                 <chatter/>
             </form>
         </field>
@@ -62,7 +60,7 @@
                 <field name="contact_name"/>
                 <field name="contact_phone" widget="phone"/>
                 <field name="task_count" string="Tareas"/>
-                <field name="active" column_invisible="True"/>
+                <field name="active" optional="hide"/>
             </list>
         </field>
     </record>
@@ -74,14 +72,17 @@
             <search>
                 <field name="name"/>
                 <field name="address"/>
-                <filter name="customer" string="Clientes" domain="[('location_type','=','customer')]"/>
-                <filter name="supplier" string="Proveedores" domain="[('location_type','=','supplier')]"/>
-                <filter name="bank" string="Bancos" domain="[('location_type','=','bank')]"/>
-                <filter name="office" string="Oficinas" domain="[('location_type','=','office')]"/>
-                <filter name="active" string="Activos" domain="[('active','=',True)]"/>
-                <group expand="0" string="Agrupar por">
-                    <filter name="group_type" string="Tipo" context="{'group_by':'location_type'}"/>
-                </group>
+                <field name="location_type"/>
+
+                <filter name="customer" string="Clientes" domain="[('location_type', '=', 'customer')]"/>
+                <filter name="supplier" string="Proveedores" domain="[('location_type', '=', 'supplier')]"/>
+                <filter name="bank" string="Bancos" domain="[('location_type', '=', 'bank')]"/>
+                <filter name="office" string="Oficinas" domain="[('location_type', '=', 'office')]"/>
+                <filter name="active_filter" string="Activos" domain="[('active', '=', True)]"/>
+
+                <separator/>
+
+                <filter name="group_type" string="Tipo" context="{'group_by': 'location_type'}"/>
             </search>
         </field>
     </record>
