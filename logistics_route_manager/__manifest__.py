@@ -10,10 +10,12 @@
         - Tipos de tareas: Entregas, Compras, Mandados, Bancos
         - Integración con Waze y Google Maps para el piloto
         - Mapa interactivo con tráfico en tiempo real para el jefe
-        - App móvil PWA para el piloto (fácil de usar)
+        - App móvil PWA para el piloto
         - Optimización de rutas con Google Maps API
     """,
     'author': 'Logistics Module',
+    'license': 'LGPL-3',
+
     'depends': [
         'base',
         'mail',
@@ -22,17 +24,22 @@
         'hr',
         'web',
     ],
+
     'data': [
         'security/logistics_security.xml',
         'security/ir.model.access.csv',
+
         'data/logistics_data.xml',
+
         'views/logistics_route_views.xml',
         'views/logistics_task_views.xml',
         'views/logistics_driver_views.xml',
+        'views/logistics_vehicle_views.xml',
         'views/logistics_location_views.xml',
         'views/res_config_settings_views.xml',
         'views/menu_items.xml',
     ],
+
     'assets': {
         'web.assets_backend': [
             'logistics_route_manager/static/src/css/logistics.css',
@@ -47,9 +54,8 @@
             'logistics_route_manager/static/src/xml/driver_interface.xml',
         ],
     },
+
     'installable': True,
     'application': True,
     'auto_install': False,
-    'license': 'LGPL-3',
-    'images': [],
 }
