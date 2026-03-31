@@ -1,0 +1,6 @@
+Parche aplicado por ChatGPT para logistics_route_manager:
+- Se removió views/logistics_vehicle_views.xml del manifest porque las vistas de vehículos ya están dentro de views/logistics_driver_views.xml.
+- Se cambió column_invisible por optional="hide" en logistics_driver_views.xml para evitar incompatibilidades.
+- Se conservaron las correcciones previas del usuario en rutas, tareas, ubicaciones, menús y settings.
+
+Nota: este parche busca dejar el módulo instalable. Aún conviene probar funciones JS/mapa y permisos en Odoo.sh.

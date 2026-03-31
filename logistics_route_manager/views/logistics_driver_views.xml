@@ -84,7 +84,7 @@
                 <field name="is_online" widget="boolean_toggle" readonly="1"/>
                 <field name="current_speed" string="Vel. km/h" readonly="1"/>
                 <field name="last_gps_update" readonly="1" string="Último GPS"/>
-                <field name="is_active" column_invisible="True"/>
+                <field name="is_active" optional="hide"/>
             </list>
         </field>
     </record>

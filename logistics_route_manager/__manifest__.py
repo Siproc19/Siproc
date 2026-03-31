@@ -34,7 +34,6 @@
         'views/logistics_route_views.xml',
         'views/logistics_task_views.xml',
         'views/logistics_driver_views.xml',
-        'views/logistics_vehicle_views.xml',
         'views/logistics_location_views.xml',
         'views/res_config_settings_views.xml',
         'views/menu_items.xml',
