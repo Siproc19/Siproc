@@ -4,9 +4,7 @@
     <menuitem id="menu_logistics_root"
         name="Logística"
         sequence="55"
-        groups="logistics_route_manager.group_logistics_manager,
-                logistics_route_manager.group_logistics_user,
-                logistics_route_manager.group_logistics_driver"/>
+        groups="logistics_route_manager.group_logistics_manager,logistics_route_manager.group_logistics_user,logistics_route_manager.group_logistics_driver"/>
 
     <!-- Rutas -->
     <menuitem id="menu_logistics_routes"
@@ -14,9 +12,7 @@
         parent="menu_logistics_root"
         action="action_logistics_routes"
         sequence="5"
-        groups="logistics_route_manager.group_logistics_manager,
-                logistics_route_manager.group_logistics_user,
-                logistics_route_manager.group_logistics_driver"/>
+        groups="logistics_route_manager.group_logistics_manager,logistics_route_manager.group_logistics_user,logistics_route_manager.group_logistics_driver"/>
 
     <!-- Tareas -->
     <menuitem id="menu_logistics_tasks"
@@ -24,8 +20,7 @@
         parent="menu_logistics_root"
         action="action_logistics_tasks"
         sequence="10"
-        groups="logistics_route_manager.group_logistics_manager,
-                logistics_route_manager.group_logistics_user"/>
+        groups="logistics_route_manager.group_logistics_manager,logistics_route_manager.group_logistics_user"/>
 
     <!-- Configuración sub-menú -->
     <menuitem id="menu_logistics_config"
