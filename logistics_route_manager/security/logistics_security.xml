@@ -3,6 +3,7 @@
     <!-- ═══════════════════════════════════════════════
          GRUPOS DE SEGURIDAD
     ═══════════════════════════════════════════════ -->
+
     <record id="module_category_logistics" model="ir.module.category">
         <field name="name">Logística</field>
         <field name="description">Gestión de rutas y logística en tiempo real</field>
@@ -13,10 +14,10 @@
     <record id="group_logistics_manager" model="res.groups">
         <field name="name">Jefe de Logística</field>
         <field name="implied_ids" eval="[(4, ref('base.group_user'))]"/>
-        <field name="comment">Acceso completo: crear, editar, eliminar rutas, ver mapa en tiempo real, configurar módulo.</field>
+        <field name="comment">Acceso completo: crear, editar, eliminar rutas, ver mapa en tiempo real y configurar el módulo.</field>
     </record>
 
-    <!-- Coordinador: crear y editar, sin eliminar -->
+    <!-- Coordinador: crear y editar -->
     <record id="group_logistics_user" model="res.groups">
         <field name="name">Coordinador de Logística</field>
         <field name="implied_ids" eval="[(4, ref('base.group_user'))]"/>
@@ -31,14 +32,14 @@
     </record>
 
     <!-- ═══════════════════════════════════════════════
-         REGLAS DE REGISTRO (Record Rules)
+         REGLAS DE REGISTRO
     ═══════════════════════════════════════════════ -->
 
     <!-- Piloto solo ve sus propias rutas -->
     <record id="logistics_route_driver_rule" model="ir.rule">
         <field name="name">Piloto: solo sus rutas</field>
         <field name="model_id" ref="logistics_route_manager.model_logistics_route"/>
-        <field name="groups" eval="[(4, ref('group_logistics_driver'))]"/>
+        <field name="groups" eval="[(4, ref('logistics_route_manager.group_logistics_driver'))]"/>
         <field name="domain_force">[('driver_id.user_id', '=', user.id)]</field>
         <field name="perm_read" eval="True"/>
         <field name="perm_write" eval="True"/>
@@ -50,7 +51,10 @@
     <record id="logistics_route_manager_rule" model="ir.rule">
         <field name="name">Jefe/Coordinador: todas las rutas</field>
         <field name="model_id" ref="logistics_route_manager.model_logistics_route"/>
-        <field name="groups" eval="[(4, ref('group_logistics_manager')), (4, ref('group_logistics_user'))]"/>
+        <field name="groups" eval="[
+            (4, ref('logistics_route_manager.group_logistics_manager')),
+            (4, ref('logistics_route_manager.group_logistics_user'))
+        ]"/>
         <field name="domain_force">[(1, '=', 1)]</field>
         <field name="perm_read" eval="True"/>
         <field name="perm_write" eval="True"/>
