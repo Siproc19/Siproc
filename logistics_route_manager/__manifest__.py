@@ -28,9 +28,7 @@
     'data': [
         'security/logistics_security.xml',
         'security/ir.model.access.csv',
-
         'data/logistics_data.xml',
-
         'views/logistics_route_views.xml',
         'views/logistics_task_views.xml',
         'views/logistics_driver_views.xml',
@@ -41,14 +39,8 @@
 
     'assets': {
         'web.assets_backend': [
-            'logistics_route_manager/static/src/css/logistics.css',
-            'logistics_route_manager/static/src/js/map_widget.js',
         ],
         'web.assets_frontend': [
-            'logistics_route_manager/static/src/css/mobile_driver.css',
-            'logistics_route_manager/static/src/js/gps_tracker.js',
-            'logistics_route_manager/static/src/js/driver_app.js',
-            'logistics_route_manager/static/src/xml/driver_interface.xml',
         ],
     },
 
