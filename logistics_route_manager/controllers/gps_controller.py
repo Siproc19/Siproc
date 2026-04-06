@@ -56,25 +56,21 @@ class LogisticsGpsController(http.Controller):
             _logger.error(f"Error actualizando GPS: {e}")
             return {'success': False, 'error': str(e)}
 
-    @http.route('/logistics/route/<int:route_id>/status', type='jsonrpc', auth='user', methods=['GET'])
+    @http.route('/logistics/route/<int:route_id>/status', type='http', auth='user', methods=['GET'], csrf=False)
     def get_route_status(self, route_id, **kwargs):
-        """
-        Retorna el estado completo de una ruta para el dashboard del jefe.
-        Incluye posición del piloto y estado de todas las tareas.
-        """
+        """Retorna el estado completo de una ruta para el mapa del jefe."""
         try:
             route = request.env['logistics.route'].sudo().browse(route_id)
             if not route.exists():
-                return {'success': False, 'error': 'Ruta no encontrada'}
-            return {
-                'success': True,
-                'data': route.get_route_data_json(),
-            }
+                payload = {'success': False, 'error': 'Ruta no encontrada'}
+            else:
+                payload = {'success': True, 'data': route.get_route_data_json()}
         except Exception as e:
             _logger.error(f"Error obteniendo estado de ruta: {e}")
-            return {'success': False, 'error': str(e)}
+            payload = {'success': False, 'error': str(e)}
+        return request.make_response(json.dumps(payload), headers=[('Content-Type', 'application/json')])
 
-    @http.route('/logistics/driver/<int:driver_id>/position', type='jsonrpc', auth='user', methods=['GET'])
+    @http.route('/logistics/driver/<int:driver_id>/position', type='jsonrpc', auth='user', methods=['POST'])
     def get_driver_position(self, driver_id, **kwargs):
         """Retorna la posición actual de un piloto específico."""
         try:
@@ -85,7 +81,7 @@ class LogisticsGpsController(http.Controller):
         except Exception as e:
             return {'success': False, 'error': str(e)}
 
-    @http.route('/logistics/routes/active', type='jsonrpc', auth='user', methods=['GET'])
+    @http.route('/logistics/routes/active', type='jsonrpc', auth='user', methods=['POST'])
     def get_active_routes(self, **kwargs):
         """Retorna todas las rutas activas del día para el dashboard del jefe."""
         try:
@@ -101,6 +97,17 @@ class LogisticsGpsController(http.Controller):
             }
         except Exception as e:
             return {'success': False, 'error': str(e)}
+
+
+    @http.route('/logistics/config', type='http', auth='user', methods=['GET'], csrf=False)
+    def get_logistics_config(self, **kwargs):
+        """Retorna configuración mínima para frontend del mapa."""
+        payload = {
+            'success': True,
+            'google_maps_api_key': request.env['ir.config_parameter'].sudo().get_param('logistics.google_maps_api_key', ''),
+            'gps_interval': int(request.env['ir.config_parameter'].sudo().get_param('logistics.gps_interval', 15) or 15),
+        }
+        return request.make_response(json.dumps(payload), headers=[('Content-Type', 'application/json')])
 
 
 def _check_geofence(driver, latitude, longitude):

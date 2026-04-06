@@ -94,6 +94,28 @@ class LogisticsRoute(models.Model):
     traffic_updated_at = fields.Datetime(string='Tráfico Actualizado')
     notes = fields.Text(string='Observaciones')
 
+
+    driver_current_latitude = fields.Float(
+        string='Latitud Piloto',
+        related='driver_id.current_latitude',
+        readonly=True,
+    )
+    driver_current_longitude = fields.Float(
+        string='Longitud Piloto',
+        related='driver_id.current_longitude',
+        readonly=True,
+    )
+    driver_last_gps_update = fields.Datetime(
+        string='Último GPS Piloto',
+        related='driver_id.last_gps_update',
+        readonly=True,
+    )
+    driver_is_online = fields.Boolean(
+        string='Piloto en Línea',
+        related='driver_id.is_online',
+        readonly=True,
+    )
+
     # ── Computed ──────────────────────────────────────────────────────────────
     @api.depends('task_ids', 'task_ids.state')
     def _compute_progress(self):
@@ -301,6 +323,15 @@ class LogisticsRoute(models.Model):
             'view_mode': 'form',
             'views': [(self.env.ref('logistics_route_manager.logistics_route_map_form').id, 'form')],
             'target': 'current',
+        }
+
+    def action_open_driver_app(self):
+        """Abre la app móvil del piloto en una nueva pestaña."""
+        self.ensure_one()
+        return {
+            'type': 'ir.actions.act_url',
+            'url': '/logistics/driver/app',
+            'target': 'new',
         }
 
     def get_route_data_json(self):

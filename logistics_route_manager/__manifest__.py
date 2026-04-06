@@ -42,9 +42,13 @@
     'assets': {
         'web.assets_backend': [
             'logistics_route_manager/static/src/css/logistics.css',
+            'logistics_route_manager/static/src/js/map_widget.js',
         ],
         'web.assets_frontend': [
             'logistics_route_manager/static/src/css/mobile_driver.css',
+            'logistics_route_manager/static/src/js/gps_tracker.js',
+            'logistics_route_manager/static/src/js/driver_app.js',
+            'logistics_route_manager/static/src/xml/driver_interface.xml',
         ],
     },
 
