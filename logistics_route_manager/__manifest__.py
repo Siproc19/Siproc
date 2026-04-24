@@ -3,10 +3,12 @@
     'name': 'Gestión de Logística y Rutas en Tiempo Real',
     'version': '19.0.1.0.1',
     'category': 'Inventory/Logistics',
-    'summary': 'Módulo de logística con rastreo GPS, integración Waze y Google Maps',
+    'summary': 'Módulo de logística con rastreo GPS',
+
     'description': """
-        Módulo completo de gestión logística para Odoo 19.
+        Módulo de logística SIPROC.
     """,
+
     'author': 'SIPROC',
     'license': 'LGPL-3',
     'website': 'https://siprocgt.com',
@@ -39,4 +41,3 @@
     'application': True,
     'auto_install': False,
 }
-
