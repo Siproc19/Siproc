@@ -1,15 +1,12 @@
 {
     "name": "SIPROC Delivery Logistics",
-    "version": "19.0.4.0.1",
-    "summary": "Logística de entregas con rutas optimizadas, panel de piloto y mapa en tiempo real",
+    "version": "19.0.4.0.2",
+    "summary": "Logística de entregas con rutas optimizadas",
     "description": """
 SIPROC Delivery Logistics para Odoo 19.
-- Rutas mixtas: entrega, compra, mandado y otros
-- Planificación automática desde bodega SIPROC
-- Ingreso manual de coordenadas, Google Maps y Waze
-- Panel de piloto con mapa real Leaflet
-- GPS desde teléfono cada 10-15 segundos
-- Evidencia fotográfica y tiempos por punto
+- Gestión de rutas de entrega
+- Control de pilotos y vehículos
+- Seguimiento de entregas
     """,
     "author": "SIPROC",
     "category": "Inventory/Inventory",
@@ -36,18 +33,8 @@ SIPROC Delivery Logistics para Odoo 19.
         "views/menu_views.xml",
     ],
 
-    # TEMPORALMENTE DESACTIVADO PARA EVITAR PANTALLA EN BLANCO
-    # Cuando Odoo ya entre bien, se activan de nuevo uno por uno.
-    "assets": {
-        "web.assets_backend": [
-            # "siproc_delivery_logistics/static/lib/leaflet/leaflet.css",
-            # "siproc_delivery_logistics/static/lib/leaflet/leaflet.js",
-            # "siproc_delivery_logistics/static/src/xml/delivery_map_templates.xml",
-            # "siproc_delivery_logistics/static/src/js/delivery_map_action.js",
-            # "siproc_delivery_logistics/static/src/xml/delivery_pilot_templates.xml",
-            # "siproc_delivery_logistics/static/src/js/delivery_pilot_action.js",
-        ],
-    },
+    # 🔥 IMPORTANTE: SIN ASSETS (para quitar pantalla blanca)
+    "assets": {},
 
     "installable": True,
     "application": False,
