@@ -1,2 +1,56 @@
-# macOS
+# ─── Python ───────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.so
+*.egg
+*.egg-info/
+dist/
+build/
+.eggs/
+
+# ─── Odoo ─────────────────────────────────────────────────
+.odoo/
+*.session
+filestore/
+
+# ─── Entornos virtuales ───────────────────────────────────
+.venv/
+venv/
+env/
+.env
+
+# ─── IDEs y editores ──────────────────────────────────────
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# ─── macOS ────────────────────────────────────────────────
 .DS_Store
+.AppleDouble
+.LSOverride
+
+# ─── Windows ──────────────────────────────────────────────
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# ─── Logs y bases de datos ────────────────────────────────
+*.log
+*.sql
+*.sqlite3
+*.db
+
+# ─── Cobertura de pruebas ─────────────────────────────────
+.coverage
+htmlcov/
+.pytest_cache/
+coverage.xml
+
+# ─── Archivos temporales ──────────────────────────────────
+*.tmp
+*.bak
+*.orig
