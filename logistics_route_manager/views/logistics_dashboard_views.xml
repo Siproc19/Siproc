@@ -1,7 +1,0 @@
-<?xml version="1.0" encoding="utf-8"?>
-<odoo>
-    <record id="logistics_dashboard_action" model="ir.actions.client">
-        <field name="name">Dashboard de Logística</field>
-        <field name="tag">logistics_dashboard</field>
-    </record>
-</odoo>
