@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data noupdate="1">
+        <record id="delivery_route_seq" model="ir.sequence">
+            <field name="name">Delivery Route</field>
+            <field name="code">delivery.route</field>
+            <field name="prefix">RUTA/</field>
+            <field name="padding">5</field>
+            <field name="company_id" eval="False"/>
+        </record>
+    </data>
+</odoo>

@@ -1,0 +1,48 @@
+<odoo>
+    <record id="view_crm_lead_form_siproc_flow" model="ir.ui.view">
+        <field name="name">crm.lead.form.siproc.flow</field>
+        <field name="model">crm.lead</field>
+        <field name="inherit_id" ref="crm.crm_lead_view_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//notebook" position="inside">
+                <page string="SIPROC">
+                    <group>
+                        <group string="Prospección">
+                            <field name="x_source_name"/>
+                            <field name="x_source_url"/>
+                            <field name="x_capture_date"/>
+                            <field name="x_industry_type"/>
+                            <field name="x_zone"/>
+                            <field name="x_city"/>
+                            <field name="x_validation_status"/>
+                            <field name="x_lead_score"/>
+                        </group>
+                        <group string="Calificación comercial">
+                            <field name="x_tipo_cliente"/>
+                            <field name="x_linea_producto_interes"/>
+                            <field name="x_monto_estimado"/>
+                            <field name="x_probabilidad_real"/>
+                            <field name="x_first_contact_deadline"/>
+                            <field name="x_days_without_management" readonly="1"/>
+                        </group>
+                    </group>
+                    <group string="Productos sugeridos">
+                        <field name="x_suggested_products" nolabel="1"/>
+                    </group>
+                    <group string="Fechas de flujo SIPROC" col="4">
+                        <field name="x_fecha_primer_contacto"/>
+                        <field name="x_fecha_solicitud_cotizacion"/>
+                        <field name="x_fecha_envio_cotizacion"/>
+                        <field name="x_fecha_commit"/>
+                        <field name="x_fecha_informal_won"/>
+                        <field name="x_fecha_formal_won"/>
+                        <field name="x_fecha_credito"/>
+                        <field name="x_fecha_pagado"/>
+                    </group>
+                </page>
+            </xpath>
+        </field>
+    </record>
+
+
+</odoo>

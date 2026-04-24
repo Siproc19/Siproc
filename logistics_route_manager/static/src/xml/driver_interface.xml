@@ -1,0 +1,162 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <template id="driver_app_template" name="App del Piloto">
+        <t t-call="web.layout">
+            <t t-set="head">
+                <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no"/>
+                <meta name="theme-color" content="#1a1a2e"/>
+                <meta name="mobile-web-app-capable" content="yes"/>
+                <meta name="apple-mobile-web-app-capable" content="yes"/>
+                <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
+                <link rel="manifest" href="/logistics/manifest.json"/>
+                <link rel="stylesheet" href="/logistics_route_manager/static/src/css/mobile_driver.css"/>
+                <title>LogiPiloto</title>
+            </t>
+            <t t-set="body">
+                <!-- Banner sin conexión -->
+                <div id="offline-banner">
+                    ⚠️ Sin conexión — Las posiciones GPS se guardarán y enviarán al reconectar
+                </div>
+
+                <!-- Header -->
+                <header class="driver-header">
+                    <div style="display:flex; justify-content:space-between; align-items:center;">
+                        <div>
+                            <h1>🚗 <t t-esc="driver.name"/></h1>
+                            <div class="subtitle">
+                                <t t-if="route">
+                                    <t t-esc="route.name"/> · <t t-esc="route.date"/>
+                                </t>
+                                <t t-else="">Sin ruta asignada hoy</t>
+                            </div>
+                        </div>
+                        <div id="driver-speed" style="font-size:22px; font-weight:900; color:#20c997;">
+                            0 km/h
+                        </div>
+                    </div>
+                </header>
+
+                <!-- GPS status -->
+                <div class="gps-status" id="gps-status">
+                    <div class="gps-dot"></div>
+                    GPS activo — Enviando posición cada <t t-esc="gps_interval"/> segundos
+                </div>
+
+                <!-- Barra de progreso -->
+                <div class="progress-section">
+                    <span id="progress-label">Cargando ruta...</span>
+                    <div class="progress-bar-track">
+                        <div id="progress-bar" style="width:0%"></div>
+                    </div>
+                </div>
+
+                <!-- Botón Iniciar Ruta (si no está iniciada) -->
+                <t t-if="route and route.state == 'confirmed'">
+                    <div style="padding:16px;">
+                        <button id="start-route-btn"
+                            style="width:100%; padding:20px; background:linear-gradient(135deg,#28a745,#20c997); color:white; border:none; border-radius:14px; font-size:20px; font-weight:900; cursor:pointer; box-shadow:0 4px 16px rgba(40,167,69,0.35);">
+                            🚀 INICIAR RUTA
+                        </button>
+                    </div>
+                </t>
+
+                <!-- Lista de tareas -->
+                <div id="task-list">
+                    <t t-if="not route">
+                        <div style="text-align:center; padding:60px 24px; color:#6c757d;">
+                            <div style="font-size:64px; margin-bottom:16px;">📋</div>
+                            <h3>No tienes rutas asignadas para hoy</h3>
+                            <p style="margin-top:8px;">Consulta con tu jefe de logística.</p>
+                        </div>
+                    </t>
+                </div>
+
+                <!-- Toast container -->
+                <div id="toast-container"></div>
+
+                <!-- Modal: Completar tarea -->
+                <div id="complete-modal" class="modal-overlay" data-task-id="">
+                    <div class="modal-sheet">
+                        <div class="modal-title">
+                            ✅ Completar Tarea
+                            <button class="close-modal">✕</button>
+                        </div>
+                        <label class="photo-upload-label">
+                            📷 Tomar/Subir Foto de Evidencia
+                            <input type="file" id="evidence-photo" accept="image/*" capture="camera"/>
+                        </label>
+                        <div style="margin-bottom:12px;">
+                            <label style="font-size:14px; font-weight:600; margin-bottom:6px; display:block;">
+                                ✍️ Firma del Receptor (dibuja en el recuadro)
+                            </label>
+                            <canvas id="signature-canvas"></canvas>
+                            <button onclick="document.getElementById('signature-canvas').getContext('2d').clearRect(0,0,999,999)"
+                                style="font-size:12px; color:#dc3545; background:none; border:none; cursor:pointer; padding:4px;">
+                                🗑️ Limpiar firma
+                            </button>
+                        </div>
+                        <input type="text" id="signature-name" class="modal-input"
+                            placeholder="Nombre del firmante (opcional)"/>
+                        <input type="number" id="spent-amount" class="modal-input"
+                            placeholder="Monto gastado en Q (si aplica)" step="0.01"/>
+                        <button id="complete-modal-confirm" class="modal-confirm-btn success">
+                            ✅ Confirmar Completado
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Modal: Reportar problema -->
+                <div id="fail-modal" class="modal-overlay" data-task-id="">
+                    <div class="modal-sheet">
+                        <div class="modal-title">
+                            ❌ Reportar Problema
+                            <button class="close-modal">✕</button>
+                        </div>
+                        <textarea id="fail-reason" class="modal-input"
+                            placeholder="Describe el problema (cliente no disponible, negocio cerrado, dirección incorrecta...)"
+                            rows="4" style="resize:none;"></textarea>
+                        <button id="fail-modal-confirm" class="modal-confirm-btn danger">
+                            ❌ Reportar Problema
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Scripts -->
+                <script src="/logistics_route_manager/static/src/js/gps_tracker.js"></script>
+                <script src="/logistics_route_manager/static/src/js/driver_app.js"></script>
+                <script>
+                    // Firma canvas táctil
+                    const canvas = document.getElementById("signature-canvas");
+                    if (canvas) {
+                        const ctx = canvas.getContext("2d");
+                        canvas.width  = canvas.offsetWidth;
+                        canvas.height = 150;
+                        let drawing = false;
+                        const getPos = (e) => {
+                            const r = canvas.getBoundingClientRect();
+                            const t = e.touches ? e.touches[0] : e;
+                            return { x: t.clientX - r.left, y: t.clientY - r.top };
+                        };
+                        canvas.addEventListener("mousedown",  (e) => { drawing = true; ctx.beginPath(); const p = getPos(e); ctx.moveTo(p.x, p.y); });
+                        canvas.addEventListener("mousemove",  (e) => { if (!drawing) return; const p = getPos(e); ctx.lineTo(p.x, p.y); ctx.strokeStyle = "#000"; ctx.lineWidth = 2; ctx.stroke(); });
+                        canvas.addEventListener("mouseup",    () => drawing = false);
+                        canvas.addEventListener("touchstart", (e) => { e.preventDefault(); drawing = true; ctx.beginPath(); const p = getPos(e); ctx.moveTo(p.x, p.y); });
+                        canvas.addEventListener("touchmove",  (e) => { e.preventDefault(); if (!drawing) return; const p = getPos(e); ctx.lineTo(p.x, p.y); ctx.strokeStyle = "#000"; ctx.lineWidth = 2; ctx.stroke(); });
+                        canvas.addEventListener("touchend",   () => drawing = false);
+                    }
+
+                    // Iniciar la app del piloto
+                    document.addEventListener("DOMContentLoaded", () => {
+                        initDriverApp({
+                            driverId:   <t t-esc="driver.id"/>,
+                            routeId:    <t t-if="route"><t t-esc="route.id"/></t><t t-else="">null</t>,
+                            routeData:  <t t-out="route_data"/>,
+                            apiKey:     "<t t-esc="api_key"/>",
+                            gpsInterval: <t t-esc="gps_interval"/>,
+                        });
+                    });
+                </script>
+            </t>
+        </t>
+    </template>
+</odoo>

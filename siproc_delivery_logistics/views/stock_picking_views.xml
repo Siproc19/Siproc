@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="stock_picking_form_delivery_logistics_inherit" model="ir.ui.view">
+        <field name="name">stock.picking.form.delivery.logistics.inherit</field>
+        <field name="model">stock.picking</field>
+        <field name="inherit_id" ref="stock.view_picking_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//sheet/notebook" position="inside">
+                <page string="Logística Entrega">
+                    <group>
+                        <group>
+                            <field name="x_delivery_route_id"/>
+                            <field name="x_delivery_route_line_id"/>
+                            <field name="x_delivery_status"/>
+                        </group>
+                        <group>
+                            <field name="x_delivered_at" readonly="1"/>
+                            <field name="x_receiver_name"/>
+                        </group>
+                    </group>
+                    <group string="Coordenadas de Entrega">
+                        <group>
+                            <field name="x_delivered_latitude" readonly="1"/>
+                            <field name="x_delivered_longitude" readonly="1"/>
+                        </group>
+                    </group>
+                </page>
+            </xpath>
+        </field>
+    </record>
+</odoo>

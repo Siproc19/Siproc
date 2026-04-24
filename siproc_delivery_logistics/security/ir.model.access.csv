@@ -1,0 +1,6 @@
+id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
+access_delivery_vehicle,delivery.vehicle,model_delivery_vehicle,,1,1,1,1
+access_delivery_driver,delivery.driver,model_delivery_driver,,1,1,1,1
+access_delivery_route,delivery.route,model_delivery_route,,1,1,1,1
+access_delivery_route_line,delivery.route.line,model_delivery_route_line,,1,1,1,1
+access_delivery_gps_log,delivery.gps.log,model_delivery_gps_log,,1,1,1,1

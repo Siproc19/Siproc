@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="delivery_vehicle_view_tree" model="ir.ui.view">
+        <field name="name">delivery.vehicle.tree</field>
+        <field name="model">delivery.vehicle</field>
+        <field name="arch" type="xml">
+            <list string="Vehículos">
+                <field name="name"/>
+                <field name="plate"/>
+                <field name="vehicle_type"/>
+                <field name="brand"/>
+                <field name="model"/>
+                <field name="driver_id"/>
+                <field name="state"/>
+                <field name="last_gps_datetime"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="delivery_vehicle_view_form" model="ir.ui.view">
+        <field name="name">delivery.vehicle.form</field>
+        <field name="model">delivery.vehicle</field>
+        <field name="arch" type="xml">
+            <form string="Vehículo">
+                <header>
+                    <button name="action_set_available" type="object" string="Disponible" class="btn-primary"/>
+                    <button name="action_set_maintenance" type="object" string="Mantenimiento"/>
+                    <field name="state" widget="statusbar" statusbar_visible="available,in_route,maintenance,inactive"/>
+                </header>
+                <sheet>
+                    <group>
+                        <group>
+                            <field name="name"/>
+                            <field name="plate"/>
+                            <field name="vehicle_type"/>
+                            <field name="capacity"/>
+                        </group>
+                        <group>
+                            <field name="brand"/>
+                            <field name="model"/>
+                            <field name="driver_id"/>
+                            <field name="company_id"/>
+                        </group>
+                    </group>
+
+                    <group string="Ubicación Actual">
+                        <group>
+                            <field name="last_latitude"/>
+                            <field name="last_longitude"/>
+                            <field name="last_gps_datetime"/>
+                        </group>
+                    </group>
+                </sheet>
+                <chatter/>
+            </form>
+        </field>
+    </record>
+
+    <record id="delivery_vehicle_action" model="ir.actions.act_window">
+        <field name="name">Vehículos</field>
+        <field name="res_model">delivery.vehicle</field>
+        <field name="view_mode">list,form</field>
+    </record>
+</odoo>
