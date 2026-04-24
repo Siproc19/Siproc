@@ -11,9 +11,10 @@ SIPROC Delivery Logistics para Odoo 19.
 - GPS desde teléfono cada 10-15 segundos
 - Evidencia fotográfica y tiempos por punto
     """,
-    "author": "OpenAI for SIPROC",
+    "author": "SIPROC",
     "category": "Inventory/Inventory",
     "license": "LGPL-3",
+    "website": "https://siprocgt.com",
     "depends": ["base", "mail", "stock", "sale_management", "hr", "web"],
     "data": [
         "data/sequence.xml",
