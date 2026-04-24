@@ -242,12 +242,7 @@ class DeliveryRoute(models.Model):
 
     def action_open_pilot_panel(self):
         self.ensure_one()
-        return {
-            "type": "ir.actions.client",
-            "tag": "siproc_delivery_logistics.delivery_pilot",
-            "name": _("Panel Piloto"),
-            "context": {"active_id": self.id},
-        }
+        raise UserError(_("Panel piloto temporalmente desactivado. Primero se debe estabilizar la carga de assets JS/Leaflet."))
 
     def update_gps_position(self, latitude, longitude, speed=0.0, user_id=False, delivery_line_id=False):
         self.ensure_one()
@@ -342,7 +337,6 @@ class DeliveryRouteLine(models.Model):
         ],
         string="Estado de Punto",
         default="pending",
-        tracking=True,
     )
 
     distance_from_point_km = fields.Float(string="Distancia al Punto (km)", compute="_compute_distance_from_point", store=False)

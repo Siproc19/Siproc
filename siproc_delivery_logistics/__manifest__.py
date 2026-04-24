@@ -1,6 +1,6 @@
 {
     "name": "SIPROC Delivery Logistics",
-    "version": "19.0.4.0.2",
+    "version": "19.0.4.0.3",
     "summary": "Logística de entregas con rutas optimizadas",
     "description": """
 SIPROC Delivery Logistics para Odoo 19.
@@ -12,16 +12,7 @@ SIPROC Delivery Logistics para Odoo 19.
     "category": "Inventory/Inventory",
     "license": "LGPL-3",
     "website": "https://siprocgt.com",
-
-    "depends": [
-        "base",
-        "mail",
-        "stock",
-        "sale_management",
-        "hr",
-        "web",
-    ],
-
+    "depends": ["base", "mail", "stock", "sale_management", "hr", "web"],
     "data": [
         "data/sequence.xml",
         "security/ir.model.access.csv",
@@ -32,10 +23,7 @@ SIPROC Delivery Logistics para Odoo 19.
         "views/stock_picking_views.xml",
         "views/menu_views.xml",
     ],
-
-    # 🔥 IMPORTANTE: SIN ASSETS (para quitar pantalla blanca)
     "assets": {},
-
     "installable": True,
     "application": False,
 }
