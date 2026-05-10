@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!-- Acción de reporte PDF -->
+    <record id="action_visit_report_pdf" model="ir.actions.report">
+        <field name="name">Reporte de Visita</field>
+        <field name="model">visit.visit</field>
+        <field name="report_type">qweb-pdf</field>
+        <field name="report_name">visit_management.report_visit_template</field>
+        <field name="report_file">visit_management.report_visit_template</field>
+        <field name="binding_model_id" ref="model_visit_visit"/>
+        <field name="binding_type">report</field>
+    </record>
+
+</odoo>

@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <record id="view_vehicle_config_form" model="ir.ui.view">
+        <field name="name">visit.vehicle.config.form</field>
+        <field name="model">visit.vehicle.config</field>
+        <field name="arch" type="xml">
+            <form string="Configuración de Vehículo">
+                <sheet>
+                    <div class="oe_button_box" name="button_box">
+                        <button name="action_view_visits"
+                                type="object"
+                                class="oe_stat_button"
+                                icon="fa-car">
+                            <field name="visit_count" widget="statinfo" string="Visitas"/>
+                        </button>
+                        <button class="oe_stat_button" icon="fa-road" type="button">
+                            <div class="o_stat_info">
+                                <field name="total_km" class="o_stat_value" digits="0"/>
+                                <span class="o_stat_text">KM Totales</span>
+                            </div>
+                        </button>
+                        <button class="oe_stat_button" icon="fa-dollar" type="button">
+                            <div class="o_stat_info">
+                                <field name="total_fuel_cost" class="o_stat_value" digits="0"/>
+                                <span class="o_stat_text">Costo Total</span>
+                            </div>
+                        </button>
+                    </div>
+                    <div class="oe_title">
+                        <h1><field name="name"/></h1>
+                    </div>
+                    <group>
+                        <group string="Información del Vehículo">
+                            <field name="employee_id"/>
+                            <field name="vehicle_type"/>
+                            <field name="fuel_type"/>
+                        </group>
+                        <group string="Configuración de Combustible">
+                            <field name="km_per_unit"/>
+                            <field name="fuel_price"/>
+                            <field name="currency_id" options="{'no_open': True}"/>
+                        </group>
+                    </group>
+                    <group>
+                        <field name="notes" placeholder="Observaciones adicionales..."/>
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <record id="view_vehicle_config_list" model="ir.ui.view">
+        <field name="name">visit.vehicle.config.list</field>
+        <field name="model">visit.vehicle.config</field>
+        <field name="arch" type="xml">
+            <list string="Vehículos">
+                <field name="name"/>
+                <field name="employee_id"/>
+                <field name="vehicle_type"/>
+                <field name="fuel_type"/>
+                <field name="km_per_unit"/>
+                <field name="fuel_price"/>
+                <field name="visit_count"/>
+                <field name="total_km"/>
+                <field name="total_fuel_cost" widget="monetary"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="action_vehicle_config" model="ir.actions.act_window">
+        <field name="name">Vehículos</field>
+        <field name="res_model">visit.vehicle.config</field>
+        <field name="view_mode">list,form</field>
+    </record>
+
+</odoo>

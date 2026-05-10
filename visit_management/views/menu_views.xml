@@ -1,0 +1,98 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!-- ══════════════════════════════════════════════
+         MENÚ RAÍZ
+    ══════════════════════════════════════════════ -->
+    <menuitem id="menu_visit_root"
+              name="🗺️ Visitas Comerciales"
+              sequence="55"
+              web_icon="visit_management,static/description/icon.png"
+              groups="group_visit_asesor"/>
+
+    <!-- ── PARA ASESORES ── -->
+    <menuitem id="menu_visit_my_visits"
+              name="📋 Mis Visitas"
+              parent="menu_visit_root"
+              action="action_visit_my_visits"
+              sequence="10"
+              groups="group_visit_asesor"/>
+
+    <menuitem id="menu_visit_my_routes"
+              name="🚗 Mis Rutas del Día"
+              parent="menu_visit_root"
+              action="action_visit_route"
+              sequence="20"
+              groups="group_visit_asesor"/>
+
+    <!-- ── PARA SUPERVISORES ── -->
+    <menuitem id="menu_visit_supervisor"
+              name="Supervisión"
+              parent="menu_visit_root"
+              sequence="30"
+              groups="group_visit_supervisor"/>
+
+    <menuitem id="menu_visit_all_visits"
+              name="Todas las Visitas"
+              parent="menu_visit_supervisor"
+              action="action_visit_visit"
+              sequence="10"
+              groups="group_visit_supervisor"/>
+
+    <menuitem id="menu_visit_all_routes"
+              name="Todas las Rutas"
+              parent="menu_visit_supervisor"
+              action="action_visit_route"
+              sequence="20"
+              groups="group_visit_supervisor"/>
+
+    <!-- ── PARA GERENCIA ── -->
+    <menuitem id="menu_visit_gerencia"
+              name="📊 Gerencia"
+              parent="menu_visit_root"
+              sequence="40"
+              groups="group_visit_gerencia"/>
+
+    <menuitem id="menu_visit_dashboard"
+              name="Dashboard Gerencial"
+              parent="menu_visit_gerencia"
+              action="action_visit_dashboard"
+              sequence="10"
+              groups="group_visit_gerencia"/>
+
+    <menuitem id="menu_visit_fuel_report"
+              name="KM y Combustible"
+              parent="menu_visit_gerencia"
+              action="action_visit_fuel_report"
+              sequence="20"
+              groups="group_visit_gerencia"/>
+
+    <!-- ── REPORTES ── -->
+    <menuitem id="menu_visit_reports"
+              name="📈 Reportes"
+              parent="menu_visit_root"
+              sequence="50"
+              groups="group_visit_supervisor"/>
+
+    <menuitem id="menu_visit_report_pdf"
+              name="Reporte de Visitas PDF"
+              parent="menu_visit_reports"
+              action="action_visit_report_pdf"
+              sequence="10"
+              groups="group_visit_supervisor"/>
+
+    <!-- ── CONFIGURACIÓN ── -->
+    <menuitem id="menu_visit_config"
+              name="⚙️ Configuración"
+              parent="menu_visit_root"
+              sequence="99"
+              groups="group_visit_supervisor"/>
+
+    <menuitem id="menu_visit_vehicles"
+              name="Vehículos"
+              parent="menu_visit_config"
+              action="action_vehicle_config"
+              sequence="10"
+              groups="group_visit_supervisor"/>
+
+</odoo>

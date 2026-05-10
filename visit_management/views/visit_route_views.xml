@@ -1,0 +1,177 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!-- ══════════════════════════════════════════════════════════
+         FORM VIEW — Ruta Diaria
+    ══════════════════════════════════════════════════════════ -->
+    <record id="view_visit_route_form" model="ir.ui.view">
+        <field name="name">visit.route.form</field>
+        <field name="model">visit.route</field>
+        <field name="arch" type="xml">
+            <form string="Ruta Diaria">
+
+                <header>
+                    <button name="action_confirm"
+                            string="✔ Confirmar"
+                            type="object"
+                            class="btn-primary"
+                            invisible="state != 'draft'"/>
+                    <button name="action_start"
+                            string="🚗 Iniciar Ruta"
+                            type="object"
+                            class="btn-primary"
+                            invisible="state != 'confirmed'"/>
+                    <button name="action_done"
+                            string="✅ Completar"
+                            type="object"
+                            class="btn-success"
+                            invisible="state != 'in_progress'"/>
+                    <button name="action_cancel"
+                            string="✖ Cancelar"
+                            type="object"
+                            class="btn-danger"
+                            invisible="state in ('done','cancelled')"/>
+                    <button name="action_open_map"
+                            string="🗺️ Ver Ruta en Mapa"
+                            type="object"
+                            class="btn-secondary"/>
+                    <field name="state"
+                           widget="statusbar"
+                           statusbar_visible="draft,confirmed,in_progress,done"/>
+                </header>
+
+                <sheet>
+                    <div class="oe_button_box" name="button_box">
+                        <button class="oe_stat_button" icon="fa-map-signs" type="object"
+                                name="action_open_map">
+                            <div class="o_stat_info">
+                                <field name="total_km" class="o_stat_value" digits="1"/>
+                                <span class="o_stat_text">KM Totales</span>
+                            </div>
+                        </button>
+                        <button class="oe_stat_button" icon="fa-check-circle" type="button">
+                            <div class="o_stat_info">
+                                <field name="completion_rate" class="o_stat_value" digits="0"/>
+                                <span class="o_stat_text">% Cumplimiento</span>
+                            </div>
+                        </button>
+                    </div>
+
+                    <div class="oe_title">
+                        <h1><field name="name"/></h1>
+                    </div>
+
+                    <group>
+                        <group string="Información de la Ruta">
+                            <field name="employee_id"/>
+                            <field name="route_date"/>
+                            <field name="total_visits"    readonly="1"/>
+                            <field name="completed_visits" readonly="1"/>
+                            <field name="estimated_duration"
+                                   readonly="1"
+                                   widget="float_time"/>
+                        </group>
+                        <group string="Resumen">
+                            <field name="total_km" readonly="1" digits="1"/>
+                            <field name="completion_rate" readonly="1" digits="1"/>
+                            <field name="notes" placeholder="Notas de la ruta..."/>
+                        </group>
+                    </group>
+
+                    <separator string="Visitas de la Ruta (en orden de visita)"/>
+                    <field name="line_ids">
+                        <list editable="bottom">
+                            <field name="sequence"        widget="handle"/>
+                            <field name="visit_id"
+                                   options="{'no_quick_create': True}"/>
+                            <field name="partner_id"      readonly="1"/>
+                            <field name="visit_type"      readonly="1"/>
+                            <field name="visit_state"
+                                   readonly="1"
+                                   widget="badge"
+                                   decoration-success="visit_state == 'done'"
+                                   decoration-warning="visit_state in ('en_route','in_process')"
+                                   decoration-secondary="visit_state == 'draft'"/>
+                            <field name="estimated_km"/>
+                            <field name="estimated_time"/>
+                            <field name="notes"/>
+                        </list>
+                    </field>
+
+                </sheet>
+
+                <chatter/>
+            </form>
+        </field>
+    </record>
+
+    <!-- ══════════════════════════════════════════════════════════
+         LIST VIEW — Rutas
+    ══════════════════════════════════════════════════════════ -->
+    <record id="view_visit_route_list" model="ir.ui.view">
+        <field name="name">visit.route.list</field>
+        <field name="model">visit.route</field>
+        <field name="arch" type="xml">
+            <list string="Rutas Diarias"
+                  decoration-success="state == 'done'"
+                  decoration-warning="state == 'in_progress'"
+                  decoration-muted="state == 'cancelled'">
+                <field name="name"/>
+                <field name="route_date"/>
+                <field name="employee_id" widget="many2one_avatar_employee"/>
+                <field name="state"
+                       widget="badge"
+                       decoration-success="state == 'done'"
+                       decoration-warning="state == 'in_progress'"
+                       decoration-info="state == 'confirmed'"
+                       decoration-secondary="state == 'draft'"/>
+                <field name="total_visits"/>
+                <field name="completed_visits"/>
+                <field name="completion_rate" widget="progressbar"/>
+                <field name="total_km"/>
+            </list>
+        </field>
+    </record>
+
+    <!-- ══════════════════════════════════════════════════════════
+         SEARCH VIEW — Rutas
+    ══════════════════════════════════════════════════════════ -->
+    <record id="view_visit_route_search" model="ir.ui.view">
+        <field name="name">visit.route.search</field>
+        <field name="model">visit.route</field>
+        <field name="arch" type="xml">
+            <search>
+                <field name="name"/>
+                <field name="employee_id"/>
+                <field name="route_date"/>
+                <filter name="today"
+                        string="Hoy"
+                        domain="[('route_date','=', context_today().strftime('%Y-%m-%d'))]"/>
+                <filter name="my_routes"
+                        string="Mis Rutas"
+                        domain="[('employee_id.user_id','=',uid)]"/>
+                <filter name="active_routes"
+                        string="En Progreso"
+                        domain="[('state','in',['confirmed','in_progress'])]"/>
+                <group expand="0" string="Agrupar por">
+                    <filter name="group_employee"
+                            string="Asesor"
+                            context="{'group_by':'employee_id'}"/>
+                    <filter name="group_date"
+                            string="Fecha"
+                            context="{'group_by':'route_date'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <!-- ACTION -->
+    <record id="action_visit_route" model="ir.actions.act_window">
+        <field name="name">Rutas Diarias</field>
+        <field name="res_model">visit.route</field>
+        <field name="view_mode">list,form</field>
+        <field name="search_view_id" ref="view_visit_route_search"/>
+        <field name="context">{'search_default_today': 1}</field>
+    </record>
+
+</odoo>

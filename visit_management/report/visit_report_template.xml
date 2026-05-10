@@ -1,0 +1,211 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+<template id="report_visit_template">
+    <t t-call="web.html_container">
+        <t t-foreach="docs" t-as="doc">
+            <t t-call="web.external_layout">
+                <div class="page">
+
+                    <!-- Encabezado -->
+                    <div class="row mb-4">
+                        <div class="col-8">
+                            <h2 style="color:#2c7be5;">
+                                Reporte de Visita Comercial
+                            </h2>
+                            <h3><t t-esc="doc.name"/></h3>
+                        </div>
+                        <div class="col-4 text-end">
+                            <span t-attf-class="badge
+                                #{'bg-success' if doc.state == 'done'
+                                  else 'bg-warning' if doc.state in ('en_route','in_process')
+                                  else 'bg-danger' if doc.state == 'cancelled'
+                                  else 'bg-secondary'}"
+                                  style="font-size:14px; padding:8px 16px;">
+                                <t t-esc="dict(doc.fields_get(['state'])['state']['selection'])[doc.state]"/>
+                            </span>
+                        </div>
+                    </div>
+
+                    <!-- Información General -->
+                    <div class="row mb-4">
+                        <div class="col-12">
+                            <table class="table table-bordered table-sm">
+                                <thead class="table-primary">
+                                    <tr>
+                                        <th colspan="4">📋 Información General</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td><strong>Asesor:</strong></td>
+                                        <td><t t-esc="doc.employee_id.name"/></td>
+                                        <td><strong>Tipo de Visita:</strong></td>
+                                        <td>
+                                            <t t-esc="dict(doc.fields_get(['visit_type'])['visit_type']['selection'])[doc.visit_type]"/>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td><strong>Cliente:</strong></td>
+                                        <td><t t-esc="doc.partner_id.name"/></td>
+                                        <td><strong>Contacto:</strong></td>
+                                        <td><t t-esc="doc.contact_id.name or '—'"/></td>
+                                    </tr>
+                                    <tr>
+                                        <td><strong>Fecha Programada:</strong></td>
+                                        <td><t t-esc="doc.scheduled_date"/></td>
+                                        <td><strong>Duración:</strong></td>
+                                        <td><t t-esc="'%.0f min' % (doc.duration or 0)"/></td>
+                                    </tr>
+                                    <tr>
+                                        <td><strong>Inicio Real:</strong></td>
+                                        <td>
+                                            <t t-if="doc.real_start_time">
+                                                <t t-esc="doc.real_start_time"/>
+                                            </t>
+                                            <t t-else="">—</t>
+                                        </td>
+                                        <td><strong>Fin Real:</strong></td>
+                                        <td>
+                                            <t t-if="doc.real_end_time">
+                                                <t t-esc="doc.real_end_time"/>
+                                            </t>
+                                            <t t-else="">—</t>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- Geolocalización -->
+                    <div class="row mb-4">
+                        <div class="col-12">
+                            <table class="table table-bordered table-sm">
+                                <thead class="table-info">
+                                    <tr><th colspan="4">📍 Geolocalización GPS</th></tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td><strong>Dirección Check-In:</strong></td>
+                                        <td><t t-esc="doc.checkin_address or '—'"/></td>
+                                        <td><strong>Validación GPS:</strong></td>
+                                        <td>
+                                            <t t-if="doc.gps_valid">
+                                                <span class="text-success">✅ Válido
+                                                    (<t t-esc="'%.0f m' % doc.gps_distance"/>)
+                                                </span>
+                                            </t>
+                                            <t t-else="">
+                                                <span class="text-danger">⚠️ Fuera de tolerancia
+                                                    (<t t-esc="'%.0f m' % doc.gps_distance"/>)
+                                                </span>
+                                            </t>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td><strong>Lat. Check-In:</strong></td>
+                                        <td><t t-esc="doc.checkin_latitude or '—'"/></td>
+                                        <td><strong>Lon. Check-In:</strong></td>
+                                        <td><t t-esc="doc.checkin_longitude or '—'"/></td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- Kilometraje y Combustible -->
+                    <t t-if="doc.km_traveled or doc.vehicle_config_id">
+                        <div class="row mb-4">
+                            <div class="col-12">
+                                <table class="table table-bordered table-sm">
+                                    <thead class="table-warning">
+                                        <tr><th colspan="4">⛽ Kilometraje y Combustible</th></tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr>
+                                            <td><strong>Vehículo:</strong></td>
+                                            <td><t t-esc="doc.vehicle_config_id.name or '—'"/></td>
+                                            <td><strong>KM Recorridos:</strong></td>
+                                            <td><t t-esc="'%.1f km' % doc.km_traveled"/></td>
+                                        </tr>
+                                        <tr>
+                                            <td><strong>KM Inicial:</strong></td>
+                                            <td><t t-esc="'%.1f' % doc.km_initial"/></td>
+                                            <td><strong>KM Final:</strong></td>
+                                            <td><t t-esc="'%.1f' % doc.km_final"/></td>
+                                        </tr>
+                                        <tr>
+                                            <td><strong>Consumo Estimado:</strong></td>
+                                            <td><t t-esc="'%.2f gal/l' % doc.fuel_consumption"/></td>
+                                            <td><strong>Costo Estimado:</strong></td>
+                                            <td>
+                                                <t t-esc="doc.fuel_cost"/>
+                                                <t t-if="doc.currency_id">
+                                                    <t t-esc="' ' + doc.currency_id.symbol"/>
+                                                </t>
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </t>
+
+                    <!-- Comentarios y Resultado -->
+                    <div class="row mb-4">
+                        <div class="col-12">
+                            <table class="table table-bordered table-sm">
+                                <thead class="table-success">
+                                    <tr><th colspan="2">📝 Cierre de la Visita</th></tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td style="width:20%"><strong>Resultado:</strong></td>
+                                        <td>
+                                            <t t-if="doc.result">
+                                                <t t-esc="dict(doc.fields_get(['result'])['result']['selection'])[doc.result]"/>
+                                            </t>
+                                            <t t-else="">—</t>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td><strong>Comentarios:</strong></td>
+                                        <td><t t-esc="doc.closing_notes or '—'"/></td>
+                                    </tr>
+                                    <tr>
+                                        <td><strong>Próxima Acción:</strong></td>
+                                        <td><t t-esc="doc.next_action or '—'"/></td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- Firma del Cliente -->
+                    <t t-if="doc.signature">
+                        <div class="row mb-4">
+                            <div class="col-12">
+                                <h5>✍️ Firma del Cliente</h5>
+                                <p><strong><t t-esc="doc.signature_name or 'Cliente'"/></strong></p>
+                                <img t-attf-src="data:image/png;base64,#{doc.signature}"
+                                     style="max-height:100px; border:1px solid #ccc; padding:5px;"/>
+                            </div>
+                        </div>
+                    </t>
+
+                    <!-- Pie de página del reporte -->
+                    <div class="row mt-4 pt-3" style="border-top:2px solid #2c7be5;">
+                        <div class="col-6 text-muted small">
+                            Generado por: Sistema de Gestión de Visitas — Siproc
+                        </div>
+                        <div class="col-6 text-end text-muted small">
+                            <t t-esc="context_timestamp(datetime.now()).strftime('%d/%m/%Y %H:%M')"/>
+                        </div>
+                    </div>
+
+                </div>
+            </t>
+        </t>
+    </t>
+</template>
+</odoo>
