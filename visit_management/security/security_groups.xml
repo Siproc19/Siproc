@@ -2,44 +2,22 @@
 <odoo>
     <data>
 
-        <!-- Categoría del módulo -->
-        <record id="module_category_visit" model="ir.module.category">
-            <field name="name">Gestión de Visitas</field>
-            <field name="description">Módulo de control de visitas comerciales de asesores.</field>
-            <field name="sequence">50</field>
-        </record>
-
         <!-- Grupo: Asesor -->
         <record id="group_visit_asesor" model="res.groups">
-            <field name="name">Asesor</field>
-            <field name="category_id" ref="module_category_visit"/>
+            <field name="name">Visitas / Asesor</field>
             <field name="implied_ids" eval="[(4, ref('base.group_user'))]"/>
-            <field name="comment">
-                Puede crear y gestionar sus propias visitas.
-                Acceso limitado a su información.
-            </field>
         </record>
 
         <!-- Grupo: Supervisor -->
         <record id="group_visit_supervisor" model="res.groups">
-            <field name="name">Supervisor</field>
-            <field name="category_id" ref="module_category_visit"/>
+            <field name="name">Visitas / Supervisor</field>
             <field name="implied_ids" eval="[(4, ref('group_visit_asesor'))]"/>
-            <field name="comment">
-                Puede ver y gestionar visitas de todos los asesores bajo su cargo.
-                Puede crear y gestionar rutas y configuraciones.
-            </field>
         </record>
 
         <!-- Grupo: Gerencia -->
         <record id="group_visit_gerencia" model="res.groups">
-            <field name="name">Gerencia</field>
-            <field name="category_id" ref="module_category_visit"/>
+            <field name="name">Visitas / Gerencia</field>
             <field name="implied_ids" eval="[(4, ref('group_visit_supervisor'))]"/>
-            <field name="comment">
-                Acceso total al módulo incluyendo dashboards gerenciales,
-                configuraciones avanzadas y reportes consolidados.
-            </field>
         </record>
 
     </data>
