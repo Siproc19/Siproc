@@ -170,7 +170,7 @@
         <field name="name">Rutas Diarias</field>
         <field name="res_model">visit.route</field>
         <field name="view_mode">list,form</field>
-        <field name="search_view_id" ref="view_visit_route_search"/>
+        <field name="search_view_id" ref="visit_management.view_visit_route_search"/>
         <field name="context">{'search_default_today': 1}</field>
     </record>
 

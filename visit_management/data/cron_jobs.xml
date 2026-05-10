@@ -5,7 +5,7 @@
         <!-- Alerta: Visitas sin Check-In (cada hora) -->
         <record id="cron_visit_alert_no_checkin" model="ir.cron">
             <field name="name">Visitas: Alerta por falta de Check-In</field>
-            <field name="model_id" ref="model_visit_visit"/>
+            <field name="model_id" ref="visit_management.model_visit_visit"/>
             <field name="state">code</field>
             <field name="code">model._cron_alert_missing_checkin()</field>
             <field name="interval_number">1</field>
@@ -16,7 +16,7 @@
         <!-- Alerta: Visitas sin Check-Out (al inicio del día siguiente) -->
         <record id="cron_visit_alert_no_checkout" model="ir.cron">
             <field name="name">Visitas: Alerta por falta de Check-Out</field>
-            <field name="model_id" ref="model_visit_visit"/>
+            <field name="model_id" ref="visit_management.model_visit_visit"/>
             <field name="state">code</field>
             <field name="code">model._cron_alert_no_checkout()</field>
             <field name="interval_number">1</field>
@@ -27,7 +27,7 @@
         <!-- Recordatorio diario a asesores (7 AM) -->
         <record id="cron_visit_daily_reminder" model="ir.cron">
             <field name="name">Visitas: Recordatorio diario a asesores</field>
-            <field name="model_id" ref="model_visit_visit"/>
+            <field name="model_id" ref="visit_management.model_visit_visit"/>
             <field name="state">code</field>
             <field name="code">model._cron_send_daily_reminders()</field>
             <field name="interval_number">1</field>

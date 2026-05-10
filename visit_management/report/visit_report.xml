@@ -8,7 +8,7 @@
         <field name="report_type">qweb-pdf</field>
         <field name="report_name">visit_management.report_visit_template</field>
         <field name="report_file">visit_management.report_visit_template</field>
-        <field name="binding_model_id" ref="model_visit_visit"/>
+        <field name="binding_model_id" ref="visit_management.model_visit_visit"/>
         <field name="binding_type">report</field>
     </record>
 
