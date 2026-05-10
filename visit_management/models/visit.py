@@ -224,6 +224,13 @@ class VisitVisit(models.Model):
     next_action    = fields.Text('Próxima Acción')
     signature      = fields.Binary('Firma del Cliente')
     signature_name = fields.Char('Nombre del Firmante')
+    attachment_ids = fields.Many2many(
+        comodel_name='ir.attachment',
+        relation='visit_visit_attachment_rel',
+        column1='visit_id',
+        column2='attachment_id',
+        string='Adjuntos (Fotos/PDF)',
+    )
 
     # ─────────────────────────────────────────────────────────────
     # CHECKINS LOG
