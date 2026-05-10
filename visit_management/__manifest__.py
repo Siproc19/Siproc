@@ -27,26 +27,27 @@
         'web',
     ],
     'data': [
-        # Seguridad
+        # 1. Seguridad primero
         'security/security_groups.xml',
         'security/ir.model.access.csv',
         'security/security_rules.xml',
-        # Datos base
+        # 2. Datos base
         'data/sequences.xml',
         'data/cron_jobs.xml',
         'data/visit_type_data.xml',
-        # Vistas
-        'views/menu_views.xml',
+        # 3. Vistas y acciones (las acciones deben existir ANTES que los menus)
         'views/visit_views.xml',
         'views/visit_route_views.xml',
         'views/vehicle_config_views.xml',
         'views/dashboard_views.xml',
         'views/res_config_settings_views.xml',
-        # Reportes
+        # 4. Reportes
         'report/visit_report.xml',
         'report/visit_report_template.xml',
-        # Wizard
+        # 5. Wizard
         'wizard/reschedule_visit_wizard.xml',
+        # 6. Menus AL FINAL — todas las acciones ya estan registradas en este punto
+        'views/menu_views.xml',
     ],
     'assets': {
         'web.assets_backend': [
