@@ -1,0 +1,91 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <record id="view_res_config_settings_visit" model="ir.ui.view">
+        <field name="name">res.config.settings.view.visit</field>
+        <field name="model">res.config.settings</field>
+        <field name="inherit_id" ref="base.res_config_settings_view_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//div[hasclass('settings')]" position="inside">
+                <div class="app_settings_block"
+                     data-string="Gestión de Visitas"
+                     string="Gestión de Visitas"
+                     data-key="visit_management">
+                    <h2>Gestión de Visitas de Asesores</h2>
+
+                    <div class="row mt16">
+                        <div class="col-12 col-lg-6">
+                            <div class="o_setting_box">
+                                <div class="o_setting_left_pane"/>
+                                <div class="o_setting_right_pane">
+                                    <label for="visit_gps_tolerance"/>
+                                    <div class="text-muted">
+                                        Distancia máxima en metros para validar un Check-In GPS.
+                                    </div>
+                                    <field name="visit_gps_tolerance"/>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-12 col-lg-6">
+                            <div class="o_setting_box">
+                                <div class="o_setting_left_pane"/>
+                                <div class="o_setting_right_pane">
+                                    <label for="visit_map_provider"/>
+                                    <div class="text-muted">Proveedor de mapas para visualización.</div>
+                                    <field name="visit_map_provider"/>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-12 col-lg-6">
+                            <div class="o_setting_box">
+                                <div class="o_setting_left_pane"/>
+                                <div class="o_setting_right_pane">
+                                    <label for="visit_google_maps_key"/>
+                                    <div class="text-muted">Requerido para mapas avanzados y optimización de rutas.</div>
+                                    <field name="visit_google_maps_key" password="True"/>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-12 col-lg-6">
+                            <div class="o_setting_box">
+                                <div class="o_setting_left_pane"/>
+                                <div class="o_setting_right_pane">
+                                    <label for="visit_alert_hours"/>
+                                    <div class="text-muted">Horas para generar alerta por falta de Check-In.</div>
+                                    <field name="visit_alert_hours"/>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-12 col-lg-6">
+                            <div class="o_setting_box">
+                                <div class="o_setting_left_pane">
+                                    <field name="visit_require_signature"/>
+                                </div>
+                                <div class="o_setting_right_pane">
+                                    <label for="visit_require_signature"/>
+                                    <div class="text-muted">
+                                        Obligar firma del cliente al finalizar visita.
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-12 col-lg-6">
+                            <div class="o_setting_box">
+                                <div class="o_setting_left_pane">
+                                    <field name="visit_require_photo"/>
+                                </div>
+                                <div class="o_setting_right_pane">
+                                    <label for="visit_require_photo"/>
+                                    <div class="text-muted">
+                                        Obligar adjuntar foto como evidencia al finalizar visita.
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </xpath>
+        </field>
+    </record>
+
+</odoo>

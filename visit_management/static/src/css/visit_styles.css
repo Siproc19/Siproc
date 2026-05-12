@@ -1,0 +1,180 @@
+/* ═══════════════════════════════════════════════════════════════
+   visit_management — Estilos personalizados para Odoo 19
+   ═══════════════════════════════════════════════════════════════ */
+
+/* ─── Estado GPS ────────────────────────────────────────────── */
+.o_visit_gps_valid {
+    color: #28a745 !important;
+    font-weight: 600;
+}
+
+.o_visit_gps_invalid {
+    color: #dc3545 !important;
+    font-weight: 600;
+}
+
+/* ─── Contenedor del Mapa ────────────────────────────────────── */
+#visit_map_container,
+.o_visit_map_container {
+    height: 380px;
+    width: 100%;
+    border-radius: 10px;
+    overflow: hidden;
+    border: 1px solid #dee2e6;
+    margin: 12px 0;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+/* ─── Tarjetas de KPI ────────────────────────────────────────── */
+.o_visit_kpi_card {
+    background: #fff;
+    border-radius: 12px;
+    padding: 20px;
+    text-align: center;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+    border: 1px solid #e9ecef;
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.o_visit_kpi_card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 20px rgba(0,0,0,0.12);
+}
+
+.o_visit_kpi_card .kpi_value {
+    font-size: 2.5rem;
+    font-weight: 700;
+    color: #2c7be5;
+    line-height: 1;
+}
+
+.o_visit_kpi_card .kpi_label {
+    font-size: 0.85rem;
+    color: #6c757d;
+    margin-top: 6px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.o_visit_kpi_card.kpi_green  .kpi_value { color: #28a745; }
+.o_visit_kpi_card.kpi_red    .kpi_value { color: #dc3545; }
+.o_visit_kpi_card.kpi_orange .kpi_value { color: #fd7e14; }
+.o_visit_kpi_card.kpi_purple .kpi_value { color: #6f42c1; }
+
+/* ─── Botones de acción rápida (móvil) ───────────────────────── */
+.o_visit_quick_actions {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    padding: 10px 0;
+}
+
+.o_visit_quick_actions .btn {
+    flex: 1;
+    min-width: 130px;
+    padding: 12px 16px;
+    font-size: 0.95rem;
+    border-radius: 8px;
+    font-weight: 500;
+}
+
+/* ─── Indicador de distancia GPS ─────────────────────────────── */
+.o_gps_distance_badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 14px;
+    border-radius: 20px;
+    font-weight: 600;
+    font-size: 0.9rem;
+}
+
+.o_gps_distance_badge.valid {
+    background-color: #d4edda;
+    color: #155724;
+    border: 1px solid #c3e6cb;
+}
+
+.o_gps_distance_badge.invalid {
+    background-color: #f8d7da;
+    color: #721c24;
+    border: 1px solid #f5c6cb;
+}
+
+/* ─── Timeline de checkins ───────────────────────────────────── */
+.o_visit_timeline {
+    position: relative;
+    padding-left: 24px;
+}
+
+.o_visit_timeline::before {
+    content: '';
+    position: absolute;
+    left: 10px;
+    top: 0;
+    bottom: 0;
+    width: 2px;
+    background: #dee2e6;
+}
+
+.o_visit_timeline_item {
+    position: relative;
+    margin-bottom: 16px;
+    padding: 10px 14px;
+    background: #f8f9fa;
+    border-radius: 8px;
+    border-left: 3px solid #2c7be5;
+}
+
+.o_visit_timeline_item.checkin  { border-left-color: #28a745; }
+.o_visit_timeline_item.checkout { border-left-color: #fd7e14; }
+
+.o_visit_timeline_item::before {
+    content: '';
+    position: absolute;
+    left: -20px;
+    top: 14px;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background: #2c7be5;
+    border: 2px solid #fff;
+    box-shadow: 0 0 0 2px #2c7be5;
+}
+
+/* ─── Responsive para móvil ──────────────────────────────────── */
+@media (max-width: 768px) {
+    #visit_map_container,
+    .o_visit_map_container {
+        height: 280px;
+    }
+
+    .o_visit_kpi_card .kpi_value {
+        font-size: 1.8rem;
+    }
+
+    .o_form_view .o_form_sheet {
+        padding: 12px;
+    }
+
+    /* Botones de encabezado del formulario apilados en móvil */
+    .o_form_statusbar {
+        flex-wrap: wrap;
+    }
+
+    .o_statusbar_buttons .btn {
+        margin-bottom: 6px;
+        width: 100%;
+    }
+}
+
+/* ─── Kanban cards ───────────────────────────────────────────── */
+.o_kanban_record.o_visit_card {
+    border-radius: 10px;
+    border: none;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+}
+
+.o_kanban_record.o_visit_card:hover {
+    box-shadow: 0 4px 16px rgba(0,0,0,0.15);
+}
