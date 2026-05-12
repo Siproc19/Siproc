@@ -15,7 +15,7 @@
                        decoration-success="state == 'done'"
                        decoration-warning="state in ('en_route','in_process')"
                        decoration-danger="state == 'cancelled'"/>
-                <field name="gps_valid" widget="boolean"/>
+                <field name="gps_valid" />
                 <field name="duration" widget="float_time"/>
                 <field name="km_traveled"/>
                 <field name="fuel_cost" widget="monetary"/>

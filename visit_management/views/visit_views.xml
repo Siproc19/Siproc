@@ -306,8 +306,7 @@
             <list string="Visitas Comerciales"
                   decoration-success="state == 'done'"
                   decoration-warning="state in ('en_route','in_process')"
-                  decoration-danger="state == 'cancelled'"
-                  decoration-muted="state == 'cancelled'">
+                  decoration-danger="state == 'cancelled'">
                 <field name="name"/>
                 <field name="scheduled_date"/>
                 <field name="employee_id" widget="many2one_avatar_employee"/>
@@ -319,14 +318,11 @@
                        decoration-warning="state in ('en_route','in_process')"
                        decoration-danger="state == 'cancelled'"
                        decoration-secondary="state == 'draft'"/>
-                <field name="gps_valid"
-                       widget="boolean"
-                       optional="show"/>
+                <field name="gps_valid" optional="show"/>
                 <field name="duration"
                        widget="float_time"
                        optional="show"/>
-                <field name="km_traveled"
-                       optional="show"/>
+                <field name="km_traveled" optional="show"/>
                 <field name="fuel_cost"
                        widget="monetary"
                        optional="show"/>
@@ -347,7 +343,7 @@
             <calendar string="Visitas"
                       date_start="scheduled_date"
                       color="employee_id"
-                      quick_create="False"
+                      quick_create="false"
                       event_limit="5">
                 <field name="name"/>
                 <field name="employee_id"/>
