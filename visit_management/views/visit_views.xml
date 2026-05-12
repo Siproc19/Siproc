@@ -302,19 +302,15 @@
         </field>
     </record>
 
-    <!-- ══════════════════════════════════════════════════════════
-         SEARCH VIEW — solo dominios simples, sin expresiones Python
-    ══════════════════════════════════════════════════════════ -->
+    <!-- SEARCH VIEW -->
     <record id="view_visit_search" model="ir.ui.view">
         <field name="name">visit.visit.search</field>
         <field name="model">visit.visit</field>
         <field name="arch" type="xml">
             <search string="Buscar Visitas">
-                <field name="name"        string="Numero Visita"/>
-                <field name="employee_id" string="Asesor"/>
-                <field name="partner_id"  string="Cliente"/>
-                <field name="visit_type"  string="Tipo"/>
-                <field name="state"       string="Estado"/>
+                <field name="name"/>
+                <field name="employee_id"/>
+                <field name="partner_id"/>
                 <filter name="state_draft"
                         string="Programadas"
                         domain="[('state','=','draft')]"/>
@@ -327,10 +323,6 @@
                 <filter name="state_cancelled"
                         string="Canceladas"
                         domain="[('state','=','cancelled')]"/>
-                <separator/>
-                <filter name="gps_invalid"
-                        string="GPS No Valido"
-                        domain="[('gps_valid','=',False)]"/>
                 <filter name="my_visits"
                         string="Mis Visitas"
                         domain="[('employee_id.user_id','=',uid)]"/>
@@ -340,10 +332,7 @@
                             context="{'group_by':'employee_id'}"/>
                     <filter name="group_date"
                             string="Fecha"
-                            context="{'group_by':'scheduled_date:day'}"/>
-                    <filter name="group_type"
-                            string="Tipo"
-                            context="{'group_by':'visit_type'}"/>
+                            context="{'group_by':'scheduled_date'}"/>
                     <filter name="group_state"
                             string="Estado"
                             context="{'group_by':'state'}"/>

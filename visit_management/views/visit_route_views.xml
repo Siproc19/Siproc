@@ -143,10 +143,6 @@
             <search>
                 <field name="name"/>
                 <field name="employee_id"/>
-                <field name="route_date"/>
-                <filter name="today"
-                        string="Hoy"
-                        domain="[('route_date','=', context_today())]"/>
                 <filter name="my_routes"
                         string="Mis Rutas"
                         domain="[('employee_id.user_id','=',uid)]"/>
