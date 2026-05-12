@@ -61,8 +61,7 @@
         <field name="res_model">visit.visit</field>
         <field name="view_mode">graph,pivot,list,calendar</field>
         <field name="context">{
-            'search_default_this_month': 1
-        }</field>
+            }</field>
     </record>
 
     <!-- Action KM y Combustible -->
@@ -72,7 +71,6 @@
         <field name="view_mode">pivot,list</field>
         <field name="domain">[('state','=','done')]</field>
         <field name="context">{
-            'search_default_this_month': 1,
             'group_by': ['employee_id']
         }</field>
     </record>

@@ -146,7 +146,7 @@
                 <field name="route_date"/>
                 <filter name="today"
                         string="Hoy"
-                        domain="[('route_date','=', context_today().strftime('%Y-%m-%d'))]"/>
+                        domain="[('route_date','=', context_today())]"/>
                 <filter name="my_routes"
                         string="Mis Rutas"
                         domain="[('employee_id.user_id','=',uid)]"/>
@@ -171,7 +171,7 @@
         <field name="res_model">visit.route</field>
         <field name="view_mode">list,form</field>
         <field name="search_view_id" ref="visit_management.view_visit_route_search"/>
-        <field name="context">{'search_default_today': 1}</field>
+        <field name="context"></field>
     </record>
 
 </odoo>
