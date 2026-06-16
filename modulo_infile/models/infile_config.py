@@ -61,10 +61,11 @@ class InfileConfig(models.Model):
     auto_certify = fields.Boolean(
         string='Certificar automáticamente al validar factura', default=False)
 
-    _sql_constraints = [
-        ('unique_company', 'unique(company_id)',
-         'Ya existe una configuración FEL INFILE para esta compañía.'),
-    ]
+    # Odoo 19: las restricciones SQL se declaran con models.Constraint.
+    _unique_company = models.Constraint(
+        'unique(company_id)',
+        'Ya existe una configuración FEL INFILE para esta compañía.',
+    )
 
     @api.model
     def get_config(self, company=None):
