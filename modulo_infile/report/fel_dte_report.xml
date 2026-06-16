@@ -9,10 +9,11 @@
             <div class="row mb-3" t-if="o.move_type in ('out_invoice', 'out_refund')">
                 <div class="col-12">
                     <div style="background-color:#F5F5F5; border-left:6px solid #F6B500; padding:10px; border-radius:6px;">
-                        <t t-if="o.company_id.x_studio_nombre_comercial">
+                        <t t-set="fel_nc" t-value="o.env['infile.config'].get_config(o.company_id).nombre_comercial or ''"/>
+                        <t t-if="fel_nc">
                             <div>
                                 <strong style="color:#556B2F;">Nombre Comercial:</strong>
-                                <span t-field="o.company_id.x_studio_nombre_comercial"/>
+                                <span t-esc="fel_nc"/>
                             </div>
                         </t>
                         <div>
@@ -183,10 +184,11 @@
                         <strong t-field="company.name"/>
                     </h4>
 
-                    <t t-if="company.x_studio_nombre_comercial">
+                    <t t-set="fel_nc2" t-value="(o.env['infile.config'].get_config(company).nombre_comercial if o else '') or ''"/>
+                    <t t-if="fel_nc2">
                         <p class="mb-1" style="font-size:11px;">
                             <strong style="color:#F18A1A;">Nombre Comercial:</strong>
-                            <span t-field="company.x_studio_nombre_comercial"/>
+                            <span t-esc="fel_nc2"/>
                         </p>
                     </t>
 

@@ -1,0 +1,139 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <record id="view_infile_config_form" model="ir.ui.view">
+        <field name="name">infile.config.form</field>
+        <field name="model">infile.config</field>
+        <field name="arch" type="xml">
+            <form string="Configuración FEL INFILE">
+                <header>
+                    <button name="action_test_connection" type="object"
+                            string="Probar Conexión" class="btn-primary"
+                            icon="fa-plug"/>
+                </header>
+                <sheet>
+                    <div class="oe_title">
+                        <h1><field name="name" placeholder="Nombre"/></h1>
+                    </div>
+                    <group>
+                        <group string="Compañía / Modo">
+                            <field name="company_id" groups="base.group_multi_company"/>
+                            <field name="modo"/>
+                            <field name="auto_certify"/>
+                            <field name="active" invisible="1"/>
+                        </group>
+                        <group string="Datos Tributarios">
+                            <field name="nombre_comercial"/>
+                            <field name="afiliacion_iva"/>
+                            <field name="regimen_isr"/>
+                            <field name="codigo_establecimiento"/>
+                        </group>
+                    </group>
+                    <notebook>
+                        <page string="Credenciales API">
+                            <group>
+                                <group string="API INFILE">
+                                    <field name="nit_emisor"/>
+                                    <field name="usuario_api"/>
+                                    <field name="llave_api" password="True"/>
+                                </group>
+                                <group string="Firma Electrónica">
+                                    <field name="usuario_firma"/>
+                                    <field name="llave_firma" password="True"/>
+                                </group>
+                            </group>
+                        </page>
+                        <page string="URLs (Avanzado)">
+                            <group>
+                                <field name="url_base"/>
+                                <field name="url_firma"/>
+                            </group>
+                        </page>
+                    </notebook>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <record id="view_infile_config_list" model="ir.ui.view">
+        <field name="name">infile.config.list</field>
+        <field name="model">infile.config</field>
+        <field name="arch" type="xml">
+            <list string="Configuraciones FEL INFILE">
+                <field name="name"/>
+                <field name="company_id" groups="base.group_multi_company"/>
+                <field name="nit_emisor"/>
+                <field name="modo"/>
+                <field name="afiliacion_iva"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="action_infile_config" model="ir.actions.act_window">
+        <field name="name">FEL INFILE</field>
+        <field name="res_model">infile.config</field>
+        <field name="view_mode">list,form</field>
+    </record>
+
+    <!-- Bitácora -->
+    <record id="view_infile_log_list" model="ir.ui.view">
+        <field name="name">infile.log.list</field>
+        <field name="model">infile.log</field>
+        <field name="arch" type="xml">
+            <list string="Bitácora FEL" create="false">
+                <field name="create_date"/>
+                <field name="user_id"/>
+                <field name="endpoint"/>
+                <field name="status"/>
+                <field name="response_time" sum="Total"/>
+                <field name="error_message"/>
+                <field name="move_id"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="view_infile_log_form" model="ir.ui.view">
+        <field name="name">infile.log.form</field>
+        <field name="model">infile.log</field>
+        <field name="arch" type="xml">
+            <form string="Bitácora FEL" create="false" edit="false">
+                <sheet>
+                    <group>
+                        <group>
+                            <field name="create_date"/>
+                            <field name="user_id"/>
+                            <field name="endpoint"/>
+                            <field name="status"/>
+                        </group>
+                        <group>
+                            <field name="response_time"/>
+                            <field name="error_message"/>
+                            <field name="move_id"/>
+                        </group>
+                    </group>
+                    <notebook>
+                        <page string="Request"><field name="request_data"/></page>
+                        <page string="Response"><field name="response_data"/></page>
+                    </notebook>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <record id="action_infile_log" model="ir.actions.act_window">
+        <field name="name">Bitácora FEL</field>
+        <field name="res_model">infile.log</field>
+        <field name="view_mode">list,form</field>
+    </record>
+
+    <!-- Menús -->
+    <menuitem id="menu_infile_config" name="FEL INFILE"
+              parent="account.menu_finance_configuration"
+              action="action_infile_config"
+              groups="group_fel_usuario" sequence="90"/>
+    <menuitem id="menu_infile_log" name="Bitácora FEL"
+              parent="account.menu_finance_configuration"
+              action="action_infile_log"
+              groups="group_fel_administrador" sequence="91"/>
+
+</odoo>

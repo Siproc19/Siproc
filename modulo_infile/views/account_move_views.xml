@@ -1,0 +1,84 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <record id="view_move_form_infile" model="ir.ui.view">
+        <field name="name">account.move.form.infile</field>
+        <field name="model">account.move</field>
+        <field name="inherit_id" ref="account.view_move_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//header" position="inside">
+                <field name="fel_enabled" invisible="1"/>
+                <field name="fel_estado" invisible="1"/>
+                <button name="action_certificar_fel" type="object"
+                        string="Certificar FEL" class="btn-primary"
+                        groups="modulo_infile.group_fel_usuario"
+                        invisible="not fel_enabled or state != 'posted' or fel_estado in ('certified','cancelled')"/>
+                <button name="action_reintentar_fel" type="object"
+                        string="Reintentar FEL"
+                        groups="modulo_infile.group_fel_usuario"
+                        invisible="not fel_enabled or fel_estado != 'error'"/>
+                <button name="action_consultar_fel" type="object"
+                        string="Consultar FEL"
+                        groups="modulo_infile.group_fel_usuario"
+                        invisible="not fel_enabled or not fel_uuid"/>
+                <button name="action_anular_fel" type="object"
+                        string="Anular FEL"
+                        groups="modulo_infile.group_fel_administrador"
+                        invisible="not fel_enabled or fel_estado != 'certified'"
+                        confirm="¿Confirma la anulación de este documento ante SAT?"/>
+                <button name="action_imprimir_dte" type="object"
+                        string="Imprimir DTE" icon="fa-print"
+                        invisible="not fel_enabled or fel_estado != 'certified'"/>
+            </xpath>
+
+            <xpath expr="//notebook" position="inside">
+                <page string="FEL INFILE" name="fel_page" invisible="not fel_enabled">
+                    <group>
+                        <group string="Documento Electrónico">
+                            <field name="fel_tipo_documento"
+                                   readonly="fel_estado == 'certified'"/>
+                            <field name="fel_estado" widget="badge"
+                                   decoration-success="fel_estado == 'certified'"
+                                   decoration-danger="fel_estado in ('error','cancelled')"/>
+                            <field name="fel_uuid"/>
+                            <field name="fel_serie"/>
+                            <field name="fel_numero"/>
+                            <field name="fel_fecha_certificacion"/>
+                        </group>
+                        <group string="Estado SAT">
+                            <field name="fel_estado_sat"/>
+                            <field name="fel_ultima_consulta_sat"/>
+                            <field name="fel_error_mensaje"
+                                   invisible="not fel_error_mensaje"/>
+                            <field name="fel_pdf_url" widget="url"
+                                   invisible="not fel_pdf_url"/>
+                        </group>
+                    </group>
+                    <notebook>
+                        <page string="XML Enviado">
+                            <field name="fel_xml_enviado_formatted"/>
+                        </page>
+                        <page string="XML Respuesta">
+                            <field name="fel_xml_respuesta_formatted"/>
+                        </page>
+                    </notebook>
+                </page>
+            </xpath>
+        </field>
+    </record>
+
+    <record id="view_invoice_list_infile" model="ir.ui.view">
+        <field name="name">account.move.list.infile</field>
+        <field name="model">account.move</field>
+        <field name="inherit_id" ref="account.view_invoice_tree"/>
+        <field name="arch" type="xml">
+            <xpath expr="//list" position="inside">
+                <field name="fel_estado" optional="show" widget="badge"
+                       decoration-success="fel_estado == 'certified'"
+                       decoration-danger="fel_estado in ('error','cancelled')"/>
+                <field name="fel_uuid" optional="hide"/>
+            </xpath>
+        </field>
+    </record>
+
+</odoo>
