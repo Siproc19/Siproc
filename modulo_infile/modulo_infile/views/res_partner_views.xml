@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_partner_form_infile" model="ir.ui.view">
+        <field name="name">res.partner.form.infile</field>
+        <field name="model">res.partner</field>
+        <field name="inherit_id" ref="base.view_partner_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//field[@name='vat']" position="after">
+                <field name="cui"/>
+                <field name="infile_nombre_consultado" readonly="1"
+                       invisible="not infile_nombre_consultado"/>
+                <button name="action_consultar_nit_infile" type="object"
+                        string="Consultar NIT (INFILE)" class="btn-link"
+                        icon="fa-search"
+                        groups="modulo_infile.group_fel_usuario"/>
+                <button name="action_consultar_cui_infile" type="object"
+                        string="Consultar CUI (INFILE)" class="btn-link"
+                        icon="fa-search"
+                        groups="modulo_infile.group_fel_usuario"/>
+            </xpath>
+        </field>
+    </record>
+</odoo>
