@@ -2,7 +2,7 @@
 import json
 
 from odoo import api, fields, models, _
-from odoo.exceptions import UserError
+from odoo.exceptions import UserError, ValidationError
 
 from ..services.infile_client import InfileClient, InfileError
 
@@ -61,11 +61,18 @@ class InfileConfig(models.Model):
     auto_certify = fields.Boolean(
         string='Certificar automáticamente al validar factura', default=False)
 
-    # Odoo 19: las restricciones SQL se declaran con models.Constraint.
-    _unique_company = models.Constraint(
-        'unique(company_id)',
-        'Ya existe una configuración FEL INFILE para esta compañía.',
-    )
+    @api.constrains('company_id')
+    def _check_unique_company(self):
+        for rec in self:
+            if not rec.company_id:
+                continue
+            otros = self.search_count([
+                ('company_id', '=', rec.company_id.id),
+                ('id', '!=', rec.id),
+            ])
+            if otros:
+                raise ValidationError(_(
+                    "Ya existe una configuración FEL INFILE para esta compañía."))
 
     @api.model
     def get_config(self, company=None):
