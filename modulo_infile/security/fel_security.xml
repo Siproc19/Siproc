@@ -1,23 +1,18 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
     <data noupdate="0">
-        <record id="module_category_infile" model="ir.module.category">
-            <field name="name">FEL INFILE</field>
-            <field name="sequence">20</field>
-        </record>
 
         <record id="group_fel_consulta" model="res.groups">
             <field name="name">FEL Consulta</field>
-            <field name="category_id" ref="module_category_infile"/>
         </record>
+
         <record id="group_fel_usuario" model="res.groups">
             <field name="name">FEL Usuario</field>
-            <field name="category_id" ref="module_category_infile"/>
             <field name="implied_ids" eval="[(4, ref('group_fel_consulta'))]"/>
         </record>
+
         <record id="group_fel_administrador" model="res.groups">
             <field name="name">FEL Administrador</field>
-            <field name="category_id" ref="module_category_infile"/>
             <field name="implied_ids" eval="[(4, ref('group_fel_usuario'))]"/>
         </record>
 
@@ -27,6 +22,7 @@
             <field name="domain_force">['|', ('company_id', '=', False), ('company_id', 'in', company_ids)]</field>
             <field name="global" eval="True"/>
         </record>
+
         <record id="infile_log_company_rule" model="ir.rule">
             <field name="name">INFILE Log multi-compañía</field>
             <field name="model_id" ref="model_infile_log"/>
@@ -34,13 +30,9 @@
             <field name="global" eval="True"/>
         </record>
 
-        <!--
-            Otorga automáticamente el grupo "FEL Administrador" al gerente de
-            contabilidad para que el menú "FEL INFILE" aparezca sin asignar
-            grupos a mano. (group_account_manager existe en todas las versiones.)
-        -->
         <record id="account.group_account_manager" model="res.groups">
             <field name="implied_ids" eval="[(4, ref('group_fel_administrador'))]"/>
         </record>
+
     </data>
 </odoo>
