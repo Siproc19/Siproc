@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!-- Leyenda en el PDF mientras la muestra no esté confirmada -->
+    <template id="report_saleorder_document_sample"
+              inherit_id="sale.report_saleorder_document">
+        <xpath expr="//div[@id='informations']" position="before">
+            <div t-if="doc.is_sample_order and doc.state in ('draft', 'sent')"
+                 style="border: 2px solid #b91c1c; color: #b91c1c; padding: 8px 12px; margin-bottom: 12px; text-align: center; border-radius: 4px;">
+                <strong>ORDEN DE MUESTRA</strong><br/>
+                Documento de control de producto en muestra.
+                No constituye venta ni afecta inventario hasta su confirmación.
+            </div>
+        </xpath>
+    </template>
+
+</odoo>

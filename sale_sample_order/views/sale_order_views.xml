@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!-- Formulario: casilla "Orden de Muestra" junto al cliente -->
+    <record id="view_order_form_sample" model="ir.ui.view">
+        <field name="name">sale.order.form.sample.order</field>
+        <field name="model">sale.order</field>
+        <field name="inherit_id" ref="sale.view_order_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//field[@name='partner_id']" position="after">
+                <field name="is_sample_order"
+                       readonly="state not in ('draft', 'sent')"/>
+                <field name="sample_reference"
+                       invisible="not sample_reference"/>
+            </xpath>
+        </field>
+    </record>
+
+    <!-- Filtro en la vista de búsqueda -->
+    <record id="view_sales_order_filter_sample" model="ir.ui.view">
+        <field name="name">sale.order.search.sample.order</field>
+        <field name="model">sale.order</field>
+        <field name="inherit_id" ref="sale.view_sales_order_filter"/>
+        <field name="arch" type="xml">
+            <xpath expr="//search" position="inside">
+                <separator/>
+                <filter name="filter_sample_orders"
+                        string="Órdenes de Muestra"
+                        domain="[('is_sample_order', '=', True)]"/>
+                <filter name="filter_sample_pending"
+                        string="Muestras Pendientes"
+                        domain="[('is_sample_order', '=', True), ('state', 'in', ('draft', 'sent'))]"/>
+            </xpath>
+        </field>
+    </record>
+
+    <!-- Acción y menú: Ventas > Órdenes de Muestra -->
+    <record id="action_sample_orders" model="ir.actions.act_window">
+        <field name="name">Órdenes de Muestra</field>
+        <field name="res_model">sale.order</field>
+        <field name="view_mode">list,form,kanban,activity</field>
+        <field name="domain">[('is_sample_order', '=', True)]</field>
+        <field name="context">{'default_is_sample_order': True}</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">
+                Crea una nueva Orden de Muestra
+            </p>
+            <p>
+                Las órdenes de muestra no afectan el inventario mientras estén
+                en borrador. Si el cliente se queda con el producto, confírmala
+                y se convertirá en una orden de venta normal.
+            </p>
+        </field>
+    </record>
+
+    <menuitem id="menu_sample_orders"
+              name="Órdenes de Muestra"
+              parent="sale.sale_order_menu"
+              action="action_sample_orders"
+              sequence="6"/>
+
+</odoo>
