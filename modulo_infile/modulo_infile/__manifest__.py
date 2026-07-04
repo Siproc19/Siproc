@@ -3,11 +3,11 @@
     "name": "SIPROC FEL INFILE Guatemala",
     "version": "19.0.2.0.0",
     "author": "Ronald de León / SIPROC",
-    "website": "https://siproc.com",
+    "website": "https://siprocgt.com",
     "license": "LGPL-3",
     "category": "Accounting/Localizations",
-    "summary": "Integración FEL Guatemala con INFILE (estructura modular: "
-               "servicios, configuración por compañía, seguridad y bitácora)",
+    # En Python, si la cadena externa usa comillas dobles, las internas deben ser simples
+    "summary": "Integración FEL Guatemala con INFILE (estructura modular: 'servicios, configuración por compañía, seguridad y bitácora')",
     "description": """
 FEL Guatemala - INFILE (reorganizado)
 =====================================
@@ -32,6 +32,10 @@ FEL Guatemala - INFILE (reorganizado)
         "report/fel_dte_report.xml",
         "data/ir_cron.xml",
     ],
+    # 💡 Recomendación: Si usas librerías externas en tu capa de servicios web (como zeep para SOAP o requests)
+    "external_dependencies": {
+        "python": ["requests"],
+    },
     "installable": True,
     "application": True,
     "auto_install": False,
