@@ -67,6 +67,22 @@ class AccountMove(models.Model):
     fel_enabled = fields.Boolean(compute="_compute_fel_enabled",
                                  string="FEL Habilitado")
 
+    # Compatibilidad con la versión anterior del módulo: la vista antigua que
+    # pueda quedar en la base referencia este campo. Se mantiene como campo
+    # calculado (desde la configuración) para que la validación de vistas no
+    # falle durante la transición.
+    x_nombre_comercial_empresa = fields.Char(
+        string="Nombre Comercial Empresa",
+        compute="_compute_x_nombre_comercial_empresa")
+
+    def _compute_x_nombre_comercial_empresa(self):
+        Config = self.env['infile.config']
+        for move in self:
+            cfg = Config.get_config(move.company_id)
+            move.x_nombre_comercial_empresa = (
+                (cfg.nombre_comercial if cfg else '')
+                or move.company_id.name or '')
+
     # ------------------------------------------------------------------
     # Cómputos
     # ------------------------------------------------------------------
