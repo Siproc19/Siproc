@@ -1,17 +1,30 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
 
-    <!-- Leyenda en el PDF mientras la muestra no esté confirmada -->
     <template id="report_saleorder_document_sample"
               inherit_id="sale.report_saleorder_document">
+
+        <!-- Título del PDF: "Orden de Muestra #" en lugar de "Cotización #" -->
+        <xpath expr="//h2" position="replace">
+            <h2 class="mt-4">
+                <span t-if="doc.is_sample_order and doc.state in ['sample', 'draft', 'sent'] and not env.context.get('proforma', False)">Orden de Muestra # </span>
+                <span t-elif="env.context.get('proforma', False)">Factura Pro-Forma # </span>
+                <span t-elif="doc.state in ['draft', 'sent']">Cotización # </span>
+                <span t-else="">Orden # </span>
+                <span t-field="doc.name">SO0000</span>
+            </h2>
+        </xpath>
+
+        <!-- Leyenda mientras la muestra no esté confirmada -->
         <xpath expr="//div[@id='informations']" position="before">
-            <div t-if="doc.is_sample_order and doc.state in ('draft', 'sent')"
+            <div t-if="doc.is_sample_order and doc.state in ['sample', 'draft', 'sent']"
                  style="border: 2px solid #b91c1c; color: #b91c1c; padding: 8px 12px; margin-bottom: 12px; text-align: center; border-radius: 4px;">
                 <strong>ORDEN DE MUESTRA</strong><br/>
                 Documento de control de producto en muestra.
                 No constituye venta ni afecta inventario hasta su confirmación.
             </div>
         </xpath>
+
     </template>
 
 </odoo>
