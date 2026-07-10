@@ -4,15 +4,15 @@
     <template id="report_saleorder_document_sample"
               inherit_id="sale.report_saleorder_document">
 
-        <!-- Título del PDF: "Orden de Muestra #" en lugar de "Cotización #" -->
-        <xpath expr="//h2" position="replace">
-            <h2 class="mt-4">
-                <span t-if="doc.is_sample_order and doc.state in ['sample', 'draft', 'sent'] and not env.context.get('proforma', False)">Orden de Muestra # </span>
-                <span t-elif="env.context.get('proforma', False)">Factura Pro-Forma # </span>
-                <span t-elif="doc.state in ['draft', 'sent']">Cotización # </span>
+        <!-- Título del PDF (Odoo 19 usa layout_document_title, ya no <h2>) -->
+        <xpath expr="//t[@t-set='layout_document_title']" position="replace">
+            <t t-set="layout_document_title">
+                <span t-if="doc.is_sample_order and doc.state in ['sample', 'draft', 'sent'] and not is_proforma">Orden de Muestra # </span>
+                <span t-elif="is_proforma">Factura Pro-Forma # </span>
+                <span t-elif="doc.state in ['draft','sent']">Cotización # </span>
                 <span t-else="">Orden # </span>
                 <span t-field="doc.name">SO0000</span>
-            </h2>
+            </t>
         </xpath>
 
         <!-- Leyenda mientras la muestra no esté confirmada -->
