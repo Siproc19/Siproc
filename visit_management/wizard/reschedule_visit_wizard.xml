@@ -1,30 +1,22 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
-
     <record id="view_reschedule_wizard_form" model="ir.ui.view">
         <field name="name">visit.reschedule.wizard.form</field>
         <field name="model">visit.reschedule.wizard</field>
         <field name="arch" type="xml">
-            <form string="Reprogramar Visita">
+            <form>
                 <group>
                     <field name="visit_id" readonly="1"/>
-                    <field name="new_date" required="1"/>
+                    <field name="new_date"/>
                     <field name="new_time" widget="float_time"/>
-                    <field name="reschedule_reason" required="1"
-                           placeholder="Explica el motivo de la reprogramación..."/>
-                    <field name="notify_client"/>
+                    <field name="reschedule_reason"/>
                 </group>
                 <footer>
-                    <button name="action_reschedule"
-                            string="✔ Reprogramar"
-                            type="object"
-                            class="btn-primary"/>
-                    <button string="Cancelar"
-                            class="btn-secondary"
-                            special="cancel"/>
+                    <button name="action_reschedule" string="Reprogramar"
+                            type="object" class="btn-primary"/>
+                    <button string="Cancelar" class="btn-secondary" special="cancel"/>
                 </footer>
             </form>
         </field>
     </record>
-
 </odoo>

@@ -1,150 +1,73 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
 
-    <!-- ══════════════════════════════════════════════════════════
-         KANBAN VIEW
-    ══════════════════════════════════════════════════════════ -->
-    <record id="view_visit_kanban" model="ir.ui.view">
-        <field name="name">visit.visit.kanban</field>
-        <field name="model">visit.visit</field>
-        <field name="arch" type="xml">
-            <kanban default_group_by="state" class="o_kanban_small_column">
-                <field name="name"/>
-                <field name="state"/>
-                <field name="employee_id"/>
-                <field name="partner_id"/>
-                <field name="visit_type"/>
-                <field name="scheduled_date"/>
-                <field name="gps_valid"/>
-                <templates>
-                    <t t-name="card">
-                        <div class="oe_kanban_details">
-                            <strong class="o_kanban_record_title">
-                                <field name="name"/>
-                            </strong>
-                            <div class="o_kanban_record_subtitle">
-                                <field name="partner_id"/>
-                            </div>
-                            <div class="mt-2">
-                                <field name="visit_type"/>
-                            </div>
-                            <div class="mt-1">
-                                <field name="scheduled_date"/>
-                            </div>
-                            <div class="mt-1">
-                                <field name="employee_id"/>
-                            </div>
-                        </div>
-                    </t>
-                </templates>
-            </kanban>
-        </field>
-    </record>
-
-    <!-- ══════════════════════════════════════════════════════════
-         FORM VIEW
-    ══════════════════════════════════════════════════════════ -->
+    <!-- FORM -->
     <record id="view_visit_form" model="ir.ui.view">
         <field name="name">visit.visit.form</field>
         <field name="model">visit.visit</field>
         <field name="arch" type="xml">
-            <form string="Visita Comercial">
-
+            <form>
                 <header>
-                    <button name="action_start_route"
-                            string="Iniciar Ruta"
-                            type="object"
-                            class="btn-primary"
+                    <button name="action_start_route" string="Iniciar Ruta"
+                            type="object" class="btn-primary"
                             invisible="state != 'draft'"/>
-                    <button name="action_checkin"
-                            string="Check-In"
-                            type="object"
-                            class="btn-primary"
+                    <button name="action_checkin" string="Check-In"
+                            type="object" class="btn-primary"
                             invisible="state != 'en_route'"/>
-                    <button name="action_checkout"
-                            string="Finalizar Visita"
-                            type="object"
-                            class="btn-success"
+                    <button name="action_checkout" string="Finalizar Visita"
+                            type="object" class="btn-success"
                             invisible="state != 'in_process'"/>
-                    <button name="action_reschedule"
-                            string="Reprogramar"
+                    <button name="action_reschedule" string="Reprogramar"
                             type="object"
-                            class="btn-warning"
                             invisible="state in ('done', 'in_process')"/>
-                    <button name="action_cancel"
-                            string="Cancelar"
+                    <button name="action_cancel" string="Cancelar"
                             type="object"
-                            class="btn-danger"
                             invisible="state in ('done', 'cancelled')"/>
-                    <button name="action_reset_draft"
-                            string="Reactivar"
+                    <button name="action_reset_draft" string="Reactivar"
                             type="object"
                             invisible="state != 'cancelled'"/>
-                    <field name="state"
-                           widget="statusbar"
+                    <field name="state" widget="statusbar"
                            statusbar_visible="draft,en_route,in_process,done"/>
                 </header>
-
                 <sheet>
                     <div class="oe_button_box" name="button_box">
-                        <button name="action_open_google_maps"
-                                type="object"
-                                class="oe_stat_button"
-                                icon="fa-map-marker">
+                        <button name="action_open_google_maps" type="object"
+                                class="oe_stat_button" icon="fa-map-marker">
                             <div class="o_stat_info">
                                 <span class="o_stat_text">Google Maps</span>
                             </div>
                         </button>
-                        <button name="action_open_waze"
-                                type="object"
-                                class="oe_stat_button"
-                                icon="fa-road">
+                        <button name="action_open_waze" type="object"
+                                class="oe_stat_button" icon="fa-road">
                             <div class="o_stat_info">
                                 <span class="o_stat_text">Waze</span>
                             </div>
                         </button>
-                        <button name="action_view_checkins"
-                                type="object"
-                                class="oe_stat_button"
-                                icon="fa-map-pin">
-                            <field name="checkin_count" widget="statinfo" string="GPS Logs"/>
-                        </button>
                     </div>
-
                     <div class="oe_title">
-                        <label for="name"/>
-                        <h1>
-                            <field name="priority" widget="priority" class="me-2"/>
-                            <field name="name" readonly="1"/>
-                        </h1>
+                        <h1><field name="name" readonly="1"/></h1>
                     </div>
-
                     <notebook>
-
                         <page string="General" name="general">
                             <group>
-                                <group string="Identificacion">
+                                <group>
                                     <field name="visit_type"/>
                                     <field name="employee_id"/>
-                                    <field name="partner_id"
-                                           options="{'no_quick_create': True}"/>
-                                    <field name="contact_id"
-                                           invisible="not partner_id"
-                                           options="{'no_quick_create': True}"/>
+                                    <field name="partner_id"/>
+                                    <field name="contact_id"/>
+                                    <field name="priority" widget="priority"/>
                                 </group>
-                                <group string="Programacion">
+                                <group>
                                     <field name="scheduled_date"/>
                                     <field name="scheduled_time" widget="float_time"/>
-                                    <field name="real_start_time" readonly="1"/>
-                                    <field name="real_end_time"   readonly="1"/>
-                                    <field name="duration" readonly="1"/>
+                                    <field name="real_start_time"/>
+                                    <field name="real_end_time"/>
+                                    <field name="duration"/>
                                 </group>
                             </group>
-                            <group string="Objetivo">
-                                <field name="visit_objective" nolabel="1"
-                                       placeholder="Describe el objetivo de esta visita..."/>
+                            <group>
+                                <field name="visit_objective"/>
                             </group>
-                            <separator string="Relaciones Comerciales"/>
                             <group>
                                 <group>
                                     <field name="crm_lead_id"/>
@@ -155,56 +78,44 @@
                                     <field name="next_action" invisible="state != 'done'"/>
                                 </group>
                             </group>
-                            <div invisible="state != 'done'" class="mt-3">
+                            <div invisible="state != 'done'">
                                 <button name="action_create_opportunity"
                                         string="Crear Oportunidad CRM"
-                                        type="object"
-                                        class="btn btn-outline-primary me-2"/>
+                                        type="object" class="btn btn-secondary"/>
                                 <button name="action_create_quotation"
                                         string="Crear Cotizacion"
-                                        type="object"
-                                        class="btn btn-outline-success"/>
+                                        type="object" class="btn btn-secondary"/>
                             </div>
                         </page>
-
                         <page string="Geolocalizacion" name="geo">
                             <group>
                                 <group string="Ubicacion del Cliente">
-                                    <field name="client_address" readonly="1"/>
-                                    <field name="client_latitude"  readonly="1"/>
-                                    <field name="client_longitude" readonly="1"/>
+                                    <field name="client_address"/>
+                                    <field name="client_latitude"/>
+                                    <field name="client_longitude"/>
                                 </group>
                                 <group string="Validacion GPS">
                                     <field name="gps_tolerance"/>
-                                    <field name="gps_distance" readonly="1"/>
-                                    <field name="gps_valid" readonly="1"/>
+                                    <field name="gps_distance"/>
+                                    <field name="gps_valid"/>
                                 </group>
                             </group>
-                            <separator string="Check-In"/>
                             <group>
-                                <group>
+                                <group string="Check-In">
                                     <field name="checkin_latitude"/>
                                     <field name="checkin_longitude"/>
+                                    <field name="checkin_address"/>
                                     <field name="checkin_accuracy"/>
                                 </group>
-                                <group>
-                                    <field name="checkin_address"/>
-                                </group>
-                            </group>
-                            <separator string="Check-Out"/>
-                            <group>
-                                <group>
+                                <group string="Check-Out">
                                     <field name="checkout_latitude"/>
                                     <field name="checkout_longitude"/>
+                                    <field name="checkout_address"/>
                                     <field name="checkout_accuracy"/>
                                 </group>
-                                <group>
-                                    <field name="checkout_address"/>
-                                </group>
                             </group>
-                            <separator string="Historial GPS"/>
                             <field name="checkin_ids">
-                                <list string="Registros GPS" editable="bottom" create="false">
+                                <list editable="bottom" create="false">
                                     <field name="checkin_type"/>
                                     <field name="timestamp"/>
                                     <field name="latitude"/>
@@ -214,55 +125,45 @@
                                 </list>
                             </field>
                         </page>
-
                         <page string="KM y Combustible" name="fuel">
                             <group>
-                                <group string="Vehiculo y Odometro">
-                                    <field name="vehicle_config_id"
-                                           options="{'no_quick_create': True}"/>
+                                <group string="Odometro">
+                                    <field name="vehicle_config_id"/>
                                     <field name="km_initial"/>
                                     <field name="km_final"/>
-                                    <field name="km_traveled" readonly="1"/>
+                                    <field name="km_traveled"/>
                                 </group>
                                 <group string="Costo Estimado">
-                                    <field name="fuel_consumption" readonly="1"/>
-                                    <field name="fuel_cost" readonly="1"/>
+                                    <field name="fuel_consumption"/>
+                                    <field name="fuel_cost"/>
                                 </group>
                             </group>
                         </page>
-
                         <page string="Cierre y Evidencias" name="closure">
-                            <group string="Comentarios">
-                                <field name="closing_notes" nolabel="1"
-                                       placeholder="Detalla el resultado de la visita..."/>
-                            </group>
-                            <separator string="Adjuntos"/>
-                            <field name="attachment_ids" widget="many2many_binary" nolabel="1"/>
-                            <separator string="Firma del Cliente"/>
                             <group>
-                                <field name="signature_name"
-                                       placeholder="Nombre de quien firma"/>
-                                <field name="signature" widget="signature" nolabel="1"/>
+                                <field name="closing_notes"/>
+                            </group>
+                            <group>
+                                <field name="attachment_ids" widget="many2many_binary"/>
+                            </group>
+                            <group>
+                                <field name="signature_name"/>
+                                <field name="signature" widget="signature"/>
                             </group>
                         </page>
-
                     </notebook>
                 </sheet>
-
                 <chatter/>
             </form>
         </field>
     </record>
 
-    <!-- ══════════════════════════════════════════════════════════
-         LIST VIEW
-    ══════════════════════════════════════════════════════════ -->
+    <!-- LIST -->
     <record id="view_visit_list" model="ir.ui.view">
         <field name="name">visit.visit.list</field>
         <field name="model">visit.visit</field>
         <field name="arch" type="xml">
-            <list string="Visitas Comerciales"
-                  decoration-success="state == 'done'"
+            <list decoration-success="state == 'done'"
                   decoration-warning="state in ('en_route','in_process')"
                   decoration-danger="state == 'cancelled'">
                 <field name="name"/>
@@ -270,95 +171,35 @@
                 <field name="employee_id"/>
                 <field name="partner_id"/>
                 <field name="visit_type"/>
-                <field name="state" widget="badge"
-                       decoration-success="state == 'done'"
-                       decoration-warning="state in ('en_route','in_process')"
-                       decoration-danger="state == 'cancelled'"/>
+                <field name="state"/>
                 <field name="gps_valid" optional="show"/>
                 <field name="duration" optional="show"/>
                 <field name="km_traveled" optional="show"/>
                 <field name="fuel_cost" optional="show"/>
-                <field name="result" optional="hide"/>
             </list>
         </field>
     </record>
 
-    <!-- ══════════════════════════════════════════════════════════
-         CALENDAR VIEW
-    ══════════════════════════════════════════════════════════ -->
+    <!-- CALENDAR -->
     <record id="view_visit_calendar" model="ir.ui.view">
         <field name="name">visit.visit.calendar</field>
         <field name="model">visit.visit</field>
         <field name="arch" type="xml">
-            <calendar string="Visitas"
-                      date_start="scheduled_date"
-                      color="employee_id"
-                      quick_create="false">
+            <calendar date_start="scheduled_date" color="employee_id">
                 <field name="name"/>
-                <field name="employee_id"/>
                 <field name="partner_id"/>
-                <field name="state"/>
             </calendar>
         </field>
     </record>
 
-    <!-- SEARCH VIEW -->
-    <record id="view_visit_search" model="ir.ui.view">
-        <field name="name">visit.visit.search</field>
-        <field name="model">visit.visit</field>
-        <field name="arch" type="xml">
-            <search string="Buscar Visitas">
-                <field name="name"/>
-                <field name="employee_id"/>
-                <field name="partner_id"/>
-                <filter name="state_draft"
-                        string="Programadas"
-                        domain="[('state','=','draft')]"/>
-                <filter name="state_active"
-                        string="En Progreso"
-                        domain="[('state','in',['en_route','in_process'])]"/>
-                <filter name="state_done"
-                        string="Finalizadas"
-                        domain="[('state','=','done')]"/>
-                <filter name="state_cancelled"
-                        string="Canceladas"
-                        domain="[('state','=','cancelled')]"/>
-                <filter name="my_visits"
-                        string="Mis Visitas"
-                        domain="[('employee_id.user_id','=',uid)]"/>
-                <group expand="1" string="Agrupar por">
-                    <filter name="group_employee"
-                            string="Asesor"
-                            context="{'group_by':'employee_id'}"/>
-                    <filter name="group_date"
-                            string="Fecha"
-                            context="{'group_by':'scheduled_date'}"/>
-                    <filter name="group_state"
-                            string="Estado"
-                            context="{'group_by':'state'}"/>
-                    <filter name="group_partner"
-                            string="Cliente"
-                            context="{'group_by':'partner_id'}"/>
-                </group>
-            </search>
-        </field>
-    </record>
-
-    <!-- ══════════════════════════════════════════════════════════
-         ACTIONS
-    ══════════════════════════════════════════════════════════ -->
+    <!-- ACTIONS -->
     <record id="action_visit_visit" model="ir.actions.act_window">
         <field name="name">Visitas Comerciales</field>
         <field name="res_model">visit.visit</field>
-        <field name="view_mode">list,kanban,form,calendar</field>
-        <field name="search_view_id" ref="visit_management.view_visit_search"/>
+        <field name="view_mode">list,form,calendar</field>
         <field name="help" type="html">
             <p class="o_view_nocontent_smiling_face">
                 No hay visitas programadas.
-            </p>
-            <p>
-                Crea una nueva visita comercial para registrar
-                el trabajo de campo de tus asesores.
             </p>
         </field>
     </record>
@@ -366,9 +207,7 @@
     <record id="action_visit_my_visits" model="ir.actions.act_window">
         <field name="name">Mis Visitas</field>
         <field name="res_model">visit.visit</field>
-        <field name="view_mode">list,kanban,form,calendar</field>
-        <field name="search_view_id" ref="visit_management.view_visit_search"/>
-        <field name="context">{'search_default_my_visits': 1}</field>
+        <field name="view_mode">list,form,calendar</field>
         <field name="domain">[('employee_id.user_id', '=', uid)]</field>
     </record>
 

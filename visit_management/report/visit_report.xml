@@ -1,7 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
-
-    <!-- Acción de reporte PDF -->
     <record id="action_visit_report_pdf" model="ir.actions.report">
         <field name="name">Reporte de Visita</field>
         <field name="model">visit.visit</field>
@@ -11,5 +9,4 @@
         <field name="binding_model_id" ref="visit_management.model_visit_visit"/>
         <field name="binding_type">report</field>
     </record>
-
 </odoo>

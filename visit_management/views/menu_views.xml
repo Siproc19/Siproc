@@ -1,16 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
 
-    <!-- ══════════════════════════════════════════════
-         MENÚ RAÍZ
-    ══════════════════════════════════════════════ -->
     <menuitem id="menu_visit_root"
               name="Visitas Comerciales"
               sequence="55"
-              web_icon="visit_management,static/description/icon.png"
               groups="visit_management.group_visit_asesor"/>
 
-    <!-- ── PARA ASESORES ── -->
     <menuitem id="menu_visit_my_visits"
               name="Mis Visitas"
               parent="visit_management.menu_visit_root"
@@ -19,80 +14,38 @@
               groups="visit_management.group_visit_asesor"/>
 
     <menuitem id="menu_visit_my_routes"
-              name="Mis Rutas del Dia"
+              name="Rutas del Dia"
               parent="visit_management.menu_visit_root"
               action="visit_management.action_visit_route"
               sequence="20"
               groups="visit_management.group_visit_asesor"/>
 
-    <!-- ── PARA SUPERVISORES ── -->
-    <menuitem id="menu_visit_supervisor"
-              name="Supervision"
+    <menuitem id="menu_visit_all_visits"
+              name="Todas las Visitas"
               parent="visit_management.menu_visit_root"
+              action="visit_management.action_visit_visit"
               sequence="30"
               groups="visit_management.group_visit_supervisor"/>
 
-    <menuitem id="menu_visit_all_visits"
-              name="Todas las Visitas"
-              parent="visit_management.menu_visit_supervisor"
-              action="visit_management.action_visit_visit"
-              sequence="10"
-              groups="visit_management.group_visit_supervisor"/>
-
-    <menuitem id="menu_visit_all_routes"
-              name="Todas las Rutas"
-              parent="visit_management.menu_visit_supervisor"
-              action="visit_management.action_visit_route"
-              sequence="20"
-              groups="visit_management.group_visit_supervisor"/>
-
-    <!-- ── PARA GERENCIA ── -->
-    <menuitem id="menu_visit_gerencia"
-              name="Gerencia"
-              parent="visit_management.menu_visit_root"
-              sequence="40"
-              groups="visit_management.group_visit_gerencia"/>
-
     <menuitem id="menu_visit_dashboard"
               name="Dashboard Gerencial"
-              parent="visit_management.menu_visit_gerencia"
+              parent="visit_management.menu_visit_root"
               action="visit_management.action_visit_dashboard"
-              sequence="10"
+              sequence="40"
               groups="visit_management.group_visit_gerencia"/>
 
     <menuitem id="menu_visit_fuel_report"
               name="KM y Combustible"
-              parent="visit_management.menu_visit_gerencia"
+              parent="visit_management.menu_visit_root"
               action="visit_management.action_visit_fuel_report"
-              sequence="20"
-              groups="visit_management.group_visit_gerencia"/>
-
-    <!-- ── REPORTES ── -->
-    <menuitem id="menu_visit_reports"
-              name="Reportes"
-              parent="visit_management.menu_visit_root"
               sequence="50"
-              groups="visit_management.group_visit_supervisor"/>
-
-    <menuitem id="menu_visit_report_pdf"
-              name="Reporte de Visitas PDF"
-              parent="visit_management.menu_visit_reports"
-              action="visit_management.action_visit_report_pdf"
-              sequence="10"
-              groups="visit_management.group_visit_supervisor"/>
-
-    <!-- ── CONFIGURACIÓN ── -->
-    <menuitem id="menu_visit_config"
-              name="Configuracion"
-              parent="visit_management.menu_visit_root"
-              sequence="99"
-              groups="visit_management.group_visit_supervisor"/>
+              groups="visit_management.group_visit_gerencia"/>
 
     <menuitem id="menu_visit_vehicles"
               name="Vehiculos"
-              parent="visit_management.menu_visit_config"
+              parent="visit_management.menu_visit_root"
               action="visit_management.action_vehicle_config"
-              sequence="10"
+              sequence="90"
               groups="visit_management.group_visit_supervisor"/>
 
 </odoo>
