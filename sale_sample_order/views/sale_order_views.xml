@@ -12,6 +12,10 @@
                        readonly="state not in ('sample', 'draft')"/>
                 <field name="sample_reference"
                        invisible="not sample_reference"/>
+                <field name="sample_transfer_picking_id"
+                       invisible="not sample_transfer_picking_id"/>
+                <field name="sample_return_picking_id"
+                       invisible="not sample_return_picking_id"/>
                 <field name="sample_picking_id"
                        invisible="not sample_picking_id"/>
             </xpath>
