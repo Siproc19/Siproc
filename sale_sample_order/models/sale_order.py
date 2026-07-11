@@ -119,6 +119,18 @@ class SaleOrder(models.Model):
             raise UserError(
                 'No se encontró un almacén con tipo de operación de salida '
                 'para trasladar el producto a Muestras.')
+        if not self._get_sample_stock_lines():
+            detail = ', '.join(
+                '%s (tipo: %s)' % (l.product_id.display_name,
+                                   l.product_id.type)
+                for l in self.order_line
+                if l.product_id) or 'sin productos'
+            self.message_post(
+                body='ATENCIÓN: no se generó traslado a Muestras porque '
+                     'ninguna línea tiene producto almacenable (tipo '
+                     '"Bienes") con cantidad mayor a cero. Líneas: %s. '
+                     'El inventario NO fue descontado.' % detail)
+            return False
         picking = self._create_sample_picking(
             warehouse.out_type_id, warehouse.lot_stock_id,
             self._get_sample_location())
