@@ -1,28 +1,47 @@
 # -*- coding: utf-8 -*-
 from odoo import api, fields, models
+from odoo.exceptions import UserError
 
 
 class SaleOrder(models.Model):
     _inherit = 'sale.order'
 
     state = fields.Selection(
-        selection_add=[('sample', 'Orden de Muestra'), ('draft',)],
-        ondelete={'sample': 'set default'},
+        selection_add=[
+            ('sample', 'Orden de Muestra'),
+            ('sample_trial', 'Orden de Prueba'),
+            ('draft',),
+        ],
+        ondelete={'sample': 'set default', 'sample_trial': 'set default'},
     )
     is_sample_order = fields.Boolean(
         string='Orden de Muestra',
         copy=False,
         tracking=True,
-        help='Marca este documento como una salida de producto de muestra. '
-             'Mientras esté como Orden de Muestra, Cotización o Cotización '
-             'enviada NO afecta el inventario. Si el cliente se queda con el '
-             'producto, se convierte en una orden de venta normal.',
+        help='Documento de control de producto en muestra. Flujo propio: '
+             'Orden de Muestra (el producto puede regresar) > Orden de '
+             'Prueba (el producto se queda con el cliente y se da de baja '
+             'del inventario). Nunca se convierte en cotización ni orden '
+             'de venta.',
     )
     sample_reference = fields.Char(
         string='Referencia de Muestra',
         readonly=True,
         copy=False,
-        help='Número OM original asignado cuando se creó como orden de muestra.',
+    )
+    generated_order_id = fields.Many2one(
+        'sale.order',
+        string='Orden de Venta Generada',
+        readonly=True,
+        copy=False,
+    )
+    sample_picking_id = fields.Many2one(
+        'stock.picking',
+        string='Salida de Inventario (Prueba)',
+        readonly=True,
+        copy=False,
+        help='Entrega que dio de baja el producto del inventario cuando '
+             'la muestra se quedó en prueba con el cliente.',
     )
 
     @api.model_create_multi
@@ -40,8 +59,8 @@ class SaleOrder(models.Model):
         return super().create(vals_list)
 
     def write(self, vals):
-        """Si se marca la casilla en una cotización existente, pasa al estado
-        Orden de Muestra (y al desmarcarla, regresa a Cotización)."""
+        """Marcar/desmarcar la casilla en una cotización mueve el documento
+        entre el flujo de muestra y el de cotización (solo en borrador)."""
         res = super().write(vals)
         if 'is_sample_order' in vals:
             for order in self:
@@ -54,30 +73,131 @@ class SaleOrder(models.Model):
                     super(SaleOrder, order).write({'state': 'draft'})
         return res
 
-    def action_convert_to_quotation(self):
-        """Botón: pasar de Orden de Muestra a Cotización (flujo estándar)."""
+    # ------------------------------------------------------------------
+    # Flujo propio de la orden de muestra
+    # ------------------------------------------------------------------
+    def _get_sample_stock_lines(self):
+        """Líneas con producto almacenable/consumible (excluye servicios,
+        secciones y notas)."""
+        self.ensure_one()
+        return self.order_line.filtered(
+            lambda l: not l.display_type and l.product_id
+            and l.product_id.type == 'consu' and l.product_uom_qty > 0)
+
+    def _create_sample_delivery(self):
+        """Crear y validar la salida de inventario hacia el cliente para
+        dar de baja el producto que se queda en prueba."""
+        self.ensure_one()
+        lines = self._get_sample_stock_lines()
+        if not lines:
+            return False
+        warehouse = self.warehouse_id
+        if not warehouse or not warehouse.out_type_id:
+            raise UserError(
+                'No se encontró un almacén con tipo de operación de salida '
+                'para dar de baja el producto en prueba.')
+        picking_type = warehouse.out_type_id
+        location_src = picking_type.default_location_src_id
+        location_dest = self.partner_id.property_stock_customer
+        picking = self.env['stock.picking'].create({
+            'picking_type_id': picking_type.id,
+            'partner_id': (self.partner_shipping_id or self.partner_id).id,
+            'origin': self.sample_reference or self.name,
+            'location_id': location_src.id,
+            'location_dest_id': location_dest.id,
+            'move_ids': [(0, 0, {
+                'name': line.product_id.display_name,
+                'product_id': line.product_id.id,
+                'product_uom_qty': line.product_uom_qty,
+                'product_uom': line.product_uom_id.id,
+                'location_id': location_src.id,
+                'location_dest_id': location_dest.id,
+            }) for line in lines],
+        })
+        picking.action_confirm()
+        picking.action_assign()
+        for move in picking.move_ids:
+            move.quantity = move.product_uom_qty
+            move.picked = True
+        picking.with_context(
+            skip_backorder=True, skip_sms=True).button_validate()
+        return picking
+
+    def action_sample_trial(self):
+        """El producto se queda en prueba: pasa a Orden de Prueba y se da
+        de baja del inventario (ese producto ya no regresa)."""
         for order in self:
-            if order.state == 'sample':
-                order.write({'state': 'draft'})
+            if order.state != 'sample':
+                continue
+            picking = order._create_sample_delivery()
+            order.write({'state': 'sample_trial'})
+            if picking:
+                order.sample_picking_id = picking
                 order.message_post(
-                    body='Orden de muestra %s convertida a cotización.'
-                         % (order.sample_reference or order.name)
-                )
+                    body='Producto quedó en prueba con el cliente. Se generó '
+                         'la salida de inventario %s (baja definitiva).'
+                         % picking.name)
+            else:
+                order.message_post(
+                    body='Documento pasó a Orden de Prueba. No se generó '
+                         'salida de inventario (sin productos almacenables).')
         return True
 
-    def action_confirm(self):
-        """Al confirmar, asignar numeración normal de orden de venta y
-        conservar la referencia OM para trazabilidad."""
-        # Si confirman directo desde el estado muestra, pasarla antes a draft
-        self.filtered(lambda o: o.state == 'sample').write({'state': 'draft'})
+    def action_sample_cancel(self):
+        """Solo desde Orden de Muestra: el producto fue devuelto."""
         for order in self:
-            if order.is_sample_order and order.sample_reference \
-                    and order.name == order.sample_reference:
-                new_name = self.env['ir.sequence'].next_by_code('sale.order')
-                if new_name:
-                    order.message_post(
-                        body='Orden de muestra %s confirmada como venta %s.'
-                             % (order.sample_reference, new_name)
-                    )
-                    order.name = new_name
+            if order.state != 'sample':
+                raise UserError(
+                    'Solo una Orden de Muestra puede cancelarse por '
+                    'devolución. Una Orden de Prueba ya dio de baja el '
+                    'producto y no admite devolución.')
+            order.write({'state': 'cancel'})
+            order.message_post(
+                body='Producto de muestra devuelto. Documento %s cancelado.'
+                     % (order.sample_reference or order.name))
+        return True
+
+    def action_create_sale_from_sample(self):
+        """El cliente decidió comprar mientras el producto estaba en
+        muestra: crear una orden de venta nueva y cerrar la muestra."""
+        self.ensure_one()
+        if self.state != 'sample':
+            raise UserError(
+                'Solo puede generarse una venta desde una Orden de Muestra '
+                'activa. Si el producto ya está en Orden de Prueba, ya fue '
+                'dado de baja del inventario.')
+        if self.generated_order_id:
+            raise UserError('Esta muestra ya generó la orden de venta %s.'
+                            % self.generated_order_id.name)
+        new_order = self.copy(default={
+            'is_sample_order': False,
+            'sample_reference': False,
+            'generated_order_id': False,
+            'sample_picking_id': False,
+            'origin': self.sample_reference or self.name,
+            'state': 'draft',
+        })
+        self.generated_order_id = new_order
+        self.write({'state': 'cancel'})
+        self.message_post(
+            body='El cliente decidió comprar: se creó la orden de venta %s '
+                 'y la muestra %s se cerró.'
+                 % (new_order.name, self.sample_reference or self.name))
+        return {
+            'type': 'ir.actions.act_window',
+            'res_model': 'sale.order',
+            'res_id': new_order.id,
+            'view_mode': 'form',
+            'target': 'current',
+        }
+
+    def action_confirm(self):
+        """Las órdenes de muestra nunca se confirman como venta."""
+        for order in self:
+            if order.is_sample_order:
+                raise UserError(
+                    'Una Orden de Muestra no puede confirmarse como venta. '
+                    'Usa "Crear Orden de Venta" si el cliente compró, '
+                    '"Se Queda en Prueba" si el producto no regresará, o '
+                    '"Producto Devuelto" si lo regresó.')
         return super().action_confirm()

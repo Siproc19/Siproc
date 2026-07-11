@@ -18,11 +18,11 @@ documento separado de la orden de venta:
 * Menú y filtro propios para ver las muestras pendientes por asesor.
 * Leyenda "ORDEN DE MUESTRA" en el PDF mientras no esté confirmada.
     """,
-    'version': '19.0.1.2.0',
+    'version': '19.0.3.0.0',
     'category': 'Sales/Sales',
     'author': 'Interno',
     'license': 'LGPL-3',
-    'depends': ['sale_management'],
+    'depends': ['sale_management', 'sale_stock'],
     'data': [
         'data/ir_sequence.xml',
         'views/sale_order_views.xml',
