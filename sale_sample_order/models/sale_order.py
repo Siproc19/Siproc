@@ -58,7 +58,7 @@ class SaleOrder(models.Model):
     # ------------------------------------------------------------------
     def _get_sample_location(self):
         location = self.env.ref(
-            'sale_sample_order.stock_location_samples',
+            'sale_sample_order.stock_location_samples_customer',
             raise_if_not_found=False)
         if not location:
             raise UserError(
@@ -109,17 +109,18 @@ class SaleOrder(models.Model):
     # Flujo de la orden de muestra
     # ------------------------------------------------------------------
     def _sample_send_to_location(self):
-        """Bodega -> Muestras: el producto deja de estar disponible."""
+        """Bodega -> Muestras (tipo cliente): el producto se descuenta del
+        stock disponible de toda la empresa."""
         self.ensure_one()
         if self.sample_transfer_picking_id:
             return self.sample_transfer_picking_id
         warehouse = self.warehouse_id
-        if not warehouse or not warehouse.int_type_id:
+        if not warehouse or not warehouse.out_type_id:
             raise UserError(
-                'No se encontró un almacén con tipo de operación interna '
+                'No se encontró un almacén con tipo de operación de salida '
                 'para trasladar el producto a Muestras.')
         picking = self._create_sample_picking(
-            warehouse.int_type_id, warehouse.lot_stock_id,
+            warehouse.out_type_id, warehouse.lot_stock_id,
             self._get_sample_location())
         if picking:
             self.sample_transfer_picking_id = picking
@@ -136,14 +137,19 @@ class SaleOrder(models.Model):
         return picking
 
     def _sample_return_to_stock(self):
-        """Muestras -> Bodega: el producto regresó."""
+        """Muestras -> Bodega (recepción): el producto regresó y vuelve a
+        estar disponible."""
         self.ensure_one()
         if not self.sample_transfer_picking_id \
                 or self.sample_return_picking_id:
             return False
         warehouse = self.warehouse_id
+        if not warehouse or not warehouse.in_type_id:
+            raise UserError(
+                'No se encontró un almacén con tipo de operación de '
+                'recepción para regresar el producto de Muestras.')
         picking = self._create_sample_picking(
-            warehouse.int_type_id, self._get_sample_location(),
+            warehouse.in_type_id, self._get_sample_location(),
             warehouse.lot_stock_id)
         if picking:
             self.sample_return_picking_id = picking
