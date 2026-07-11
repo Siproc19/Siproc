@@ -29,12 +29,6 @@ class SaleOrder(models.Model):
         readonly=True,
         copy=False,
     )
-    generated_order_id = fields.Many2one(
-        'sale.order',
-        string='Orden de Venta Generada',
-        readonly=True,
-        copy=False,
-    )
     sample_picking_id = fields.Many2one(
         'stock.picking',
         string='Salida de Inventario (Prueba)',
@@ -106,7 +100,6 @@ class SaleOrder(models.Model):
             'location_id': location_src.id,
             'location_dest_id': location_dest.id,
             'move_ids': [(0, 0, {
-                'name': line.product_id.display_name,
                 'product_id': line.product_id.id,
                 'product_uom_qty': line.product_uom_qty,
                 'product_uom': line.product_uom_id.id,
@@ -157,47 +150,13 @@ class SaleOrder(models.Model):
                      % (order.sample_reference or order.name))
         return True
 
-    def action_create_sale_from_sample(self):
-        """El cliente decidió comprar mientras el producto estaba en
-        muestra: crear una orden de venta nueva y cerrar la muestra."""
-        self.ensure_one()
-        if self.state != 'sample':
-            raise UserError(
-                'Solo puede generarse una venta desde una Orden de Muestra '
-                'activa. Si el producto ya está en Orden de Prueba, ya fue '
-                'dado de baja del inventario.')
-        if self.generated_order_id:
-            raise UserError('Esta muestra ya generó la orden de venta %s.'
-                            % self.generated_order_id.name)
-        new_order = self.copy(default={
-            'is_sample_order': False,
-            'sample_reference': False,
-            'generated_order_id': False,
-            'sample_picking_id': False,
-            'origin': self.sample_reference or self.name,
-            'state': 'draft',
-        })
-        self.generated_order_id = new_order
-        self.write({'state': 'cancel'})
-        self.message_post(
-            body='El cliente decidió comprar: se creó la orden de venta %s '
-                 'y la muestra %s se cerró.'
-                 % (new_order.name, self.sample_reference or self.name))
-        return {
-            'type': 'ir.actions.act_window',
-            'res_model': 'sale.order',
-            'res_id': new_order.id,
-            'view_mode': 'form',
-            'target': 'current',
-        }
-
     def action_confirm(self):
         """Las órdenes de muestra nunca se confirman como venta."""
         for order in self:
             if order.is_sample_order:
                 raise UserError(
-                    'Una Orden de Muestra no puede confirmarse como venta. '
-                    'Usa "Crear Orden de Venta" si el cliente compró, '
-                    '"Se Queda en Prueba" si el producto no regresará, o '
-                    '"Producto Devuelto" si lo regresó.')
+                    'Una Orden de Muestra no puede confirmarse ni '
+                    'convertirse en venta. Usa "Se Queda en Prueba" si el '
+                    'producto no regresará (se dará de baja del inventario) '
+                    'o "Producto Devuelto" si el cliente lo regresó.')
         return super().action_confirm()

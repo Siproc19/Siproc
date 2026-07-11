@@ -14,8 +14,6 @@
                        invisible="not sample_reference"/>
                 <field name="sample_picking_id"
                        invisible="not sample_picking_id"/>
-                <field name="generated_order_id"
-                       invisible="not generated_order_id"/>
             </xpath>
             <xpath expr="//header" position="inside">
                 <button name="action_sample_trial"
@@ -24,10 +22,6 @@
                         class="btn-primary"
                         confirm="El producto se dará de BAJA del inventario y ya no podrá registrarse como devuelto. ¿Continuar?"
                         invisible="state != 'sample'"/>
-                <button name="action_create_sale_from_sample"
-                        type="object"
-                        string="Crear Orden de Venta"
-                        invisible="state != 'sample' or generated_order_id"/>
                 <button name="action_sample_cancel"
                         type="object"
                         string="Producto Devuelto (Cancelar)"
@@ -71,9 +65,10 @@
             </p>
             <p>
                 Mientras el documento está como Orden de Muestra, el producto
-                puede regresar (Producto Devuelto) o venderse (Crear Orden de
-                Venta). Si se queda con el cliente, "Se Queda en Prueba" lo
-                convierte en Orden de Prueba y da de baja el inventario.
+                puede regresar (Producto Devuelto). Si se queda con el
+                cliente, "Se Queda en Prueba" lo convierte en Orden de Prueba
+                y da de baja el inventario. Las muestras nunca se convierten
+                en venta.
             </p>
         </field>
     </record>
