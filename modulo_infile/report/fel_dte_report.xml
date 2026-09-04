@@ -16,6 +16,12 @@
                                 <span t-esc="fel_nc"/>
                             </div>
                         </t>
+                        <t t-if="o.fel_tipo_documento">
+                            <div>
+                                <strong style="color:#556B2F;">Tipo de Documento:</strong>
+                                <span t-field="o.fel_tipo_documento" style="text-transform:uppercase; font-weight:bold;"/>
+                            </div>
+                        </t>
                         <div>
                             <strong style="color:#556B2F;">Régimen:</strong>
                             <span>Sujeto a pagos trimestrales</span>
@@ -167,6 +173,17 @@
                         <div style="height:12px; background:linear-gradient(90deg, #F6B500 0%, #F18A1A 55%, #556B2F 100%); border-radius:6px;"></div>
                     </div>
                 </div>
+
+                <!-- Título del tipo de documento (Factura, Factura Cambiaria, Nota de Crédito, etc.) -->
+                <t t-if="o.fel_tipo_documento">
+                    <div class="row mb-3">
+                        <div class="col-12 text-center">
+                            <h2 style="color:#556B2F; letter-spacing:1px; margin:0; text-transform:uppercase; font-weight:bold;">
+                                <span t-field="o.fel_tipo_documento"/>
+                            </h2>
+                        </div>
+                    </div>
+                </t>
 
 <!-- ENCABEZADO EN UNA SOLA LÍNEA -->
 <div class="row mb-4">
