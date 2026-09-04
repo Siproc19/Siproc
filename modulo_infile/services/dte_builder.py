@@ -87,6 +87,37 @@ class DteBuilder(object):
         out.append('        </dte:Frases>')
         return out
 
+    def _abonos_cambiaria(self):
+        """Calendario de abonos (cuotas) para el complemento
+        AbonosFacturaCambiaria, requerido por la SAT en documentos FCAM y
+        FCAP (esquema GT_Complemento_Cambiaria-0.1.0).
+
+        Se construye a partir de las líneas por cobrar del asiento (una
+        línea por cada cuota del plazo de pago del cliente). Si el plazo de
+        pago no genera varias cuotas (p. ej. "Contado" o "30 días" con una
+        sola línea), se emite un único abono con el total del documento.
+        """
+        move = self.move
+        receivable_lines = move.line_ids.filtered(
+            lambda l: l.account_id.account_type == 'asset_receivable')
+        receivable_lines = receivable_lines.sorted(
+            key=lambda l: l.date_maturity or move.invoice_date_due
+            or move.invoice_date)
+
+        abonos = []
+        for line in receivable_lines:
+            monto = abs(line.amount_currency) if line.currency_id else abs(line.balance)
+            if monto <= 0:
+                continue
+            fecha = line.date_maturity or move.invoice_date_due or move.invoice_date
+            abonos.append((fecha, monto))
+
+        if not abonos:
+            fecha = move.invoice_date_due or move.invoice_date
+            abonos.append((fecha, move.amount_total))
+
+        return abonos
+
     def build(self):
         move = self.move
         config = self.config
@@ -243,24 +274,65 @@ class DteBuilder(object):
         x.append('          <dte:GranTotal>%s</dte:GranTotal>' % fmt(round(suma_total, 2)))
         x.append('        </dte:Totales>')
 
-        # Complemento de notas de crédito/débito
-        if move.move_type == 'out_refund' and move.fel_tipo_documento == 'NCRE':
+        # Complementos: cada tipo de documento puede requerir uno o más,
+        # según el catálogo oficial de esquemas de la SAT
+        # (https://github.com/fel-sat-gob-gt/cat/tree/main/xsd).
+        complementos = []
+
+        # Referencias de nota (obligatorio en notas de crédito/débito).
+        # URIComplemento corregido: debe ser el targetNamespace real del
+        # XSD GT_Complemento_Referencia_Nota-0.1.0
+        # (http://www.sat.gob.gt/face2/ComplementoReferenciaNota/0.1.0);
+        # el valor anterior ("http://www.sat.gob.gt/fel/notas.xsd") no
+        # corresponde a ningún esquema publicado por la SAT.
+        if move.move_type == 'out_refund' and tipo_documento == 'NCRE':
             origen = move.reversed_entry_id
             if origen and origen.fel_uuid:
                 motivo = xml_escape(move.ref or "Anulación")
-                x.append('        <dte:Complementos>')
-                x.append('          <dte:Complemento IDComplemento="ReferenciasNota" '
-                         'NombreComplemento="ReferenciasNota" '
-                         'URIComplemento="http://www.sat.gob.gt/fel/notas.xsd">')
-                x.append('            <cno:ReferenciasNota '
-                         'xmlns:cno="http://www.sat.gob.gt/fel/notas.xsd" Version="0.0" '
-                         'FechaEmisionDocumentoOrigen="%s" MotivoAjuste="%s" '
-                         'NumeroAutorizacionDocumentoOrigen="%s" '
-                         'SerieDocumentoOrigen="%s" NumeroDocumentoOrigen="%s"/>'
-                         % (origen.invoice_date, motivo, origen.fel_uuid,
-                            origen.fel_serie or "", origen.fel_numero or ""))
-                x.append('          </dte:Complemento>')
-                x.append('        </dte:Complementos>')
+                complementos.append(
+                    '          <dte:Complemento IDComplemento="ReferenciasNota" '
+                    'NombreComplemento="ReferenciasNota" '
+                    'URIComplemento="http://www.sat.gob.gt/face2/ComplementoReferenciaNota/0.1.0">\n'
+                    '            <cno:ReferenciasNota '
+                    'xmlns:cno="http://www.sat.gob.gt/face2/ComplementoReferenciaNota/0.1.0" '
+                    'Version="0.1" '
+                    'FechaEmisionDocumentoOrigen="%s" MotivoAjuste="%s" '
+                    'NumeroAutorizacionDocumentoOrigen="%s" '
+                    'SerieDocumentoOrigen="%s" NumeroDocumentoOrigen="%s"/>\n'
+                    '          </dte:Complemento>'
+                    % (origen.invoice_date, motivo, origen.fel_uuid,
+                       origen.fel_serie or "", origen.fel_numero or ""))
+
+        # Abonos de factura cambiaria (obligatorio en FCAM/FCAP; es lo que
+        # provoca el error FEL-GUI-83 "complemento requerido
+        # [AbonosFacturaCambiaria] está ausente" cuando falta).
+        if tipo_documento in ('FCAM', 'FCAP'):
+            abonos = self._abonos_cambiaria()
+            abono_lines = [
+                '          <dte:Complemento IDComplemento="AbonosFacturaCambiaria" '
+                'NombreComplemento="AbonosFacturaCambiaria" '
+                'URIComplemento="http://www.sat.gob.gt/dte/fel/CompCambiaria/0.1.0">',
+                '            <cfc:AbonosFacturaCambiaria '
+                'xmlns:cfc="http://www.sat.gob.gt/dte/fel/CompCambiaria/0.1.0" '
+                'Version="1">',
+            ]
+            for numero, (fecha, monto) in enumerate(abonos, start=1):
+                fecha_str = (fecha.strftime('%Y-%m-%d')
+                             if hasattr(fecha, 'strftime') else str(fecha))
+                abono_lines.append(
+                    '              <cfc:Abono>'
+                    '<cfc:NumeroAbono>%s</cfc:NumeroAbono>'
+                    '<cfc:FechaVencimiento>%s</cfc:FechaVencimiento>'
+                    '<cfc:MontoAbono>%s</cfc:MontoAbono>'
+                    '</cfc:Abono>' % (numero, fecha_str, fmt(monto)))
+            abono_lines.append('            </cfc:AbonosFacturaCambiaria>')
+            abono_lines.append('          </dte:Complemento>')
+            complementos.append('\n'.join(abono_lines))
+
+        if complementos:
+            x.append('        <dte:Complementos>')
+            x.extend(complementos)
+            x.append('        </dte:Complementos>')
 
         x.append('      </dte:DatosEmision>')
         x.append('    </dte:DTE>')
