@@ -23,7 +23,7 @@
                         invisible="not fel_enabled or not fel_uuid"/>
                 <button name="action_anular_fel" type="object"
                         string="Anular FEL"
-                        groups="modulo_infile.group_fel_administrador"
+                        groups="modulo_infile.group_fel_usuario"
                         invisible="not fel_enabled or fel_estado != 'certified'"
                         confirm="¿Confirma la anulación de este documento ante SAT?"/>
                 <button name="action_imprimir_dte" type="object"
