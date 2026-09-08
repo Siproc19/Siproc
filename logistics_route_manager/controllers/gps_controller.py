@@ -28,7 +28,12 @@ class LogisticsGpsController(http.Controller):
             timestamp (str): ISO timestamp del celular
         """
         try:
-            data = request.get_json_data()
+            # En una ruta type='jsonrpc', Odoo ya desarma el sobre JSON-RPC y
+            # entrega el contenido de `params` como kwargs. Usar
+            # request.get_json_data() aquí devolvía el sobre completo
+            # {jsonrpc, method, params}, así que driver_id salía vacío y toda
+            # posición del piloto se descartaba en silencio.
+            data = kwargs
             driver_id = data.get('driver_id')
             latitude = float(data.get('latitude', 0))
             longitude = float(data.get('longitude', 0))

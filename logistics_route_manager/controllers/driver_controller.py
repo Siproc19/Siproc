@@ -2,6 +2,8 @@
 import json
 import logging
 
+from markupsafe import Markup
+
 from odoo import http
 from odoo.http import request
 
@@ -44,8 +46,38 @@ class DriverAppController(http.Controller):
             'route': route,
             'api_key': api_key,
             'gps_interval': gps_interval,
-            'route_data': json.dumps(route.get_route_data_json()) if route else '{}',
+            # Markup evita que QWeb escape las comillas: dentro de un <script>
+            # un &#34; es un error de sintaxis y tumba toda la app.
+            'route_data': Markup(json.dumps(route.get_route_data_json())) if route else Markup('{}'),
         })
+
+    @http.route('/logistics/route/<int:route_id>/start', type='jsonrpc', auth='user', methods=['POST'])
+    def start_route(self, route_id, **kwargs):
+        """El piloto tocó «Iniciar Ruta» en su celular.
+
+        Antes el botón solo encendía el rastreo GPS en el teléfono y nunca
+        avisaba al servidor, así que la ruta se quedaba en «confirmada»
+        para siempre: ninguna parada pasaba a «en camino», la llegada
+        automática por geofence nunca se disparaba y las entregas de
+        inventario no cambiaban de estado.
+        """
+        try:
+            route = request.env['logistics.route'].sudo().browse(route_id)
+            if not route.exists():
+                return {'success': False, 'error': 'La ruta no existe.'}
+
+            piloto = request.env['logistics.driver'].sudo().search(
+                [('user_id', '=', request.env.user.id)], limit=1
+            )
+            if not piloto or route.driver_id != piloto:
+                return {'success': False, 'error': 'Esta ruta no está asignada a usted.'}
+
+            if route.state == 'confirmed':
+                route.action_start_route()
+            return {'success': True, 'state': route.state}
+        except Exception as e:
+            _logger.exception("Error al iniciar la ruta. route_id=%s", route_id)
+            return {'success': False, 'error': str(e)}
 
     @http.route('/logistics/task/<int:task_id>/arrived', type='jsonrpc', auth='user', methods=['POST'])
     def mark_task_arrived(self, task_id, **kwargs):
@@ -65,7 +97,7 @@ class DriverAppController(http.Controller):
     def complete_task(self, task_id, **kwargs):
         """El piloto completó la tarea."""
         try:
-            data = request.get_json_data() or {}
+            data = kwargs  # `params` de la llamada JSON-RPC, ya desarmado por Odoo
             task = request.env['logistics.task'].sudo().browse(task_id)
 
             if not task.exists():
@@ -106,7 +138,7 @@ class DriverAppController(http.Controller):
     def fail_task(self, task_id, **kwargs):
         """El piloto reportó que no pudo completar la tarea."""
         try:
-            data = request.get_json_data() or {}
+            data = kwargs  # `params` de la llamada JSON-RPC, ya desarmado por Odoo
             reason = data.get('reason', 'Sin razón especificada')
             task = request.env['logistics.task'].sudo().browse(task_id)
 

@@ -311,8 +311,34 @@ class DriverApp {
     }
 
     _bindEvents() {
-        document.getElementById("start-route-btn")?.addEventListener("click", () => {
-            if (this.gpsTracker) this.gpsTracker.start();
+        document.getElementById("start-route-btn")?.addEventListener("click", async (ev) => {
+            const boton = ev.currentTarget;
+            if (!this.routeId) return;
+            boton.disabled = true;
+            boton.textContent = "Iniciando…";
+            try {
+                const res = await fetch(`/logistics/route/${this.routeId}/start`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ jsonrpc: "2.0", method: "call", params: {} }),
+                });
+                const data = await res.json();
+                if (data.result?.success) {
+                    // El rastreo arranca ya, para no perder los primeros metros.
+                    if (this.gpsTracker) this.gpsTracker.start();
+                    this._showToast("🚀 Ruta iniciada", "success");
+                    // Y se recarga para traer las paradas con su estado nuevo.
+                    setTimeout(() => window.location.reload(), 900);
+                } else {
+                    boton.disabled = false;
+                    boton.textContent = "🚀 INICIAR RUTA";
+                    this._showToast(data.result?.error || "No se pudo iniciar la ruta.", "danger");
+                }
+            } catch (e) {
+                boton.disabled = false;
+                boton.textContent = "🚀 INICIAR RUTA";
+                this._showToast("Sin conexión. Inténtelo de nuevo.", "warning");
+            }
         });
         document.getElementById("complete-modal-confirm")?.addEventListener("click", () => {
             const taskId = parseInt(document.getElementById("complete-modal")?.dataset.taskId);
