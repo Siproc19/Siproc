@@ -9,10 +9,20 @@
                 <app string="Logística" name="logistics_route_manager" data-key="logistics_route_manager">
                     <block title="Logística y Rutas" name="logistics_settings_block">
 
-                        <setting string="API Key de Google Maps"
-                                 help="Necesaria para optimización de rutas y tráfico.">
+                        <setting string="API Key de Google Maps (opcional)"
+                                 help="Los mapas ya funcionan sin API Key usando OpenStreetMap. Configúrela solo si desea optimización automática de rutas y ETA con tráfico real.">
                             <field name="logistics_google_maps_api_key"
                                    placeholder="AIzaSy..."/>
+                        </setting>
+
+                        <setting string="Umbral de Desvío (km)"
+                                 help="Distancia a la que la Torre de Control marca al piloto como desviado de su siguiente parada.">
+                            <field name="logistics_deviation_threshold_km"/>
+                        </setting>
+
+                        <setting string="Validar la Transferencia al Entregar"
+                                 help="Al marcar la parada como entregada, valida la orden de entrega en Inventario. Si falla, la entrega igual queda registrada.">
+                            <field name="logistics_auto_validate_picking"/>
                         </setting>
 
                         <setting string="Optimizar Rutas Automáticamente"

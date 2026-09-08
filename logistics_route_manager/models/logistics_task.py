@@ -45,6 +45,11 @@ class LogisticsTask(models.Model):
     ], string='Prioridad', default='0')
 
     # ── Ubicación ─────────────────────────────────────────────────────────────
+    partner_id = fields.Many2one(
+        'res.partner', string='Cliente / Contacto',
+        help='Al seleccionarlo se copian su dirección, teléfono y coordenadas.',
+        tracking=True,
+    )
     location_id = fields.Many2one(
         'logistics.location', string='Lugar Registrado',
         help='Seleccione un lugar frecuente o ingrese la dirección manualmente',
@@ -79,6 +84,12 @@ class LogisticsTask(models.Model):
     stock_picking_id = fields.Many2one(
         'stock.picking', string='Orden de Entrega (Stock)',
         domain=[('picking_type_code', '=', 'outgoing')],
+        index=True,
+    )
+    sale_order_id = fields.Many2one(
+        'sale.order', string='Pedido de Venta',
+        index=True,
+        help='Se completa solo al elegir la orden de entrega.',
     )
     delivery_products = fields.Text(string='Productos a Entregar')
     delivery_weight_kg = fields.Float(string='Peso Total (kg)')
@@ -130,6 +141,124 @@ class LogisticsTask(models.Model):
             self.contact_name = self.location_id.contact_name
             self.contact_phone = self.location_id.contact_phone
 
+    # ── Autocompletado desde los documentos ───────────────────────────────────
+    def _vals_from_partner(self, partner):
+        """Dirección, contacto y coordenadas de un contacto de Odoo."""
+        if not partner:
+            return {}
+        vals = {
+            'address': partner._display_address(without_company=True).replace('\n', ', ')
+            if hasattr(partner, '_display_address') else (partner.contact_address or ''),
+            'contact_name': partner.name,
+            'contact_phone': partner.phone
+            or (partner.mobile if 'mobile' in partner._fields else '')
+            or '',
+        }
+        lat = partner.partner_latitude if 'partner_latitude' in partner._fields else 0.0
+        lng = partner.partner_longitude if 'partner_longitude' in partner._fields else 0.0
+        if lat and lng:
+            vals['latitude'] = lat
+            vals['longitude'] = lng
+        return vals
+
+    def _vals_from_picking(self, picking):
+        """Cliente, dirección y contenido de una orden de entrega."""
+        if not picking:
+            return {}
+        partner = picking.partner_id
+        vals = {
+            'task_type': 'delivery',
+            'partner_id': partner.id if partner else False,
+            'name': _('Entrega %(ref)s — %(partner)s',
+                      ref=picking.name, partner=partner.name or ''),
+            'delivery_products': self._summarize_picking_lines(picking),
+            'delivery_weight_kg': self._picking_weight(picking),
+        }
+        # `sale_id` solo existe si sale_stock está instalado.
+        if 'sale_id' in picking._fields and picking.sale_id:
+            vals['sale_order_id'] = picking.sale_id.id
+        vals.update(self._vals_from_partner(partner))
+        if picking.note:
+            vals['notes'] = picking.note
+        return vals
+
+    @api.model
+    def _summarize_picking_lines(self, picking):
+        """Resumen legible de lo que va en la entrega, para el piloto."""
+        lines = []
+        for move in picking.move_ids:
+            qty = move.product_uom_qty
+            uom = move.product_uom.name if move.product_uom else ''
+            lines.append(f"{qty:g} {uom} — {move.product_id.display_name}".strip())
+        return "\n".join(lines)
+
+    @api.model
+    def _picking_weight(self, picking):
+        """Peso total de la entrega, si los productos lo tienen configurado."""
+        total = 0.0
+        for move in picking.move_ids:
+            weight = getattr(move.product_id, 'weight', 0.0) or 0.0
+            total += weight * move.product_uom_qty
+        return total
+
+    @api.onchange('partner_id')
+    def _onchange_partner_id(self):
+        """Copia dirección, teléfono y coordenadas del cliente."""
+        if self.partner_id:
+            self.update(self._vals_from_partner(self.partner_id))
+
+    @api.onchange('stock_picking_id')
+    def _onchange_stock_picking_id(self):
+        """Rellena la parada con los datos de la orden de entrega."""
+        if self.stock_picking_id:
+            self.update(self._vals_from_picking(self.stock_picking_id))
+
+    @api.onchange('purchase_order_id')
+    def _onchange_purchase_order_id(self):
+        """Rellena la parada con los datos de la orden de compra."""
+        order = self.purchase_order_id
+        if not order:
+            return
+        vals = {
+            'task_type': 'purchase',
+            'partner_id': order.partner_id.id if order.partner_id else False,
+            'name': _('Compra %(ref)s — %(partner)s',
+                      ref=order.name, partner=order.partner_id.name or ''),
+            'authorized_amount': order.amount_total,
+            'shopping_list': "\n".join(
+                f"{line.product_qty:g} — {line.product_id.display_name}"
+                for line in order.order_line
+            ),
+        }
+        vals.update(self._vals_from_partner(order.partner_id))
+        self.update(vals)
+
+    # ── Sincronización de estado con la orden de entrega ──────────────────────
+    def write(self, vals):
+        res = super().write(vals)
+        if 'state' in vals:
+            self._sync_picking_transit_status()
+        return res
+
+    def _sync_picking_transit_status(self):
+        """
+        Refleja en la orden de entrega que ya va en camino.
+
+        Se usa sudo: el piloto actualiza su parada desde el celular y no
+        necesariamente tiene permisos de escritura en Inventario. Es una
+        sincronización del sistema, no una acción del usuario sobre el stock.
+        """
+        for task in self:
+            picking = task.stock_picking_id
+            if not picking:
+                continue
+            if task.state in ('in_transit', 'arrived'):
+                if picking.x_delivery_status in ('no_route', 'planned'):
+                    picking.sudo().x_delivery_status = 'in_transit'
+            elif task.state == 'pending':
+                if picking.x_delivery_status == 'in_transit':
+                    picking.sudo().x_delivery_status = 'planned'
+
     # ── Acciones de estado ────────────────────────────────────────────────────
     def action_mark_arrived(self):
         """Piloto marcó que llegó a la parada."""
@@ -152,11 +281,78 @@ class LogisticsTask(models.Model):
             'state': 'completed',
             'actual_departure': fields.Datetime.now(),
         })
+        self._sync_delivery_document()
         self.env['bus.bus']._sendone(
             f'logistics_task_{self.route_id.id}',
             'task_completed',
             {'task_id': self.id, 'task_name': self.name}
         )
+
+    # ── Devolución de la entrega al documento de origen ───────────────────────
+    def _sync_delivery_document(self):
+        """
+        Escribe en la orden de entrega la prueba de la entrega: fecha y hora
+        reales, coordenadas GPS donde el piloto la marcó, y quién recibió.
+
+        Si el ajuste correspondiente está activo, además intenta validar la
+        transferencia. Un fallo de validación (falta de stock, por ejemplo)
+        se registra en el chatter pero nunca bloquea al piloto: su trabajo en
+        campo ya está hecho.
+        """
+        self.ensure_one()
+        picking = self.stock_picking_id
+        if not picking:
+            return
+
+        driver = self.route_id.driver_id
+        picking = picking.sudo()
+        picking.write({
+            'x_logistics_task_id': self.id,
+            'x_logistics_route_id': self.route_id.id,
+            'x_delivery_status': 'delivered',
+            'x_delivered_at': self.actual_departure or fields.Datetime.now(),
+            'x_delivered_latitude': driver.current_latitude or self.latitude or 0.0,
+            'x_delivered_longitude': driver.current_longitude or self.longitude or 0.0,
+            'x_receiver_name': self.signature_name or self.contact_name or '',
+        })
+        picking.message_post(body=_(
+            'Entregado por %(driver)s en la ruta %(route)s.',
+            driver=driver.name or '', route=self.route_id.name or '',
+        ))
+
+        auto_validate = self.env['ir.config_parameter'].sudo().get_param(
+            'logistics.auto_validate_picking'
+        )
+        if auto_validate in ('True', 'true', '1') and picking.state not in ('done', 'cancel'):
+            try:
+                picking.sudo().with_context(skip_backorder=True).button_validate()
+            except Exception as error:  # noqa: BLE001 — nunca bloquear al piloto
+                _logger.warning(
+                    "No se pudo validar la transferencia %s desde la tarea %s: %s",
+                    picking.name, self.id, error,
+                )
+                picking.message_post(body=_(
+                    'La entrega se registró desde la ruta, pero la validación '
+                    'automática de la transferencia falló: %(error)s. '
+                    'Valídela manualmente.', error=error,
+                ))
+
+    def _sync_delivery_document_failed(self, reason):
+        """Refleja en la orden de entrega que el piloto no pudo entregar."""
+        self.ensure_one()
+        picking = self.stock_picking_id
+        if not picking:
+            return
+        picking = picking.sudo()
+        picking.write({
+            'x_logistics_task_id': self.id,
+            'x_logistics_route_id': self.route_id.id,
+            'x_delivery_status': 'failed',
+        })
+        picking.message_post(body=_(
+            'Entrega no realizada en la ruta %(route)s. Motivo: %(reason)s',
+            route=self.route_id.name or '', reason=reason or _('sin especificar'),
+        ))
 
     def action_mark_failed(self, reason=''):
         """Marcar tarea como fallida."""
@@ -166,6 +362,7 @@ class LogisticsTask(models.Model):
             'failure_reason': reason,
             'actual_departure': fields.Datetime.now(),
         })
+        self._sync_delivery_document_failed(reason)
 
     def action_navigate_waze(self):
         """Abre Waze con las coordenadas de esta parada."""

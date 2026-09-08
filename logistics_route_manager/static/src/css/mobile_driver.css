@@ -6,24 +6,25 @@
 * { box-sizing: border-box; margin: 0; padding: 0; }
 
 :root {
-    --primary:    #0d6efd;
+    --primary:    #4a5b25;       /* verde SIPROC */
     --success:    #28a745;
     --warning:    #ffc107;
     --danger:     #dc3545;
     --waze:       #05C8F7;
     --gmaps:      #4285F4;
-    --dark:       #1a1a2e;
+    --dark:       #2b3714;       /* oliva profundo */
     --card-bg:    #ffffff;
     --text:       #212529;
     --text-muted: #6c757d;
     --border:     #dee2e6;
+    --accent:     #e9ab21;       /* naranja del casco */
     --radius:     14px;
 }
 
 body {
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
     font-size: 16px;
-    background: #f0f2f5;
+    background: #f2f3ed;
     color: var(--text);
     min-height: 100vh;
     padding-bottom: 80px;
@@ -81,7 +82,7 @@ body {
 
 #progress-bar {
     height: 100%;
-    background: linear-gradient(90deg, #28a745, #20c997);
+    background: linear-gradient(90deg, #4a5b25, #63783a);
     border-radius: 6px;
     transition: width 0.5s ease;
     width: 0%;
@@ -93,7 +94,7 @@ body {
     align-items: center;
     gap: 8px;
     padding: 8px 16px;
-    background: #e8f5e9;
+    background: #eef1e5;
     font-size: 13px;
     color: #2e7d32;
 }
@@ -335,10 +336,10 @@ body {
 /* ── Modo oscuro (conducción nocturna) ───────────────────────── */
 @media (prefers-color-scheme: dark) {
     :root { --card-bg: #2d2d2d; --text: #e9ecef; --text-muted: #adb5bd; --border: #444; }
-    body  { background: #1a1a2e; }
+    body  { background: #2b3714; }
     .progress-section { background: #2d2d2d; border-color: #444; }
     .modal-sheet      { background: #2d2d2d; }
-    .modal-input      { background: #1a1a2e; color: white; border-color: #555; }
+    .modal-input      { background: #2b3714; color: white; border-color: #5c6a45; }
 }
 
 /* ── Foto / firma en modal ───────────────────────────────────── */

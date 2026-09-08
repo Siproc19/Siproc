@@ -1,6 +1,5 @@
 # -*- coding: utf-8 -*-
 from odoo import models, fields, api
-from datetime import datetime
 import logging
 
 _logger = logging.getLogger(__name__)
@@ -102,7 +101,7 @@ class LogisticsDriver(models.Model):
     @api.depends('last_gps_update')
     def _compute_is_online(self):
         """El piloto está en línea si envió GPS en los últimos 2 minutos."""
-        now = datetime.now()
+        now = fields.Datetime.now()
         for rec in self:
             if rec.last_gps_update:
                 diff = (now - rec.last_gps_update).total_seconds()
@@ -122,7 +121,7 @@ class LogisticsDriver(models.Model):
         Llamado desde el controller del celular del piloto.
         """
         self.ensure_one()
-        now = datetime.now()
+        now = fields.Datetime.now()
         self.write({
             'current_latitude': latitude,
             'current_longitude': longitude,

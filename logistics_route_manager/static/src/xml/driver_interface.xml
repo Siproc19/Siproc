@@ -1,10 +1,10 @@
-<?xml version="1.0" encoding="utf-8"?>
+<?xml version='1.0' encoding='UTF-8'?>
 <odoo>
     <template id="driver_app_template" name="App del Piloto">
         <t t-call="web.layout">
             <t t-set="head">
                 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no"/>
-                <meta name="theme-color" content="#1a1a2e"/>
+                <meta name="theme-color" content="#2b3714"/>
                 <meta name="mobile-web-app-capable" content="yes"/>
                 <meta name="apple-mobile-web-app-capable" content="yes"/>
                 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
@@ -12,8 +12,7 @@
                 <link rel="stylesheet" href="/logistics_route_manager/static/src/css/mobile_driver.css"/>
                 <title>LogiPiloto</title>
             </t>
-            <t t-set="body">
-                <!-- Banner sin conexión -->
+            <!-- Banner sin conexión -->
                 <div id="offline-banner">
                     ⚠️ Sin conexión — Las posiciones GPS se guardarán y enviarán al reconectar
                 </div>
@@ -30,7 +29,7 @@
                                 <t t-else="">Sin ruta asignada hoy</t>
                             </div>
                         </div>
-                        <div id="driver-speed" style="font-size:22px; font-weight:900; color:#20c997;">
+                        <div id="driver-speed" style="font-size:22px; font-weight:900; color:#e9ab21;">
                             0 km/h
                         </div>
                     </div>
@@ -38,7 +37,7 @@
 
                 <!-- GPS status -->
                 <div class="gps-status" id="gps-status">
-                    <div class="gps-dot"></div>
+                    <div class="gps-dot"/>
                     GPS activo — Enviando posición cada <t t-esc="gps_interval"/> segundos
                 </div>
 
@@ -46,15 +45,14 @@
                 <div class="progress-section">
                     <span id="progress-label">Cargando ruta...</span>
                     <div class="progress-bar-track">
-                        <div id="progress-bar" style="width:0%"></div>
+                        <div id="progress-bar" style="width:0%"/>
                     </div>
                 </div>
 
                 <!-- Botón Iniciar Ruta (si no está iniciada) -->
                 <t t-if="route and route.state == 'confirmed'">
                     <div style="padding:16px;">
-                        <button id="start-route-btn"
-                            style="width:100%; padding:20px; background:linear-gradient(135deg,#28a745,#20c997); color:white; border:none; border-radius:14px; font-size:20px; font-weight:900; cursor:pointer; box-shadow:0 4px 16px rgba(40,167,69,0.35);">
+                        <button id="start-route-btn" style="width:100%; padding:20px; background:linear-gradient(135deg,#4a5b25,#63783a); color:white; border:none; border-radius:14px; font-size:20px; font-weight:900; cursor:pointer; box-shadow:0 4px 16px rgba(74,91,37,0.42);">
                             🚀 INICIAR RUTA
                         </button>
                     </div>
@@ -72,7 +70,7 @@
                 </div>
 
                 <!-- Toast container -->
-                <div id="toast-container"></div>
+                <div id="toast-container"/>
 
                 <!-- Modal: Completar tarea -->
                 <div id="complete-modal" class="modal-overlay" data-task-id="">
@@ -89,16 +87,13 @@
                             <label style="font-size:14px; font-weight:600; margin-bottom:6px; display:block;">
                                 ✍️ Firma del Receptor (dibuja en el recuadro)
                             </label>
-                            <canvas id="signature-canvas"></canvas>
-                            <button onclick="document.getElementById('signature-canvas').getContext('2d').clearRect(0,0,999,999)"
-                                style="font-size:12px; color:#dc3545; background:none; border:none; cursor:pointer; padding:4px;">
+                            <canvas id="signature-canvas"/>
+                            <button onclick="document.getElementById('signature-canvas').getContext('2d').clearRect(0,0,999,999)" style="font-size:12px; color:#dc3545; background:none; border:none; cursor:pointer; padding:4px;">
                                 🗑️ Limpiar firma
                             </button>
                         </div>
-                        <input type="text" id="signature-name" class="modal-input"
-                            placeholder="Nombre del firmante (opcional)"/>
-                        <input type="number" id="spent-amount" class="modal-input"
-                            placeholder="Monto gastado en Q (si aplica)" step="0.01"/>
+                        <input type="text" id="signature-name" class="modal-input" placeholder="Nombre del firmante (opcional)"/>
+                        <input type="number" id="spent-amount" class="modal-input" placeholder="Monto gastado en Q (si aplica)" step="0.01"/>
                         <button id="complete-modal-confirm" class="modal-confirm-btn success">
                             ✅ Confirmar Completado
                         </button>
@@ -112,9 +107,7 @@
                             ❌ Reportar Problema
                             <button class="close-modal">✕</button>
                         </div>
-                        <textarea id="fail-reason" class="modal-input"
-                            placeholder="Describe el problema (cliente no disponible, negocio cerrado, dirección incorrecta...)"
-                            rows="4" style="resize:none;"></textarea>
+                        <textarea id="fail-reason" class="modal-input" placeholder="Describe el problema (cliente no disponible, negocio cerrado, dirección incorrecta...)" rows="4" style="resize:none;"/>
                         <button id="fail-modal-confirm" class="modal-confirm-btn danger">
                             ❌ Reportar Problema
                         </button>
@@ -122,8 +115,8 @@
                 </div>
 
                 <!-- Scripts -->
-                <script src="/logistics_route_manager/static/src/js/gps_tracker.js"></script>
-                <script src="/logistics_route_manager/static/src/js/driver_app.js"></script>
+                <script src="/logistics_route_manager/static/src/js/gps_tracker.js"/>
+                <script src="/logistics_route_manager/static/src/js/driver_app.js"/>
                 <script>
                     // Firma canvas táctil
                     const canvas = document.getElementById("signature-canvas");
@@ -132,21 +125,21 @@
                         canvas.width  = canvas.offsetWidth;
                         canvas.height = 150;
                         let drawing = false;
-                        const getPos = (e) => {
+                        const getPos = (e) =&gt; {
                             const r = canvas.getBoundingClientRect();
                             const t = e.touches ? e.touches[0] : e;
                             return { x: t.clientX - r.left, y: t.clientY - r.top };
                         };
-                        canvas.addEventListener("mousedown",  (e) => { drawing = true; ctx.beginPath(); const p = getPos(e); ctx.moveTo(p.x, p.y); });
-                        canvas.addEventListener("mousemove",  (e) => { if (!drawing) return; const p = getPos(e); ctx.lineTo(p.x, p.y); ctx.strokeStyle = "#000"; ctx.lineWidth = 2; ctx.stroke(); });
-                        canvas.addEventListener("mouseup",    () => drawing = false);
-                        canvas.addEventListener("touchstart", (e) => { e.preventDefault(); drawing = true; ctx.beginPath(); const p = getPos(e); ctx.moveTo(p.x, p.y); });
-                        canvas.addEventListener("touchmove",  (e) => { e.preventDefault(); if (!drawing) return; const p = getPos(e); ctx.lineTo(p.x, p.y); ctx.strokeStyle = "#000"; ctx.lineWidth = 2; ctx.stroke(); });
-                        canvas.addEventListener("touchend",   () => drawing = false);
+                        canvas.addEventListener("mousedown",  (e) =&gt; { drawing = true; ctx.beginPath(); const p = getPos(e); ctx.moveTo(p.x, p.y); });
+                        canvas.addEventListener("mousemove",  (e) =&gt; { if (!drawing) return; const p = getPos(e); ctx.lineTo(p.x, p.y); ctx.strokeStyle = "#000"; ctx.lineWidth = 2; ctx.stroke(); });
+                        canvas.addEventListener("mouseup",    () =&gt; drawing = false);
+                        canvas.addEventListener("touchstart", (e) =&gt; { e.preventDefault(); drawing = true; ctx.beginPath(); const p = getPos(e); ctx.moveTo(p.x, p.y); });
+                        canvas.addEventListener("touchmove",  (e) =&gt; { e.preventDefault(); if (!drawing) return; const p = getPos(e); ctx.lineTo(p.x, p.y); ctx.strokeStyle = "#000"; ctx.lineWidth = 2; ctx.stroke(); });
+                        canvas.addEventListener("touchend",   () =&gt; drawing = false);
                     }
 
                     // Iniciar la app del piloto
-                    document.addEventListener("DOMContentLoaded", () => {
+                    document.addEventListener("DOMContentLoaded", () =&gt; {
                         initDriverApp({
                             driverId:   <t t-esc="driver.id"/>,
                             routeId:    <t t-if="route"><t t-esc="route.id"/></t><t t-else="">null</t>,
@@ -157,6 +150,5 @@
                     });
                 </script>
             </t>
-        </t>
     </template>
 </odoo>

@@ -1,0 +1,75 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <record id="logistics_route_from_picking_form" model="ir.ui.view">
+        <field name="name">logistics.route.from.picking.form</field>
+        <field name="model">logistics.route.from.picking</field>
+        <field name="arch" type="xml">
+            <form string="Crear Ruta desde Entregas">
+
+                <div class="alert alert-info" role="status">
+                    Se creará una parada por cada entrega, con el cliente, la
+                    dirección, el contenido y las coordenadas ya cargados.
+                </div>
+
+                <group>
+                    <field name="mode" widget="radio" options="{'horizontal': true}"/>
+                </group>
+
+                <group invisible="mode != 'new'">
+                    <group string="Ruta nueva">
+                        <field name="date" required="mode == 'new'"/>
+                        <field name="driver_id" required="mode == 'new'"
+                               options="{'no_create': True}"/>
+                        <field name="vehicle_id" required="mode == 'new'"
+                               options="{'no_create': True}"/>
+                    </group>
+                </group>
+
+                <group invisible="mode != 'existing'">
+                    <field name="route_id" required="mode == 'existing'"
+                           options="{'no_create': True}"/>
+                </group>
+
+                <separator string="Entregas seleccionadas"/>
+                <field name="picking_count" invisible="1"/>
+                <field name="picking_ids" readonly="1">
+                    <list>
+                        <field name="name"/>
+                        <field name="partner_id"/>
+                        <field name="scheduled_date"/>
+                        <field name="x_logistics_route_id" string="Ruta actual"/>
+                        <field name="state"/>
+                    </list>
+                </field>
+
+                <div class="alert alert-warning" role="alert"
+                     invisible="not warning">
+                    <field name="warning" nolabel="1" readonly="1"/>
+                </div>
+
+                <footer>
+                    <button string="Crear ruta" name="action_create"
+                            type="object" class="btn-primary"/>
+                    <button string="Cancelar" class="btn-secondary"
+                            special="cancel"/>
+                </footer>
+            </form>
+        </field>
+    </record>
+
+    <!-- Aparece en Inventario → Transferencias → Acciones -->
+    <record id="action_logistics_route_from_picking" model="ir.actions.act_window">
+        <field name="name">Crear ruta desde entregas</field>
+        <field name="res_model">logistics.route.from.picking</field>
+        <field name="view_mode">form</field>
+        <field name="target">new</field>
+        <field name="binding_model_id" ref="stock.model_stock_picking"/>
+        <field name="binding_view_types">list</field>
+        <!-- En Odoo 19 el campo de ir.actions.act_window es group_ids. -->
+        <field name="group_ids"
+               eval="[(4, ref('logistics_route_manager.group_logistics_manager')),
+                      (4, ref('logistics_route_manager.group_logistics_user'))]"/>
+    </record>
+
+</odoo>
