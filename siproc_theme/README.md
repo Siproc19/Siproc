@@ -42,3 +42,29 @@ las de Odoo nunca llegan a aplicarse.
 No se parchea ni se sobrescribe ningún archivo del núcleo de Odoo: es el
 mismo mecanismo que usan los addons oficiales, y sobrevive a las
 actualizaciones de versión.
+
+## Si después de instalar sigue morado
+
+En orden, esto es lo que hay que revisar:
+
+1. **¿Llegó el módulo al servidor?** Abrir en el navegador
+   `https://<su-dominio>/siproc_theme/static/src/scss/primary_variables.scss`.
+   Si da 404, el archivo no está desplegado: falta el push o la build de
+   Odoo.sh no lo tomó.
+2. **¿Está instalado, no solo listado?** Aplicaciones → quitar el filtro
+   "Aplicaciones" → buscar `siproc` → el botón debe decir **Desinstalar**
+   (si dice *Instalar*, nunca se instaló).
+3. **¿Se regeneraron los estilos?** Con modo desarrollador activo:
+   Ajustes → Técnico → **Regenerar paquetes de recursos**.
+4. **Caché del navegador:** `Ctrl + Shift + R` (o abrir en incógnito).
+5. **¿Está viendo la rama correcta?** En Odoo.sh, producción y staging son
+   instancias distintas.
+
+## Nota técnica: por qué las variables van en `data/assets.xml`
+
+Odoo procesa primero los registros `ir.asset` con secuencia menor que 16 y
+después lo que declaran los manifiestos. Declarando las variables como un
+`ir.asset` de secuencia 1, este archivo queda garantizado al principio del
+bundle — antes que el de `web` y, sobre todo, antes que el de
+`web_enterprise`, que define el morado y en el mismo archivo deriva de él
+los colores de la barra superior.

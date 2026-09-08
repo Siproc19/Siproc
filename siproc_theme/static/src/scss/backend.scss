@@ -11,3 +11,24 @@
     --btn-hover-border-color: #{darken($siproc-naranja, 8%)};
     --btn-hover-color: #3d2f00;
 }
+
+// ── Red de seguridad para la barra superior ───────────────────────────
+//
+// En Community la barra ya sale verde solo con las variables. En
+// Enterprise, `web_enterprise` deriva el color de la barra dentro del
+// mismo archivo donde define el morado, así que si por lo que sea
+// nuestras variables llegaran tarde, la barra se quedaría morada.
+//
+// Este bloque se carga en `web.assets_backend`, que va después de todo,
+// y fija el color sin depender de ninguna variable de Odoo.
+.o_main_navbar {
+    background-color: $siproc-verde;
+    border-bottom-color: $siproc-verde-osc;
+}
+
+// La barra de la app "Ajustes" y el menú de sistema comparten el mismo
+// color de marca.
+.o_navbar_apps_menu .dropdown-toggle,
+.o_main_navbar .o_menu_brand {
+    background-color: transparent;
+}

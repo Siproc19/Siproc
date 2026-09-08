@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 {
     'name': 'SIPROC — Identidad Visual',
-    'version': '19.0.1.0.0',
+    'version': '19.0.1.1.0',
     'category': 'Theme/Backend',
     'summary': 'Pinta Odoo con los colores de SIPROC en lugar de los de Odoo',
 
@@ -39,12 +39,15 @@ aviso — se dejan intactos: son los que el usuario interpreta de un vistazo.
     # correo; viene instalado en cualquier Odoo.
     'depends': ['web', 'mail'],
 
+    # Las variables de color NO se declaran aquí sino en data/assets.xml,
+    # como un ir.asset de secuencia 1. Es la única forma de garantizar que
+    # se carguen antes que las de `web_enterprise`. Ver el comentario de
+    # ese archivo.
+    'data': [
+        'data/assets.xml',
+    ],
+
     'assets': {
-        # Se cargan antes que las de Odoo: al llevar `!default`, las suyas
-        # ya no se aplican. Es el patrón que usan los addons oficiales.
-        'web._assets_primary_variables': [
-            ('prepend', 'siproc_theme/static/src/scss/primary_variables.scss'),
-        ],
         # Retoques que no dependen de variables.
         'web.assets_backend': [
             'siproc_theme/static/src/scss/backend.scss',

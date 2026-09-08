@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!--
+        Las variables de color se cargan con un registro ir.asset de
+        secuencia 1 en lugar de declararlas en el manifiesto.
+
+        Motivo: Odoo procesa PRIMERO todos los ir.asset con secuencia
+        menor que 16 y DESPUÉS lo que declaran los manifiestos (ver
+        odoo/addons/base/models/ir_asset.py, DEFAULT_SEQUENCE = 16).
+
+        Así este archivo queda garantizado al principio del bundle, antes
+        que el de `web` y también antes que el de `web_enterprise`. Es lo
+        que hace falta para que gane en Enterprise: ahí `web_enterprise`
+        define el morado y en el mismo archivo deriva de él los colores
+        de la barra superior, así que llegar después no bastaba.
+    -->
+    <record id="asset_primary_variables" model="ir.asset">
+        <field name="name">SIPROC — variables de color</field>
+        <field name="bundle">web._assets_primary_variables</field>
+        <field name="directive">prepend</field>
+        <field name="path">siproc_theme/static/src/scss/primary_variables.scss</field>
+        <field name="sequence">1</field>
+    </record>
+</odoo>
