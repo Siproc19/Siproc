@@ -1,0 +1,13 @@
+// Retoques que no salen de una variable de Odoo.
+
+// El botón de acción principal usa el naranja del casco, para que
+// destaque sobre el verde de la barra y de los botones secundarios.
+.o_form_button_save,
+.o_list_button_save {
+    --btn-bg: #{$siproc-naranja};
+    --btn-border-color: #{$siproc-naranja};
+    --btn-color: #3d2f00;
+    --btn-hover-bg: #{darken($siproc-naranja, 8%)};
+    --btn-hover-border-color: #{darken($siproc-naranja, 8%)};
+    --btn-hover-color: #3d2f00;
+}

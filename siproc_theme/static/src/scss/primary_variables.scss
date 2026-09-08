@@ -1,0 +1,30 @@
+// ═══════════════════════════════════════════════════════════════
+//  Colores de marca de SIPROC
+//
+//  Odoo declara estas variables con `!default`, o sea "usa este valor
+//  solo si nadie lo definió antes". Como este archivo se carga con
+//  `prepend`, las nuestras ganan y las de Odoo nunca se aplican.
+//
+//  Tomados del logo original:
+//    verde oliva  #4A5B25  (letras y engranaje)
+//    naranja      #E9AB21  (casco)
+// ═══════════════════════════════════════════════════════════════
+
+$siproc-verde:        #4a5b25;
+$siproc-verde-osc:    #2b3714;
+$siproc-verde-claro:  #63783a;
+$siproc-naranja:      #e9ab21;
+
+// ── Color de marca ────────────────────────────────────────────
+// $o-community-color y $o-enterprise-color son la base de la que
+// Odoo deriva la barra superior y los acentos. Se definen ambos
+// para que funcione igual en Community y en Enterprise.
+$o-community-color:        $siproc-verde;
+$o-enterprise-color:       $siproc-verde;
+$o-enterprise-action-color: $siproc-naranja;
+
+$o-brand-odoo:      $siproc-verde;
+$o-brand-primary:   $siproc-verde;
+
+// ── Acentos derivados ─────────────────────────────────────────
+$o-brand-secondary: #6b7a52;
