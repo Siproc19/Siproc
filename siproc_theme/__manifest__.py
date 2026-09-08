@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 {
     'name': 'SIPROC — Identidad Visual',
-    'version': '19.0.2.0.0',
+    'version': '19.0.2.0.1',
     'category': 'Theme/Backend',
     'summary': 'Pinta Odoo con los colores de SIPROC en lugar de los de Odoo',
 
