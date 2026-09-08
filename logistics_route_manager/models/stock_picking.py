@@ -28,17 +28,14 @@ class StockPicking(models.Model):
     x_logistics_route_id = fields.Many2one(
         'logistics.route', string='Ruta Logística',
         copy=False, readonly=True,
-        groups=GRUPOS_LOGISTICA,
     )
     x_logistics_driver_id = fields.Many2one(
         'logistics.driver', string='Piloto',
         related='x_logistics_route_id.driver_id', store=True, readonly=True,
-        groups=GRUPOS_LOGISTICA,
     )
     x_logistics_vehicle_id = fields.Many2one(
         'logistics.vehicle', string='Vehículo',
         related='x_logistics_route_id.vehicle_id', store=True, readonly=True,
-        groups=GRUPOS_LOGISTICA,
     )
     x_logistics_date = fields.Date(
         string='Fecha de Ruta',

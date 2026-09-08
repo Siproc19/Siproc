@@ -38,15 +38,17 @@ class SaleOrder(models.Model):
         string='Paradas de Ruta', copy=False,
         groups=GRUPOS_LOGISTICA,
     )
+    # Sin `groups=`: cualquier usuario interno tiene lectura sobre piloto y
+    # vehículo (ver security/ir.model.access.csv). Ponerles candado a nivel
+    # de campo hacía reventar cualquier vista, filtro guardado o
+    # personalización de Studio que los mencionara.
     logistics_driver_id = fields.Many2one(
         'logistics.driver', string='Piloto Asignado',
         compute='_compute_logistics_info',
-        groups=GRUPOS_LOGISTICA,
     )
     logistics_vehicle_id = fields.Many2one(
         'logistics.vehicle', string='Vehículo Asignado',
         compute='_compute_logistics_info',
-        groups=GRUPOS_LOGISTICA,
     )
 
     # ── Resumen: lo ve cualquier usuario interno ─────────────────────────
@@ -125,9 +127,6 @@ class SaleOrder(models.Model):
             rec.logistics_vehicle_name = (
                 route.vehicle_id.display_name if route else False
             )
-            # Estos dos se calculan siempre — un compute está obligado a
-            # asignar todos sus campos — pero solo se le entregan a quien
-            # esté en un grupo de logística, por el `groups=` del campo.
             rec.logistics_driver_id = route.driver_id.id if route else False
             rec.logistics_vehicle_id = route.vehicle_id.id if route else False
 
