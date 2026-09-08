@@ -1,0 +1,163 @@
+<?xml version="1.0" encoding="utf-8"?>
+<templates xml:space="preserve">
+
+    <t t-name="logistics_route_manager.ControlTower">
+        <div class="o_logistics_tower h-100">
+
+            <div t-if="state.error" class="alert alert-danger m-3" role="alert">
+                <t t-esc="state.error"/>
+            </div>
+
+            <t t-if="!state.error">
+                <!-- Encabezado con los indicadores del día -->
+                <div class="o_logistics_tower_header">
+                    <div class="o_logistics_tower_title">
+                        <h2>Torre de Control</h2>
+                        <span class="o_logistics_tower_date">
+                            Rutas del <t t-esc="state.date"/>
+                            <t t-if="state.lastRefresh">
+                                · actualizado <t t-esc="state.lastRefresh"/>
+                            </t>
+                        </span>
+                    </div>
+
+                    <div class="o_logistics_kpis">
+                        <div class="o_logistics_kpi">
+                            <span class="o_logistics_kpi_value"><t t-esc="state.summary.routes"/></span>
+                            <span class="o_logistics_kpi_label">Rutas activas</span>
+                        </div>
+                        <div class="o_logistics_kpi is-online">
+                            <span class="o_logistics_kpi_value"><t t-esc="state.summary.online"/></span>
+                            <span class="o_logistics_kpi_label">En línea</span>
+                        </div>
+                        <div class="o_logistics_kpi is-offline">
+                            <span class="o_logistics_kpi_value"><t t-esc="state.summary.offline"/></span>
+                            <span class="o_logistics_kpi_label">Sin señal</span>
+                        </div>
+                        <div class="o_logistics_kpi is-warning">
+                            <span class="o_logistics_kpi_value"><t t-esc="state.summary.deviated"/></span>
+                            <span class="o_logistics_kpi_label">Desviados</span>
+                        </div>
+                        <div class="o_logistics_kpi">
+                            <span class="o_logistics_kpi_value">
+                                <t t-esc="state.summary.completed_tasks"/>/<t t-esc="state.summary.total_tasks"/>
+                            </span>
+                            <span class="o_logistics_kpi_label">
+                                Paradas (<t t-esc="state.summary.progress"/>%)
+                            </span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Alertas activas -->
+                <div t-if="state.alerts.length" class="o_logistics_alerts">
+                    <div t-foreach="state.alerts" t-as="alert" t-key="alert_index"
+                         t-attf-class="o_logistics_alert is-{{ alert.type }}">
+                        <span class="o_logistics_alert_tag">
+                            <t t-esc="alert.type === 'deviation' ? 'Desvío' : 'Sin señal'"/>
+                        </span>
+                        <span t-esc="alert.message"/>
+                    </div>
+                </div>
+
+                <div class="o_logistics_tower_body">
+                    <!-- Panel lateral: la flota -->
+                    <aside class="o_logistics_fleet">
+                        <div class="o_logistics_filters">
+                            <button type="button"
+                                    t-attf-class="btn btn-sm {{ state.filter === 'all' ? 'btn-primary' : 'btn-outline-secondary' }}"
+                                    t-on-click="() => this.setFilter('all')">
+                                Todos
+                            </button>
+                            <button type="button"
+                                    t-attf-class="btn btn-sm {{ state.filter === 'online' ? 'btn-primary' : 'btn-outline-secondary' }}"
+                                    t-on-click="() => this.setFilter('online')">
+                                En línea
+                            </button>
+                            <button type="button"
+                                    t-attf-class="btn btn-sm {{ state.filter === 'offline' ? 'btn-primary' : 'btn-outline-secondary' }}"
+                                    t-on-click="() => this.setFilter('offline')">
+                                Sin señal
+                            </button>
+                            <button type="button"
+                                    t-attf-class="btn btn-sm {{ state.filter === 'deviated' ? 'btn-primary' : 'btn-outline-secondary' }}"
+                                    t-on-click="() => this.setFilter('deviated')">
+                                Desviados
+                            </button>
+                        </div>
+
+                        <div t-if="state.loading" class="o_logistics_empty">Cargando flota…</div>
+
+                        <div t-elif="!visibleFleet.length" class="o_logistics_empty">
+                            No hay rutas que coincidan con este filtro.
+                        </div>
+
+                        <div t-else="" class="o_logistics_fleet_list">
+                            <div t-foreach="visibleFleet" t-as="unit" t-key="unit.route_id"
+                                 t-attf-class="o_logistics_unit {{ state.selectedRouteId === unit.route_id ? 'is-selected' : '' }} {{ unit.deviated ? 'is-deviated' : '' }}"
+                                 t-on-click="() => this.selectUnit(unit)">
+
+                                <div class="o_logistics_unit_top">
+                                    <span t-attf-class="o_logistics_dot is-{{ unit.gps_status }}"/>
+                                    <span class="o_logistics_unit_driver" t-esc="unit.driver_name"/>
+                                    <span class="o_logistics_unit_speed"><t t-esc="unit.speed"/> km/h</span>
+                                </div>
+
+                                <div class="o_logistics_unit_meta">
+                                    <t t-esc="unit.vehicle_name"/> · <t t-esc="unit.vehicle_plate"/>
+                                    <span class="o_logistics_sep">·</span>
+                                    <t t-esc="unit.route_name"/>
+                                </div>
+
+                                <div class="o_logistics_progress">
+                                    <div class="o_logistics_progress_bar"
+                                         t-attf-style="width: {{ unit.progress }}%;"/>
+                                </div>
+                                <div class="o_logistics_unit_meta">
+                                    <t t-esc="unit.completed_tasks"/> / <t t-esc="unit.total_tasks"/> paradas
+                                    <span class="o_logistics_sep">·</span>
+                                    <t t-esc="statusLabel(unit.gps_status)"/>
+                                    <t t-if="unit.minutes_since_gps">
+                                        (hace <t t-esc="unit.minutes_since_gps"/> min)
+                                    </t>
+                                </div>
+
+                                <div t-if="unit.next_task_name" class="o_logistics_unit_next">
+                                    Siguiente: <t t-esc="unit.next_task_name"/>
+                                    <t t-if="unit.deviated">
+                                        <span class="o_logistics_unit_warn">
+                                            a <t t-esc="unit.deviation_km"/> km
+                                        </span>
+                                    </t>
+                                </div>
+
+                                <div class="o_logistics_unit_actions">
+                                    <button type="button" class="btn btn-sm btn-link p-0"
+                                            t-on-click.stop="() => this.openRoute(unit)">
+                                        Abrir ruta
+                                    </button>
+                                    <a t-if="unit.driver_phone"
+                                       t-attf-href="tel:{{ unit.driver_phone }}"
+                                       class="btn btn-sm btn-link p-0"
+                                       t-on-click.stop="() => {}">
+                                        Llamar
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    </aside>
+
+                    <!-- Mapa de la flota -->
+                    <div class="o_logistics_tower_map">
+                        <button type="button" class="btn btn-sm btn-light o_logistics_fit_btn"
+                                t-on-click="() => this.fitAll()">
+                            Ver toda la flota
+                        </button>
+                        <div class="o_logistics_map_canvas" t-ref="map"/>
+                    </div>
+                </div>
+            </t>
+        </div>
+    </t>
+
+</templates>

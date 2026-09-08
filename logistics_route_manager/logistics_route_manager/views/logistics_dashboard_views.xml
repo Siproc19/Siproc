@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!--
+        Torre de Control — vista en vivo de toda la flota.
+        Pensada para Gerencia y Jefatura de Bodega: todos los pilotos y
+        vehículos del día en un solo mapa, con alertas de desvío y de
+        pérdida de señal GPS.
+    -->
+    <record id="logistics_control_tower_action" model="ir.actions.client">
+        <field name="name">Torre de Control</field>
+        <field name="tag">logistics_control_tower</field>
+    </record>
+
+</odoo>

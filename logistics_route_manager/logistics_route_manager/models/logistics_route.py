@@ -2,11 +2,28 @@
 from odoo import models, fields, api, _
 from odoo.exceptions import UserError
 from datetime import datetime, timedelta
+from math import radians, sin, cos, sqrt, atan2
 import json
 import requests
 import logging
 
 _logger = logging.getLogger(__name__)
+
+# Umbral de desvío por defecto, en kilómetros. Configurable en Ajustes.
+DEFAULT_DEVIATION_KM = 1.0
+
+
+def haversine_km(lat1, lon1, lat2, lon2):
+    """Distancia en kilómetros entre dos coordenadas. 0.0 si falta alguna."""
+    if not all([lat1, lon1, lat2, lon2]):
+        return 0.0
+    dlat = radians(lat2 - lat1)
+    dlon = radians(lon2 - lon1)
+    a = (
+        sin(dlat / 2) ** 2
+        + cos(radians(lat1)) * cos(radians(lat2)) * sin(dlon / 2) ** 2
+    )
+    return 6371.0 * 2 * atan2(sqrt(a), sqrt(1 - a))
 
 
 class LogisticsRoute(models.Model):
@@ -93,6 +110,28 @@ class LogisticsRoute(models.Model):
     )
     traffic_updated_at = fields.Datetime(string='Tráfico Actualizado')
     notes = fields.Text(string='Observaciones')
+
+
+    driver_current_latitude = fields.Float(
+        string='Latitud Piloto',
+        related='driver_id.current_latitude',
+        readonly=True,
+    )
+    driver_current_longitude = fields.Float(
+        string='Longitud Piloto',
+        related='driver_id.current_longitude',
+        readonly=True,
+    )
+    driver_last_gps_update = fields.Datetime(
+        string='Último GPS Piloto',
+        related='driver_id.last_gps_update',
+        readonly=True,
+    )
+    driver_is_online = fields.Boolean(
+        string='Piloto en Línea',
+        related='driver_id.is_online',
+        readonly=True,
+    )
 
     # ── Computed ──────────────────────────────────────────────────────────────
     @api.depends('task_ids', 'task_ids.state')
@@ -276,7 +315,7 @@ class LogisticsRoute(models.Model):
             data = response.json()
             if data.get('status') == 'OK':
                 elements = data['rows'][0]['elements']
-                now = datetime.now()
+                now = fields.Datetime.now()
                 cumulative_seconds = 0
                 for i, task in enumerate(pending_tasks):
                     if i < len(elements) and elements[i]['status'] == 'OK':
@@ -301,6 +340,15 @@ class LogisticsRoute(models.Model):
             'view_mode': 'form',
             'views': [(self.env.ref('logistics_route_manager.logistics_route_map_form').id, 'form')],
             'target': 'current',
+        }
+
+    def action_open_driver_app(self):
+        """Abre la app móvil del piloto en una nueva pestaña."""
+        self.ensure_one()
+        return {
+            'type': 'ir.actions.act_url',
+            'url': '/logistics/driver/app',
+            'target': 'new',
         }
 
     def get_route_data_json(self):
@@ -334,4 +382,191 @@ class LogisticsRoute(models.Model):
             } for t in self.task_ids],
             'polyline': json.loads(self.route_polyline) if self.route_polyline else None,
             'progress': self.progress_percentage,
+        }
+
+    # ── Datos para los mapas ──────────────────────────────────────────────────
+    def _get_deviation_threshold_km(self):
+        """Umbral de desvío configurado, en kilómetros."""
+        param = self.env['ir.config_parameter'].sudo().get_param(
+            'logistics.deviation_threshold_km', DEFAULT_DEVIATION_KM
+        )
+        try:
+            return float(param)
+        except (TypeError, ValueError):
+            return DEFAULT_DEVIATION_KM
+
+    def _get_next_task(self):
+        """Siguiente parada del piloto: la primera no cerrada, por secuencia."""
+        self.ensure_one()
+        pending = self.task_ids.filtered(
+            lambda t: t.state in ('pending', 'in_transit', 'arrived')
+        )
+        return pending.sorted('sequence')[:1]
+
+    def _get_deviation_info(self):
+        """
+        Distancia del piloto a su siguiente parada y si supera el umbral.
+        Devuelve (km, desviado, mensaje).
+        """
+        self.ensure_one()
+        next_task = self._get_next_task()
+        driver = self.driver_id
+        if not next_task or not driver.current_latitude or not next_task.latitude:
+            return 0.0, False, ''
+        km = haversine_km(
+            driver.current_latitude, driver.current_longitude,
+            next_task.latitude, next_task.longitude,
+        )
+        threshold = self._get_deviation_threshold_km()
+        if km >= threshold:
+            return km, True, _(
+                '%(driver)s está a %(km).2f km de su siguiente parada (%(task)s).',
+                driver=driver.name or '', km=km, task=next_task.name or '',
+            )
+        return km, False, ''
+
+    def get_gps_track(self, limit=500):
+        """Recorrido GPS real de la ruta, en orden cronológico."""
+        self.ensure_one()
+        history = self.env['logistics.gps.history'].search(
+            [('route_id', '=', self.id)],
+            order='timestamp asc',
+            limit=limit,
+        )
+        return [
+            [h.latitude, h.longitude]
+            for h in history
+            if h.latitude and h.longitude
+        ]
+
+    def get_route_map_data(self):
+        """
+        Todo lo que el mapa de una ruta necesita: paradas, posición del
+        piloto, recorrido real y estado de desvío.
+        """
+        self.ensure_one()
+        data = self.get_route_data_json()
+        km, deviated, message = self._get_deviation_info()
+        next_task = self._get_next_task()
+        data.update({
+            'gps_track': self.get_gps_track(),
+            'deviation_km': round(km, 3),
+            'deviated': deviated,
+            'deviation_message': message,
+            'next_task_id': next_task.id if next_task else False,
+            'vehicle': {
+                'id': self.vehicle_id.id,
+                'name': self.vehicle_id.name,
+                'plate': self.vehicle_id.plate,
+                'type': self.vehicle_id.vehicle_type,
+            },
+            'total_tasks': self.total_tasks,
+            'completed_tasks': self.completed_tasks,
+        })
+        return data
+
+    @api.model
+    def get_control_tower_data(self, date_str=False):
+        """
+        Estado de toda la flota para la Torre de Control de Gerencia y
+        Jefatura de Bodega: un registro por ruta activa, con la posición
+        del piloto, el vehículo, el avance y las alertas de desvío.
+
+        Respeta las reglas de registro: un piloto solo verá sus rutas.
+        """
+        target_date = fields.Date.to_date(date_str) if date_str else fields.Date.context_today(self)
+        routes = self.search([
+            ('date', '=', target_date),
+            ('state', 'in', ('confirmed', 'in_progress')),
+        ], order='name asc')
+
+        fleet = []
+        alerts = []
+        for route in routes:
+            driver = route.driver_id
+            km, deviated, message = route._get_deviation_info()
+            next_task = route._get_next_task()
+
+            if not driver.last_gps_update:
+                gps_status = 'offline'
+                minutes_since = False
+            else:
+                seconds = (fields.Datetime.now() - driver.last_gps_update).total_seconds()
+                minutes_since = round(seconds / 60.0, 1)
+                if seconds <= 120:
+                    gps_status = 'online'
+                elif seconds <= 600:
+                    gps_status = 'delay'
+                else:
+                    gps_status = 'offline'
+
+            fleet.append({
+                'route_id': route.id,
+                'route_name': route.name,
+                'state': route.state,
+                'driver_id': driver.id,
+                'driver_name': driver.name,
+                'driver_phone': driver.phone or '',
+                'vehicle_name': route.vehicle_id.name,
+                'vehicle_plate': route.vehicle_id.plate,
+                'vehicle_type': route.vehicle_id.vehicle_type,
+                'latitude': driver.current_latitude,
+                'longitude': driver.current_longitude,
+                'speed': round(driver.current_speed or 0.0, 1),
+                'heading': driver.current_heading or 0.0,
+                'gps_status': gps_status,
+                'minutes_since_gps': minutes_since,
+                'last_gps_update': driver.last_gps_update.isoformat() if driver.last_gps_update else None,
+                'total_tasks': route.total_tasks,
+                'completed_tasks': route.completed_tasks,
+                'progress': round(route.progress_percentage, 1),
+                'next_task_name': next_task.name if next_task else '',
+                'next_task_address': next_task.address if next_task else '',
+                'next_task_lat': next_task.latitude if next_task else 0.0,
+                'next_task_lng': next_task.longitude if next_task else 0.0,
+                'deviation_km': round(km, 2),
+                'deviated': deviated,
+            })
+
+            if deviated:
+                alerts.append({
+                    'type': 'deviation',
+                    'route_id': route.id,
+                    'driver_name': driver.name,
+                    'message': message,
+                })
+            if gps_status == 'offline' and route.state == 'in_progress':
+                if minutes_since:
+                    message = _(
+                        '%(driver)s no envía GPS desde hace %(minutes)s minutos.',
+                        driver=driver.name or '', minutes=int(minutes_since),
+                    )
+                else:
+                    message = _(
+                        '%(driver)s no ha enviado GPS desde que inició la ruta.',
+                        driver=driver.name or '',
+                    )
+                alerts.append({
+                    'type': 'offline',
+                    'route_id': route.id,
+                    'driver_name': driver.name,
+                    'message': message,
+                })
+
+        total_tasks = sum(f['total_tasks'] for f in fleet)
+        completed_tasks = sum(f['completed_tasks'] for f in fleet)
+        return {
+            'date': str(target_date),
+            'fleet': fleet,
+            'alerts': alerts,
+            'summary': {
+                'routes': len(fleet),
+                'in_progress': len([f for f in fleet if f['state'] == 'in_progress']),
+                'online': len([f for f in fleet if f['gps_status'] == 'online']),
+                'offline': len([f for f in fleet if f['gps_status'] == 'offline']),
+                'deviated': len([f for f in fleet if f['deviated']]),
+                'total_tasks': total_tasks,
+                'completed_tasks': completed_tasks,
+                'progress': round(completed_tasks / total_tasks * 100, 1) if total_tasks else 0.0,
+            },
         }

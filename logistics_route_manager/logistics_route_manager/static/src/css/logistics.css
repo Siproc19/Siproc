@@ -1,0 +1,532 @@
+/* ═══════════════════════════════════════════════════════════════
+   logistics.css — Estilos del módulo de logística para Odoo 19
+   Responsive: PC, Tablet y Móvil
+═══════════════════════════════════════════════════════════════ */
+
+/* ── Mapa embebido en Odoo ─────────────────────────────────────────────────── */
+.logistics_map_container {
+    margin: 16px 0;
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.1);
+}
+
+#logistics_route_map {
+    width: 100%;
+    height: 450px;
+    border-radius: 12px;
+    border: 2px solid #dee2e6;
+}
+
+.logistics_map_controls {
+    display: flex;
+    gap: 8px;
+    padding: 12px 0;
+    flex-wrap: wrap;
+}
+
+/* ── Botones de navegación Waze / Google Maps ──────────────────────────────── */
+.logistics-waze-btn,
+.logistics-gmaps-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 20px;
+    border-radius: 10px;
+    border: none;
+    font-size: 15px;
+    font-weight: 700;
+    color: white;
+    cursor: pointer;
+    transition: transform 0.15s, box-shadow 0.15s;
+    box-shadow: 0 3px 10px rgba(0,0,0,0.2);
+}
+
+.logistics-waze-btn {
+    background: linear-gradient(135deg, #05C8F7, #0099CC);
+}
+
+.logistics-gmaps-btn {
+    background: linear-gradient(135deg, #4285F4, #1A56CC);
+}
+
+.logistics-waze-btn:hover,
+.logistics-gmaps-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 16px rgba(0,0,0,0.25);
+    color: white;
+}
+
+.logistics-waze-btn:active,
+.logistics-gmaps-btn:active {
+    transform: translateY(0);
+}
+
+/* ── Indicador de estado en línea del piloto ──────────────────────────────── */
+.driver-online-indicator {
+    display: inline-block;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: #28a745;
+    animation: pulse 1.5s infinite;
+    margin-right: 6px;
+}
+
+@keyframes pulse {
+    0%   { box-shadow: 0 0 0 0 rgba(40,167,69, 0.6); }
+    70%  { box-shadow: 0 0 0 8px rgba(40,167,69, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(40,167,69, 0); }
+}
+
+/* ── Barra de progreso de la ruta ─────────────────────────────────────────── */
+.logistics-progress-bar {
+    height: 10px;
+    border-radius: 5px;
+    background: #e9ecef;
+    overflow: hidden;
+    margin: 8px 0;
+}
+
+.logistics-progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #4a5b25, #63783a);
+    border-radius: 5px;
+    transition: width 0.5s ease;
+}
+
+/* ── Tabla de tareas con colores por estado ───────────────────────────────── */
+.o_list_view .o_data_row.state-completed td { background: rgba(40,167,69,0.08); }
+.o_list_view .o_data_row.state-failed    td { background: rgba(220,53,69,0.08); }
+.o_list_view .o_data_row.state-arrived   td { background: rgba(255,193,7,0.12); }
+.o_list_view .o_data_row.state-in_transit td { background: rgba(13,110,253,0.08); }
+
+/* ── Responsive: Tablet ────────────────────────────────────────────────────── */
+@media (max-width: 1024px) {
+    #logistics_route_map { height: 350px; }
+    .logistics_map_controls { gap: 6px; }
+    .logistics-waze-btn, .logistics-gmaps-btn { font-size: 14px; padding: 10px 16px; }
+}
+
+/* ── Responsive: Móvil ─────────────────────────────────────────────────────── */
+@media (max-width: 768px) {
+    #logistics_route_map { height: 280px; }
+    .logistics_map_controls { flex-direction: column; }
+    .logistics-waze-btn, .logistics-gmaps-btn { width: 100%; justify-content: center; }
+}
+
+
+/* ═══════════════════════════════════════════════════════════════
+   Mapas Leaflet — widget de ruta y Torre de Control
+═══════════════════════════════════════════════════════════════ */
+
+/* ── Marcadores construidos con divIcon (sin PNG de Leaflet) ──────────────── */
+.o_logistics_driver_icon,
+.o_logistics_stop_icon {
+    background: transparent;
+    border: none;
+}
+
+.o_logistics_driver_pin {
+    position: relative;
+    width: 38px;
+    height: 38px;
+    border-radius: 50%;
+    background: #ffffff;
+    border: 3px solid #198754;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
+}
+
+.o_logistics_driver_pin i {
+    position: absolute;
+    right: -2px;
+    bottom: -2px;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    border: 2px solid #ffffff;
+}
+
+.o_logistics_stop_pin {
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+    color: #ffffff;
+    font-size: 12px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 2px solid #ffffff;
+    box-shadow: 0 1px 5px rgba(0, 0, 0, 0.3);
+}
+
+/* ── Popups ───────────────────────────────────────────────────────────────── */
+.o_logistics_popup {
+    font-size: 13px;
+    line-height: 1.5;
+    min-width: 180px;
+}
+
+.o_logistics_popup_title {
+    font-weight: 700;
+    font-size: 14px;
+    margin-bottom: 4px;
+}
+
+.o_logistics_popup_nav {
+    margin-top: 6px;
+    display: flex;
+    gap: 10px;
+}
+
+/* ── Indicadores de estado ────────────────────────────────────────────────── */
+.o_logistics_dot {
+    display: inline-block;
+    width: 9px;
+    height: 9px;
+    border-radius: 50%;
+    background: #adb5bd;
+    flex: 0 0 auto;
+}
+
+.o_logistics_dot.is-online { background: #198754; }
+.o_logistics_dot.is-delay { background: #ffc107; }
+.o_logistics_dot.is-offline { background: #dc3545; }
+
+.o_logistics_sep {
+    opacity: 0.45;
+    margin: 0 2px;
+}
+
+/* ── Widget de mapa dentro del formulario de ruta ─────────────────────────── */
+.o_logistics_map_widget {
+    margin: 12px 0 20px;
+}
+
+.o_logistics_map_bar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    margin-bottom: 10px;
+}
+
+.o_logistics_map_status {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 13px;
+    font-weight: 500;
+}
+
+.o_logistics_map_actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+.o_logistics_map_canvas {
+    width: 100%;
+    height: 460px;
+    border-radius: 10px;
+    border: 1px solid #dee2e6;
+    z-index: 0;
+}
+
+.o_logistics_deviation {
+    margin-bottom: 10px;
+    padding: 8px 12px;
+    font-size: 13px;
+}
+
+.o_logistics_map_legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 14px;
+    margin-top: 8px;
+    font-size: 12px;
+    opacity: 0.85;
+}
+
+.o_logistics_map_legend i {
+    display: inline-block;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    margin-right: 4px;
+    vertical-align: middle;
+}
+
+.o_logistics_map_legend .o_logistics_legend_line {
+    width: 18px;
+    height: 3px;
+    border-radius: 2px;
+    background: #3d4c1e;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   Torre de Control
+═══════════════════════════════════════════════════════════════ */
+.o_logistics_tower {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    overflow: hidden;
+    background: #f7f8f2;
+}
+
+.o_logistics_tower_header {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 14px 20px;
+    background: #ffffff;
+    border-bottom: 1px solid #dee2e6;
+}
+
+.o_logistics_tower_title h2 {
+    margin: 0;
+    font-size: 20px;
+    font-weight: 700;
+}
+
+.o_logistics_tower_date {
+    font-size: 12px;
+    opacity: 0.65;
+}
+
+.o_logistics_kpis {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.o_logistics_kpi {
+    min-width: 92px;
+    padding: 8px 14px;
+    border-radius: 10px;
+    background: #f1f3f5;
+    border: 1px solid #e3e6ea;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+}
+
+.o_logistics_kpi.is-online { background: #e8f5ee; border-color: #b7e0c8; }
+.o_logistics_kpi.is-offline { background: #fdeaec; border-color: #f5c2c7; }
+.o_logistics_kpi.is-warning { background: #fdf3dc; border-color: #f0d795; }
+
+.o_logistics_kpi_value {
+    font-size: 20px;
+    font-weight: 700;
+    line-height: 1.1;
+}
+
+.o_logistics_kpi_label {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    opacity: 0.7;
+}
+
+/* ── Alertas ──────────────────────────────────────────────────────────────── */
+.o_logistics_alerts {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding: 8px 20px;
+    background: #fdf3dc;
+    border-bottom: 1px solid #f0dca5;
+    max-height: 110px;
+    overflow-y: auto;
+}
+
+.o_logistics_alert {
+    font-size: 13px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.o_logistics_alert_tag {
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    padding: 2px 7px;
+    border-radius: 20px;
+    background: #e9ab21;
+    color: #4a3600;
+    flex: 0 0 auto;
+}
+
+.o_logistics_alert.is-offline .o_logistics_alert_tag {
+    background: #dc3545;
+    color: #ffffff;
+}
+
+/* ── Cuerpo: panel + mapa ─────────────────────────────────────────────────── */
+.o_logistics_tower_body {
+    display: flex;
+    flex: 1 1 auto;
+    min-height: 0;
+}
+
+.o_logistics_fleet {
+    width: 340px;
+    flex: 0 0 340px;
+    display: flex;
+    flex-direction: column;
+    background: #ffffff;
+    border-right: 1px solid #dee2e6;
+    min-height: 0;
+}
+
+.o_logistics_filters {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+    padding: 10px 12px;
+    border-bottom: 1px solid #e9ecef;
+}
+
+.o_logistics_fleet_list {
+    flex: 1 1 auto;
+    overflow-y: auto;
+}
+
+.o_logistics_empty {
+    padding: 24px 16px;
+    text-align: center;
+    font-size: 13px;
+    opacity: 0.6;
+}
+
+.o_logistics_unit {
+    padding: 11px 14px;
+    border-bottom: 1px solid #f1f3f5;
+    cursor: pointer;
+    border-left: 3px solid transparent;
+    transition: background 0.12s ease;
+}
+
+.o_logistics_unit:hover { background: #f8f9fa; }
+.o_logistics_unit.is-selected { background: #eef1e5; border-left-color: #4a5b25; }
+.o_logistics_unit.is-deviated { border-left-color: #e9ab21; }
+
+.o_logistics_unit_top {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    margin-bottom: 3px;
+}
+
+.o_logistics_unit_driver {
+    font-weight: 600;
+    font-size: 14px;
+    flex: 1 1 auto;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.o_logistics_unit_speed {
+    font-size: 12px;
+    opacity: 0.7;
+    flex: 0 0 auto;
+}
+
+.o_logistics_unit_meta {
+    font-size: 12px;
+    opacity: 0.72;
+    margin-top: 2px;
+}
+
+.o_logistics_unit_next {
+    font-size: 12px;
+    margin-top: 4px;
+}
+
+.o_logistics_unit_warn {
+    color: #9a6f0c;
+    font-weight: 600;
+    margin-left: 4px;
+}
+
+.o_logistics_unit_actions {
+    display: flex;
+    gap: 14px;
+    margin-top: 6px;
+    font-size: 12px;
+}
+
+.o_logistics_progress {
+    height: 5px;
+    border-radius: 3px;
+    background: #e9ecef;
+    margin-top: 7px;
+    overflow: hidden;
+}
+
+.o_logistics_progress_bar {
+    height: 100%;
+    background: #4a5b25;
+    border-radius: 3px;
+    transition: width 0.3s ease;
+}
+
+.o_logistics_tower_map {
+    position: relative;
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+.o_logistics_tower_map .o_logistics_map_canvas {
+    height: 100%;
+    border: none;
+    border-radius: 0;
+}
+
+.o_logistics_fit_btn {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    z-index: 500;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.18);
+}
+
+/* ── Responsive: tablet y móvil ───────────────────────────────────────────── */
+@media (max-width: 900px) {
+    .o_logistics_tower_body {
+        flex-direction: column;
+    }
+
+    .o_logistics_fleet {
+        width: 100%;
+        flex: 0 0 auto;
+        max-height: 45%;
+        border-right: none;
+        border-bottom: 1px solid #dee2e6;
+    }
+
+    .o_logistics_tower_map {
+        flex: 1 1 320px;
+        min-height: 320px;
+    }
+
+    .o_logistics_kpis {
+        width: 100%;
+    }
+
+    .o_logistics_kpi {
+        flex: 1 1 auto;
+        min-width: 72px;
+    }
+}
