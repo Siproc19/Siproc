@@ -43,6 +43,25 @@ No se parchea ni se sobrescribe ningún archivo del núcleo de Odoo: es el
 mismo mecanismo que usan los addons oficiales, y sobrevive a las
 actualizaciones de versión.
 
+## La barra de título de la aplicación de escritorio
+
+Cuando Odoo se instala como aplicación (el icono en el escritorio o en el
+celular, en vez de una pestaña del navegador), **la barra de título con los
+botones de minimizar y cerrar no la pinta el CSS**: la pinta el sistema
+operativo, leyendo dos cosas de Odoo que traen el morado fijo:
+
+- la etiqueta `<meta name="theme-color">` de la página, y
+- los campos `theme_color` y `background_color` de
+  `/web/manifest.webmanifest`.
+
+Desde la versión **19.0.2.0.0** este módulo cambia las dos por el verde de
+SIPROC (`views/webclient_templates.xml` y `controllers/webmanifest.py`).
+
+> **Importante:** ese color se lee **en el momento de instalar** la
+> aplicación. Después de actualizar el módulo hay que **desinstalar la app
+> del escritorio y volver a instalarla** desde el navegador; si no, sigue
+> mostrando el color con el que se instaló.
+
 ## Si después de instalar sigue morado
 
 En orden, esto es lo que hay que revisar:

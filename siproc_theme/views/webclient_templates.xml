@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!--
+        La barra de título de la ventana cuando Odoo está instalado como
+        aplicación (PWA) no la pinta el CSS: la pinta el sistema operativo
+        leyendo la etiqueta <meta name="theme-color"> de la página.
+
+        Odoo la trae fija en morado. Aquí se reemplaza por el verde de
+        SIPROC. Después de instalar hay que DESINSTALAR y volver a instalar
+        la aplicación en el escritorio: el color se lee al instalarla.
+    -->
+    <template id="webclient_bootstrap_siproc"
+              inherit_id="web.webclient_bootstrap"
+              name="SIPROC — color de la barra de título">
+        <xpath expr="//meta[@name='theme-color']" position="replace">
+            <meta name="theme-color" content="#4A5B25"/>
+        </xpath>
+    </template>
+
+</odoo>

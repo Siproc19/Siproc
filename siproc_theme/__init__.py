@@ -7,6 +7,8 @@ sino en un campo de la base de datos, así que las variables SCSS no lo
 alcanzan.
 """
 
+from . import controllers
+
 VERDE = "#4A5B25"
 NARANJA = "#E9AB21"
 
