@@ -165,6 +165,11 @@ class DriverApp {
         if (modal) {
             modal.dataset.taskId = taskId;
             modal.style.display  = "flex";
+            // Primero limpiar lo de la parada anterior, y solo después medir
+            // el canvas: con el modal oculto su ancho es 0 y no se puede firmar.
+            this._limpiarModalCompletar();
+            this._prepararFirma();
+            this._ligarFoto();
         }
     }
 
@@ -174,15 +179,29 @@ class DriverApp {
         const sigName    = document.getElementById("signature-name");
         const spent      = document.getElementById("spent-amount");
 
+        const boton = document.getElementById("complete-modal-confirm");
         const params = {};
-        if (photoInput?.files[0]) {
+
+        // La foto ya viene reducida desde que se eligió. Si por lo que sea no
+        // se pudo reducir, se manda tal cual.
+        if (this._fotoLista) {
+            params.evidence_photo_1 = this._fotoLista;
+        } else if (photoInput?.files[0]) {
             params.evidence_photo_1 = await this._fileToBase64(photoInput.files[0]);
         }
-        if (sigCanvas) {
+        // Solo se manda la firma si de verdad se trazó algo: antes se enviaba
+        // siempre un recuadro en blanco.
+        if (sigCanvas && this._firmaTrazada) {
             params.signature = sigCanvas.toDataURL("image/png").split(",")[1];
         }
-        if (sigName?.value)  params.signature_name = sigName.value;
+        if (sigName?.value)  params.signature_name = sigName.value.trim();
         if (spent?.value)    params.spent_amount   = parseFloat(spent.value);
+
+        if (boton) { boton.disabled = true; boton.textContent = "Guardando…"; }
+
+        const restaurar = () => {
+            if (boton) { boton.disabled = false; boton.textContent = "✅ Confirmar Completado"; }
+        };
 
         try {
             const res = await fetch(`/logistics/task/${taskId}/complete`, {
@@ -203,10 +222,155 @@ class DriverApp {
                         document.querySelector(`.task-card.active`)?.scrollIntoView({ behavior: "smooth" });
                     }, 300);
                 }
+            } else {
+                restaurar();
+                this._showToast(
+                    data.result?.error || "No se pudo guardar. Inténtelo de nuevo.",
+                    "danger"
+                );
             }
         } catch (e) {
-            this._showToast("Error al completar. Intenta de nuevo.", "danger");
+            restaurar();
+            this._showToast("No se pudo guardar. Revise la señal e inténtelo de nuevo.", "danger");
         }
+    }
+
+    // ── Modal de completar: limpieza, firma y foto ────────────────────────────
+
+    _limpiarModalCompletar() {
+        // Sin esto, la foto y la firma de la parada anterior se quedaban
+        // cargadas y se volvían a mandar en la siguiente entrega.
+        const foto = document.getElementById("evidence-photo");
+        if (foto) foto.value = "";
+        const vista = document.getElementById("evidence-preview");
+        if (vista) { vista.removeAttribute("src"); vista.style.display = "none"; }
+        ["signature-name", "spent-amount"].forEach((id) => {
+            const el = document.getElementById(id);
+            if (el) el.value = "";
+        });
+        this._fotoLista = null;
+        const boton = document.getElementById("complete-modal-confirm");
+        if (boton) { boton.disabled = false; boton.textContent = "✅ Confirmar Completado"; }
+    }
+
+    _prepararFirma() {
+        const c = document.getElementById("signature-canvas");
+        if (!c) return;
+
+        // El ancho se mide AHORA, con el modal ya en pantalla. Medirlo mientras
+        // estaba oculto devolvía 0, el canvas quedaba de cero píxeles y el dedo
+        // no pintaba nada: por eso no se podía firmar.
+        const ancho = Math.round(c.getBoundingClientRect().width) || 300;
+        c.width  = ancho;
+        c.height = 150;
+
+        const ctx = c.getContext("2d");
+        ctx.fillStyle = "#ffffff";
+        ctx.fillRect(0, 0, c.width, c.height);
+        ctx.lineWidth   = 2.5;
+        ctx.lineCap     = "round";
+        ctx.lineJoin    = "round";
+        ctx.strokeStyle = "#111111";
+        this._firmaTrazada = false;
+
+        if (c.dataset.ligado) return;
+        c.dataset.ligado = "1";
+
+        let trazando = false;
+        const punto = (e) => {
+            const r = c.getBoundingClientRect();
+            const t = e.touches && e.touches[0] ? e.touches[0] : e;
+            return { x: t.clientX - r.left, y: t.clientY - r.top };
+        };
+        const empezar = (e) => {
+            e.preventDefault();
+            trazando = true;
+            const p = punto(e);
+            ctx.beginPath();
+            ctx.moveTo(p.x, p.y);
+            // Un toque suelto también deja marca.
+            ctx.lineTo(p.x + 0.1, p.y);
+            ctx.stroke();
+            this._firmaTrazada = true;
+        };
+        const seguir = (e) => {
+            if (!trazando) return;
+            e.preventDefault();
+            const p = punto(e);
+            ctx.lineTo(p.x, p.y);
+            ctx.stroke();
+            this._firmaTrazada = true;
+        };
+        const soltar = () => { trazando = false; };
+
+        c.addEventListener("touchstart", empezar, { passive: false });
+        c.addEventListener("touchmove",  seguir,  { passive: false });
+        c.addEventListener("touchend",   soltar);
+        c.addEventListener("touchcancel", soltar);
+        c.addEventListener("mousedown",  empezar);
+        c.addEventListener("mousemove",  seguir);
+        c.addEventListener("mouseup",    soltar);
+        c.addEventListener("mouseleave", soltar);
+
+        document.getElementById("clear-signature")?.addEventListener("click", () => {
+            ctx.fillStyle = "#ffffff";
+            ctx.fillRect(0, 0, c.width, c.height);
+            ctx.strokeStyle = "#111111";
+            this._firmaTrazada = false;
+        });
+    }
+
+    _ligarFoto() {
+        const input = document.getElementById("evidence-photo");
+        if (!input || input.dataset.ligado) return;
+        input.dataset.ligado = "1";
+        input.addEventListener("change", async () => {
+            const archivo = input.files && input.files[0];
+            if (!archivo) return;
+            this._showToast("Preparando la foto…", "info");
+            try {
+                this._fotoLista = await this._reducirImagen(archivo, 1280, 0.72);
+                const vista = document.getElementById("evidence-preview");
+                if (vista) {
+                    vista.src = "data:image/jpeg;base64," + this._fotoLista;
+                    vista.style.display = "block";
+                }
+                this._showToast("📷 Foto lista", "success");
+            } catch (e) {
+                this._fotoLista = null;
+                this._showToast("No se pudo leer la foto. Tómela de nuevo.", "danger");
+            }
+        });
+    }
+
+    // Las fotos de un celular pesan varios megas. Enviarlas enteras por datos
+    // móviles es lento y a veces el servidor rechaza el envío por tamaño.
+    _reducirImagen(archivo, ladoMax, calidad) {
+        return new Promise((resolver, rechazar) => {
+            const lector = new FileReader();
+            lector.onerror = () => rechazar(new Error("no se pudo leer el archivo"));
+            lector.onload = () => {
+                const img = new Image();
+                img.onerror = () => rechazar(new Error("no se pudo decodificar la imagen"));
+                img.onload = () => {
+                    try {
+                        const escala = Math.min(1, ladoMax / Math.max(img.width, img.height));
+                        const lienzo = document.createElement("canvas");
+                        lienzo.width  = Math.max(1, Math.round(img.width  * escala));
+                        lienzo.height = Math.max(1, Math.round(img.height * escala));
+                        const ctx = lienzo.getContext("2d");
+                        ctx.fillStyle = "#ffffff";
+                        ctx.fillRect(0, 0, lienzo.width, lienzo.height);
+                        ctx.drawImage(img, 0, 0, lienzo.width, lienzo.height);
+                        resolver(lienzo.toDataURL("image/jpeg", calidad).split(",")[1]);
+                    } catch (err) {
+                        rechazar(err);
+                    }
+                };
+                img.src = lector.result;
+            };
+            lector.readAsDataURL(archivo);
+        });
     }
 
     // ── Modal para reportar fallo ─────────────────────────────────────────────

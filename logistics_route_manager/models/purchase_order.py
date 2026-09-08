@@ -1,14 +1,28 @@
 # -*- coding: utf-8 -*-
 from odoo import models, fields, api, _
 
+# Mismo criterio que en el pedido de venta: quien no es de logística no
+# entra al módulo, pero sí ve el resumen de su propia orden.
+GRUPOS_LOGISTICA = (
+    'logistics_route_manager.group_logistics_manager,'
+    'logistics_route_manager.group_logistics_user,'
+    'logistics_route_manager.group_logistics_driver'
+)
+
 
 class PurchaseOrder(models.Model):
-    """Visibilidad de la logística en la orden de compra."""
+    """Visibilidad de la logística en la orden de compra.
+
+    El enlace crudo a las paradas queda reservado a los grupos de
+    logística; el resumen se calcula con `sudo()` para que Compras no
+    tropiece con «No puede acceder a los registros Tarea Logística».
+    """
     _inherit = 'purchase.order'
 
     logistics_task_ids = fields.One2many(
         'logistics.task', 'purchase_order_id',
         string='Paradas de Ruta', copy=False,
+        groups=GRUPOS_LOGISTICA,
     )
     logistics_task_count = fields.Integer(
         string='Paradas', compute='_compute_logistics_task_count',
@@ -24,12 +38,12 @@ class PurchaseOrder(models.Model):
     @api.depends('logistics_task_ids')
     def _compute_logistics_task_count(self):
         for rec in self:
-            rec.logistics_task_count = len(rec.logistics_task_ids)
+            rec.logistics_task_count = len(rec.sudo().logistics_task_ids)
 
     @api.depends('logistics_task_ids.state')
     def _compute_logistics_status(self):
         for rec in self:
-            states = set(rec.logistics_task_ids.mapped('state'))
+            states = set(rec.sudo().logistics_task_ids.mapped('state'))
             if not states:
                 rec.logistics_status = 'no_route'
             elif states == {'completed'}:

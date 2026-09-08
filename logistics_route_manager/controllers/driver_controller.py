@@ -109,7 +109,10 @@ class DriverAppController(http.Controller):
                 vals['evidence_photo_1'] = data['evidence_photo_1']
             if data.get('signature'):
                 vals['signature'] = data['signature']
-                vals['signature_name'] = data.get('signature_name', '')
+            # El nombre de quien recibe se guarda aunque no haya firma dibujada:
+            # antes vivía dentro del if de arriba y se perdía siempre.
+            if data.get('signature_name'):
+                vals['signature_name'] = data['signature_name']
             if data.get('spent_amount'):
                 vals['spent_amount'] = float(data['spent_amount'])
 

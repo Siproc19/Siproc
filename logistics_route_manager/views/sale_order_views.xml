@@ -11,6 +11,7 @@
             <xpath expr="//div[hasclass('oe_button_box')]" position="inside">
                 <button type="object" name="action_view_logistics_routes"
                         class="oe_stat_button" icon="fa-truck"
+                        groups="logistics_route_manager.group_logistics_manager,logistics_route_manager.group_logistics_user,logistics_route_manager.group_logistics_driver"
                         invisible="logistics_route_count == 0">
                     <field name="logistics_route_count" widget="statinfo"
                            string="Rutas"/>
@@ -24,14 +25,15 @@
                         <group string="Ruta">
                             <field name="logistics_status"/>
                             <field name="logistics_route_date"/>
-                            <field name="logistics_driver_id"/>
-                            <field name="logistics_vehicle_id"/>
+                            <field name="logistics_driver_name"/>
+                            <field name="logistics_vehicle_name"/>
                             <field name="logistics_delivered_at"
                                    invisible="logistics_status != 'delivered'"/>
                         </group>
                     </group>
 
-                    <field name="logistics_task_ids" readonly="1">
+                    <field name="logistics_task_ids" readonly="1"
+                           groups="logistics_route_manager.group_logistics_manager,logistics_route_manager.group_logistics_user,logistics_route_manager.group_logistics_driver">
                         <list string="Paradas">
                             <field name="route_id"/>
                             <field name="sequence" string="Orden"/>
@@ -67,7 +69,7 @@
                        decoration-info="logistics_status == 'in_transit'"
                        decoration-warning="logistics_status == 'partial'"
                        decoration-muted="logistics_status == 'no_route'"/>
-                <field name="logistics_driver_id" optional="hide" string="Piloto"/>
+                <field name="logistics_driver_name" optional="hide" string="Piloto"/>
             </xpath>
         </field>
     </record>
@@ -81,6 +83,7 @@
             <xpath expr="//div[hasclass('oe_button_box')]" position="inside">
                 <button type="object" name="action_view_logistics_routes"
                         class="oe_stat_button" icon="fa-truck"
+                        groups="logistics_route_manager.group_logistics_manager,logistics_route_manager.group_logistics_user,logistics_route_manager.group_logistics_driver"
                         invisible="logistics_task_count == 0">
                     <field name="logistics_task_count" widget="statinfo"
                            string="Paradas"/>

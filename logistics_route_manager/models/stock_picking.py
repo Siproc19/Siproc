@@ -1,6 +1,15 @@
 # -*- coding: utf-8 -*-
 from odoo import models, fields, api, _
 
+# Mismo criterio que en ventas y compras: los enlaces directos a registros
+# de logística quedan para los grupos del módulo; el resumen lo ve
+# cualquier usuario de Inventario sin necesitar acceso al módulo.
+GRUPOS_LOGISTICA = (
+    'logistics_route_manager.group_logistics_manager,'
+    'logistics_route_manager.group_logistics_user,'
+    'logistics_route_manager.group_logistics_driver'
+)
+
 
 class StockPicking(models.Model):
     """
@@ -14,22 +23,38 @@ class StockPicking(models.Model):
     x_logistics_task_id = fields.Many2one(
         'logistics.task', string='Parada de Ruta',
         copy=False, readonly=True,
+        groups=GRUPOS_LOGISTICA,
     )
     x_logistics_route_id = fields.Many2one(
         'logistics.route', string='Ruta Logística',
         copy=False, readonly=True,
+        groups=GRUPOS_LOGISTICA,
     )
     x_logistics_driver_id = fields.Many2one(
         'logistics.driver', string='Piloto',
         related='x_logistics_route_id.driver_id', store=True, readonly=True,
+        groups=GRUPOS_LOGISTICA,
     )
     x_logistics_vehicle_id = fields.Many2one(
         'logistics.vehicle', string='Vehículo',
         related='x_logistics_route_id.vehicle_id', store=True, readonly=True,
+        groups=GRUPOS_LOGISTICA,
     )
     x_logistics_date = fields.Date(
         string='Fecha de Ruta',
         related='x_logistics_route_id.date', store=True, readonly=True,
+    )
+
+    # Nombres en texto: dicen lo mismo que los enlaces de arriba, pero no
+    # obligan a leer los modelos de logística.
+    x_logistics_route_name = fields.Char(
+        string='Ruta', compute='_compute_logistics_nombres',
+    )
+    x_logistics_driver_name = fields.Char(
+        string='Piloto de Entrega', compute='_compute_logistics_nombres',
+    )
+    x_logistics_vehicle_name = fields.Char(
+        string='Vehículo de Entrega', compute='_compute_logistics_nombres',
     )
 
     x_delivery_status = fields.Selection([
@@ -64,7 +89,17 @@ class StockPicking(models.Model):
     @api.depends('x_logistics_route_id')
     def _compute_has_logistics_route(self):
         for rec in self:
-            rec.x_has_logistics_route = bool(rec.x_logistics_route_id)
+            rec.x_has_logistics_route = bool(rec.sudo().x_logistics_route_id)
+
+    @api.depends('x_logistics_route_id')
+    def _compute_logistics_nombres(self):
+        for rec in self:
+            ruta = rec.sudo().x_logistics_route_id
+            rec.x_logistics_route_name   = ruta.name if ruta else False
+            rec.x_logistics_driver_name  = ruta.driver_id.name if ruta else False
+            rec.x_logistics_vehicle_name = (
+                ruta.vehicle_id.display_name if ruta else False
+            )
 
     @api.depends('x_delivered_latitude', 'x_delivered_longitude')
     def _compute_delivery_proof_url(self):

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 {
     'name': 'Gestión de Logística y Rutas en Tiempo Real',
-    'version': '19.0.5.2.0',
+    'version': '19.0.5.4.0',
     'category': 'Inventory/Logistics',
     'summary': 'Rastreo GPS de pilotos y vehículos con Torre de Control',
 

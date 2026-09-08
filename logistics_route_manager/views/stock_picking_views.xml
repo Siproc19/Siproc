@@ -29,9 +29,9 @@
                     <group invisible="not x_has_logistics_route">
                         <group string="Asignación">
                             <field name="x_delivery_status"/>
-                            <field name="x_logistics_route_id" readonly="1"/>
-                            <field name="x_logistics_driver_id" readonly="1"/>
-                            <field name="x_logistics_vehicle_id" readonly="1"/>
+                            <field name="x_logistics_route_name" readonly="1"/>
+                            <field name="x_logistics_driver_name" readonly="1"/>
+                            <field name="x_logistics_vehicle_name" readonly="1"/>
                             <field name="x_logistics_date" readonly="1"/>
                         </group>
                         <group string="Prueba de Entrega"
@@ -50,6 +50,7 @@
                     <div invisible="not x_has_logistics_route">
                         <button type="object" name="action_open_logistics_route"
                                 string="Abrir la ruta" class="btn-secondary"
+                                groups="logistics_route_manager.group_logistics_manager,logistics_route_manager.group_logistics_user,logistics_route_manager.group_logistics_driver"
                                 icon="fa-truck"/>
                     </div>
                 </page>
@@ -71,8 +72,8 @@
                        decoration-info="x_delivery_status == 'in_transit'"
                        decoration-warning="x_delivery_status == 'planned'"
                        decoration-muted="x_delivery_status == 'no_route'"/>
-                <field name="x_logistics_driver_id" optional="hide" string="Piloto"/>
-                <field name="x_logistics_route_id" optional="hide" string="Ruta"/>
+                <field name="x_logistics_driver_name" optional="hide" string="Piloto"/>
+                <field name="x_logistics_route_name" optional="hide" string="Ruta"/>
             </xpath>
         </field>
     </record>
@@ -86,6 +87,7 @@
             <xpath expr="//search" position="inside">
                 <separator/>
                 <filter name="filter_sin_ruta" string="Sin ruta asignada"
+                        groups="logistics_route_manager.group_logistics_manager,logistics_route_manager.group_logistics_user,logistics_route_manager.group_logistics_driver"
                         domain="[('x_logistics_route_id', '=', False),
                                  ('picking_type_code', '=', 'outgoing'),
                                  ('state', 'not in', ('done', 'cancel'))]"/>
@@ -103,8 +105,10 @@
                 -->
                 <separator/>
                 <filter name="group_logistics_route" string="Ruta"
+                        groups="logistics_route_manager.group_logistics_manager,logistics_route_manager.group_logistics_user,logistics_route_manager.group_logistics_driver"
                         context="{'group_by': 'x_logistics_route_id'}"/>
                 <filter name="group_logistics_driver" string="Piloto"
+                        groups="logistics_route_manager.group_logistics_manager,logistics_route_manager.group_logistics_user,logistics_route_manager.group_logistics_driver"
                         context="{'group_by': 'x_logistics_driver_id'}"/>
                 <filter name="group_delivery_status" string="Estado de Entrega"
                         context="{'group_by': 'x_delivery_status'}"/>

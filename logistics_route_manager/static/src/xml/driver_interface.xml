@@ -81,14 +81,16 @@
                         </div>
                         <label class="photo-upload-label">
                             📷 Tomar/Subir Foto de Evidencia
-                            <input type="file" id="evidence-photo" accept="image/*" capture="camera"/>
+                            <input type="file" id="evidence-photo" accept="image/*" capture="environment"/>
                         </label>
+                        <img id="evidence-preview" alt="Foto de evidencia"
+                             style="display:none; width:100%; border-radius:12px; margin-bottom:12px;"/>
                         <div style="margin-bottom:12px;">
                             <label style="font-size:14px; font-weight:600; margin-bottom:6px; display:block;">
                                 ✍️ Firma del Receptor (dibuja en el recuadro)
                             </label>
                             <canvas id="signature-canvas"/>
-                            <button onclick="document.getElementById('signature-canvas').getContext('2d').clearRect(0,0,999,999)" style="font-size:12px; color:#dc3545; background:none; border:none; cursor:pointer; padding:4px;">
+                            <button type="button" id="clear-signature" style="font-size:12px; color:#dc3545; background:none; border:none; cursor:pointer; padding:4px;">
                                 🗑️ Limpiar firma
                             </button>
                         </div>
@@ -118,26 +120,6 @@
                 <script src="/logistics_route_manager/static/src/js/gps_tracker.js"/>
                 <script src="/logistics_route_manager/static/src/js/driver_app.js"/>
                 <script>
-                    // Firma canvas táctil
-                    const canvas = document.getElementById("signature-canvas");
-                    if (canvas) {
-                        const ctx = canvas.getContext("2d");
-                        canvas.width  = canvas.offsetWidth;
-                        canvas.height = 150;
-                        let drawing = false;
-                        const getPos = (e) =&gt; {
-                            const r = canvas.getBoundingClientRect();
-                            const t = e.touches ? e.touches[0] : e;
-                            return { x: t.clientX - r.left, y: t.clientY - r.top };
-                        };
-                        canvas.addEventListener("mousedown",  (e) =&gt; { drawing = true; ctx.beginPath(); const p = getPos(e); ctx.moveTo(p.x, p.y); });
-                        canvas.addEventListener("mousemove",  (e) =&gt; { if (!drawing) return; const p = getPos(e); ctx.lineTo(p.x, p.y); ctx.strokeStyle = "#000"; ctx.lineWidth = 2; ctx.stroke(); });
-                        canvas.addEventListener("mouseup",    () =&gt; drawing = false);
-                        canvas.addEventListener("touchstart", (e) =&gt; { e.preventDefault(); drawing = true; ctx.beginPath(); const p = getPos(e); ctx.moveTo(p.x, p.y); });
-                        canvas.addEventListener("touchmove",  (e) =&gt; { e.preventDefault(); if (!drawing) return; const p = getPos(e); ctx.lineTo(p.x, p.y); ctx.strokeStyle = "#000"; ctx.lineWidth = 2; ctx.stroke(); });
-                        canvas.addEventListener("touchend",   () =&gt; drawing = false);
-                    }
-
                     // Iniciar la app del piloto
                     document.addEventListener("DOMContentLoaded", () =&gt; {
                         initDriverApp({
