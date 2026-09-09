@@ -24,11 +24,33 @@ class DriverApp {
         this._updateProgressBar();
         this._startGpsTracking();
         this._checkOnlineStatus();
-        // Registrar Service Worker para PWA
-        if ("serviceWorker" in navigator) {
-            navigator.serviceWorker.register("/logistics_route_manager/static/src/js/sw.js")
-                .then(() => console.log("SW registrado"))
-                .catch(e => console.warn("SW error:", e));
+        this._prepararServiceWorker();
+    }
+
+    // ── Service Worker ────────────────────────────────────────────────────────
+    //
+    // El anterior tenía alcance solo sobre la carpeta /static/src/js y
+    // servía el JavaScript desde su propia caché, con un nombre de caché
+    // fijo que nunca caducaba. Resultado: el teléfono se quedaba con el
+    // código del primer día y ninguna corrección le llegaba jamás.
+    // Aquí se dan de baja esos registros viejos antes de poner el nuevo.
+    async _prepararServiceWorker() {
+        if (!("serviceWorker" in navigator)) return;
+        const alcanceBueno = new URL("/logistics/", window.location.origin).href;
+        try {
+            const registros = await navigator.serviceWorker.getRegistrations();
+            for (const reg of registros) {
+                if (reg.scope !== alcanceBueno) {
+                    await reg.unregister();
+                }
+            }
+            const reg = await navigator.serviceWorker.register(
+                "/logistics/sw.js", { scope: "/logistics/" }
+            );
+            // Buscar versión nueva en cada arranque de la app.
+            reg.update().catch(() => {});
+        } catch (e) {
+            console.warn("Service worker:", e);
         }
     }
 
@@ -414,11 +436,33 @@ class DriverApp {
                 this._showToast(`📍 Llegaste a: ${data.task_name}`, "info");
                 this._updateTaskState(data.task_id, "arrived");
             },
-            onError: (msg) => this._showToast(msg, "danger"),
+            onError: (msg) => {
+                this._showToast(msg, "danger");
+                this._estadoGps(msg, false);
+            },
+            // Estos dos son lo que convierte «no me tira la señal» en algo
+            // que el piloto y la oficina pueden leer en pantalla.
+            onSent: () => {
+                const hora = new Date().toLocaleTimeString("es-GT",
+                    { hour: "2-digit", minute: "2-digit", second: "2-digit" });
+                this._estadoGps(`GPS enviado a las ${hora}`, true);
+            },
+            onSendError: (msg) => this._estadoGps(`GPS sin enviar — ${msg}`, false),
         });
         if (this.routeData.state === "in_progress") {
             this.gpsTracker.start();
         }
+    }
+
+    // Pinta la franja de estado del GPS. Verde: la posición llegó al
+    // servidor. Rojo: no llegó, y dice por qué.
+    _estadoGps(texto, bien) {
+        const franja = document.getElementById("gps-status");
+        if (!franja) return;
+        const punto = franja.querySelector(".gps-dot");
+        franja.lastChild.textContent = " " + texto;
+        franja.classList.toggle("gps-fallo", !bien);
+        if (punto) punto.style.background = bien ? "#198754" : "#dc3545";
     }
 
     // ── Barra de progreso ─────────────────────────────────────────────────────

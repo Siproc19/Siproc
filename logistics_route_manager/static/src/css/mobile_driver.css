@@ -371,3 +371,9 @@ body {
     background: white;
     margin-bottom: 8px;
 }
+
+/* Franja de GPS cuando la posición no llegó al servidor. */
+.gps-status.gps-fallo {
+    background: #fdecea;
+    color: #a11c15;
+}

@@ -6,6 +6,7 @@ from markupsafe import Markup
 
 from odoo import http
 from odoo.http import request
+from odoo.tools import file_open
 
 _logger = logging.getLogger(__name__)
 
@@ -153,6 +154,33 @@ class DriverAppController(http.Controller):
         except Exception as e:
             _logger.exception("Error al marcar tarea como fallida. task_id=%s", task_id)
             return {'success': False, 'error': str(e)}
+
+    @http.route('/logistics/sw.js', type='http', auth='public')
+    def service_worker(self, **kwargs):
+        """Sirve el service worker con la versión del módulo incrustada.
+
+        Es lo que hace que el teléfono descarte su caché vieja en cada
+        actualización: al cambiar la versión cambia el nombre de la caché,
+        y el propio service worker borra la anterior al activarse.
+
+        La cabecera `Service-Worker-Allowed` es necesaria para que el
+        alcance sea /logistics/ y no solo la carpeta del archivo.
+        """
+        modulo = request.env['ir.module.module'].sudo().search(
+            [('name', '=', 'logistics_route_manager')], limit=1
+        )
+        version = (modulo.latest_version or '0').replace('.', '-')
+        with file_open(
+            'logistics_route_manager/static/src/js/sw.js', 'r'
+        ) as archivo:
+            contenido = archivo.read()
+        contenido = contenido.replace('__VERSION_CACHE__', version)
+        return request.make_response(contenido, headers=[
+            ('Content-Type', 'text/javascript; charset=utf-8'),
+            ('Service-Worker-Allowed', '/logistics/'),
+            # El service worker jamás debe cachearse a sí mismo.
+            ('Cache-Control', 'no-cache, no-store, must-revalidate'),
+        ])
 
     @http.route('/logistics/manifest.json', type='http', auth='public')
     def pwa_manifest(self, **kwargs):

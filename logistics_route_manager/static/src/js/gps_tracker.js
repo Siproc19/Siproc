@@ -18,6 +18,9 @@ class LogisticsGpsTracker {
         this.onPositionUpdate = options.onPositionUpdate || null;
         this.onGeofenceTrigger = options.onGeofenceTrigger || null;
         this.onError = options.onError || null;
+        // Avisos de lo que pasa con cada envío al servidor.
+        this.onSent = options.onSent || null;
+        this.onSendError = options.onSendError || null;
     }
 
     // ── Iniciar rastreo ───────────────────────────────────────────────────────
@@ -121,6 +124,25 @@ class LogisticsGpsTracker {
             if (!response.ok) throw new Error(`HTTP ${response.status}`);
             const result = await response.json();
 
+            // El servidor puede responder 200 y aun así rechazar el dato.
+            // Antes eso se daba por bueno y la posición se perdía en
+            // silencio: por fuera parecía que el GPS estaba enviando.
+            if (result.result?.success === false) {
+                const motivo = result.result.error || "el servidor rechazó la posición";
+                console.warn("GpsTracker: rechazado por el servidor:", motivo);
+                this._addToOfflineQueue(data);
+                if (this.onSendError) this.onSendError(motivo);
+                return;
+            }
+            if (result.error) {
+                const motivo = result.error.message || "error del servidor";
+                this._addToOfflineQueue(data);
+                if (this.onSendError) this.onSendError(motivo);
+                return;
+            }
+
+            if (this.onSent) this.onSent(data);
+
             if (result.result?.geofence_triggered) {
                 if (this.onGeofenceTrigger) {
                     this.onGeofenceTrigger(result.result.geofence_triggered);
@@ -130,6 +152,7 @@ class LogisticsGpsTracker {
             // Sin conexión → guardar en cola offline
             console.warn("GpsTracker: Sin conexión, guardando offline:", e.message);
             this._addToOfflineQueue(data);
+            if (this.onSendError) this.onSendError("sin conexión, guardado en el teléfono");
         }
     }
 
