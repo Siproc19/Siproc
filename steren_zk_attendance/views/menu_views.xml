@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <menuitem id="menu_zk_biometric_device_root"
+              name="Checadores Biométricos"
+              parent="hr_attendance.menu_hr_attendance_root"
+              action="zk_biometric_device_action"
+              sequence="100"/>
+
+</odoo>

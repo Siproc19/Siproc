@@ -1,0 +1,104 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <record id="zk_biometric_device_view_list" model="ir.ui.view">
+        <field name="name">zk.biometric.device.list</field>
+        <field name="model">zk.biometric.device</field>
+        <field name="arch" type="xml">
+            <list>
+                <field name="name"/>
+                <field name="ip_address"/>
+                <field name="port"/>
+                <field name="state" widget="badge"
+                       decoration-success="state == 'connected'"
+                       decoration-danger="state == 'error'"/>
+                <field name="last_sync"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="zk_biometric_device_view_form" model="ir.ui.view">
+        <field name="name">zk.biometric.device.form</field>
+        <field name="model">zk.biometric.device</field>
+        <field name="arch" type="xml">
+            <form>
+                <header>
+                    <button name="action_test_connection" type="object"
+                            string="Probar conexión" class="btn-secondary"/>
+                    <button name="action_download_attendance" type="object"
+                            string="Descargar asistencias" class="btn-primary"/>
+                    <field name="state" widget="statusbar"
+                           statusbar_visible="draft,connected,error"/>
+                </header>
+                <sheet>
+                    <div class="oe_button_box" name="button_box">
+                        <button name="%(action_zk_attendance_log)d" type="action"
+                                class="oe_stat_button" icon="fa-list">
+                            <field name="log_count" widget="statinfo" string="Marcaciones"/>
+                        </button>
+                    </div>
+                    <div class="oe_title">
+                        <label for="name"/>
+                        <h1><field name="name" placeholder="Ej. Checador entrada principal"/></h1>
+                    </div>
+                    <group>
+                        <group string="Conexión">
+                            <field name="ip_address" placeholder="192.168.1.201"/>
+                            <field name="port"/>
+                            <field name="password"/>
+                            <field name="timeout"/>
+                            <field name="force_udp"/>
+                            <field name="tz"/>
+                            <field name="active"/>
+                        </group>
+                        <group string="Estado">
+                            <field name="device_name"/>
+                            <field name="firmware_version"/>
+                            <field name="last_sync"/>
+                            <field name="last_error"/>
+                        </group>
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <record id="zk_biometric_device_action" model="ir.actions.act_window">
+        <field name="name">Checadores Biométricos</field>
+        <field name="res_model">zk.biometric.device</field>
+        <field name="view_mode">list,form</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">
+                Registra tu primer checador biométrico
+            </p>
+            <p>
+                Indica la IP, puerto y clave de comunicación del equipo (por
+                ejemplo un Steren CLK-960 / ZKTeco WL10) para empezar a
+                sincronizar sus marcaciones con Asistencias.
+            </p>
+        </field>
+    </record>
+
+    <record id="zk_attendance_log_view_list" model="ir.ui.view">
+        <field name="name">zk.attendance.log.list</field>
+        <field name="model">zk.attendance.log</field>
+        <field name="arch" type="xml">
+            <list create="false" edit="false">
+                <field name="punch_datetime"/>
+                <field name="device_id"/>
+                <field name="device_user_id"/>
+                <field name="employee_id"/>
+                <field name="attendance_id"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="action_zk_attendance_log" model="ir.actions.act_window">
+        <field name="name">Marcaciones importadas</field>
+        <field name="res_model">zk.attendance.log</field>
+        <field name="view_mode">list,form</field>
+        <field name="domain">[('device_id', '=', active_id)]</field>
+        <field name="context">{'default_device_id': active_id}</field>
+    </record>
+
+</odoo>

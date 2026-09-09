@@ -1,0 +1,5 @@
+id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
+access_zk_biometric_device_hr_manager,zk.biometric.device.hr.manager,model_zk_biometric_device,hr.group_hr_manager,1,1,1,1
+access_zk_biometric_device_hr_user,zk.biometric.device.hr.user,model_zk_biometric_device,hr.group_hr_user,1,0,0,0
+access_zk_attendance_log_hr_manager,zk.attendance.log.hr.manager,model_zk_attendance_log,hr.group_hr_manager,1,1,1,1
+access_zk_attendance_log_hr_user,zk.attendance.log.hr.user,model_zk_attendance_log,hr.group_hr_user,1,0,0,0

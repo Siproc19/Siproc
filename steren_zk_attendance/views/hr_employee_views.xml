@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!-- NOTA: este xpath asume que el campo "barcode" existe en la vista
+         estándar de empleados (hr.view_employee_form), como sucede en
+         instalaciones con el módulo de Asistencias/POS habilitado. Si al
+         instalar el módulo da error de xpath, cambia "barcode" por otro
+         campo que sí exista en tu vista, por ejemplo "pin". -->
+    <record id="hr_employee_view_form_zk_inherit" model="ir.ui.view">
+        <field name="name">hr.employee.form.zk.biometric</field>
+        <field name="model">hr.employee</field>
+        <field name="inherit_id" ref="hr.view_employee_form"/>
+        <field name="arch" type="xml">
+            <field name="barcode" position="after">
+                <field name="zk_device_user_id"/>
+            </field>
+        </field>
+    </record>
+
+</odoo>
