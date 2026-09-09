@@ -1,7 +1,10 @@
 # -*- coding: utf-8 -*-
+import logging
+
+from markupsafe import Markup
+
 from odoo import models, fields, api, _
 from odoo.exceptions import ValidationError
-import logging
 
 _logger = logging.getLogger(__name__)
 
@@ -282,6 +285,7 @@ class LogisticsTask(models.Model):
             'actual_departure': fields.Datetime.now(),
         })
         self._sync_delivery_document()
+        self._avisar_a_ventas_y_crm(entregado=True)
         self.env['bus.bus']._sendone(
             f'logistics_task_{self.route_id.id}',
             'task_completed',
@@ -363,6 +367,113 @@ class LogisticsTask(models.Model):
             'actual_departure': fields.Datetime.now(),
         })
         self._sync_delivery_document_failed(reason)
+        self._avisar_a_ventas_y_crm(entregado=False, motivo=reason)
+
+    # ── Aviso al pedido de venta y a la oportunidad del CRM ───────────────────
+
+    def _avisar_a_ventas_y_crm(self, entregado, motivo=''):
+        """Avisa el resultado de la entrega donde lo va a ver Ventas.
+
+        La constancia ya queda en la orden de entrega, pero quien atiende al
+        cliente trabaja en el pedido de venta y en la oportunidad del CRM.
+        Este método publica el mismo aviso en los dos, y se lo notifica al
+        vendedor responsable para que no tenga que ir a buscarlo.
+
+        Se ejecuta con `sudo()` porque quien lo dispara es el piloto, que no
+        tiene permisos sobre ventas ni sobre el CRM. Cualquier problema al
+        avisar se registra en el log y se traga: el piloto ya hizo su
+        trabajo en campo y no puede quedar bloqueado por esto.
+        """
+        self.ensure_one()
+        pedido = self.sale_order_id
+        if not pedido:
+            return
+        pedido = pedido.sudo()
+
+        try:
+            cuerpo = self._cuerpo_aviso_entrega(entregado, motivo)
+            destinatarios = self._destinatarios_aviso(pedido)
+
+            pedido.message_post(
+                body=cuerpo,
+                subject=(_('Entrega realizada') if entregado
+                         else _('Entrega no realizada')),
+                partner_ids=destinatarios,
+                subtype_xmlid='mail.mt_comment',
+            )
+
+            # `opportunity_id` lo aporta el puente sale_crm. Si esta base no
+            # lo tiene, el aviso al pedido igual se hizo.
+            oportunidad = False
+            if 'opportunity_id' in pedido._fields:
+                oportunidad = pedido.opportunity_id
+            if oportunidad:
+                oportunidad.sudo().message_post(
+                    body=cuerpo,
+                    subject=(_('Entrega realizada') if entregado
+                             else _('Entrega no realizada')),
+                    partner_ids=destinatarios,
+                    subtype_xmlid='mail.mt_comment',
+                )
+        except Exception as error:  # noqa: BLE001 — nunca bloquear al piloto
+            _logger.warning(
+                "No se pudo avisar a Ventas/CRM desde la parada %s: %s",
+                self.id, error,
+            )
+
+    def _destinatarios_aviso(self, pedido):
+        """A quién se le notifica: el vendedor responsable del pedido."""
+        vendedor = pedido.user_id
+        if vendedor and vendedor.partner_id:
+            return vendedor.partner_id.ids
+        return []
+
+    def _cuerpo_aviso_entrega(self, entregado, motivo=''):
+        """Arma el texto del aviso con los datos de la entrega real."""
+        self.ensure_one()
+        piloto = self.route_id.driver_id
+        vehiculo = self.route_id.vehicle_id
+        cuando = self.actual_departure or fields.Datetime.now()
+        cuando_txt = fields.Datetime.context_timestamp(self, cuando).strftime(
+            '%d/%m/%Y %H:%M'
+        )
+
+        filas = [
+            (_('Cliente'), self.partner_id.display_name or self.name or ''),
+            (_('Piloto'), piloto.name or ''),
+            (_('Vehículo'), vehiculo.display_name or ''),
+            (_('Ruta'), self.route_id.name or ''),
+        ]
+
+        if entregado:
+            titulo = _('✅ Entrega realizada')
+            filas.append((_('Entregado el'), cuando_txt))
+            if self.signature_name:
+                filas.append((_('Recibió'), self.signature_name))
+            if self.stock_picking_id:
+                filas.append((_('Transferencia'), self.stock_picking_id.name))
+        else:
+            titulo = _('❌ Entrega no realizada')
+            filas.append((_('Reportado el'), cuando_txt))
+            filas.append((_('Motivo'), motivo or _('sin especificar')))
+
+        lineas = ''.join(
+            Markup('<li><b>%s:</b> %s</li>') % (etiqueta, valor)
+            for etiqueta, valor in filas if valor
+        )
+        cuerpo = Markup('<p><b>%s</b></p><ul>%s</ul>') % (titulo, Markup(lineas))
+
+        # Enlace al punto exacto donde se marcó la entrega.
+        if entregado and piloto.current_latitude and piloto.current_longitude:
+            url = (
+                'https://www.google.com/maps?q='
+                f'{piloto.current_latitude},{piloto.current_longitude}'
+            )
+            cuerpo += Markup(
+                '<p><a href="%s" target="_blank">%s</a></p>'
+            ) % (url, _('Ver en el mapa dónde se entregó'))
+
+        return cuerpo
 
     def action_navigate_waze(self):
         """Abre Waze con las coordenadas de esta parada."""
