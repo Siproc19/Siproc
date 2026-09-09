@@ -399,7 +399,14 @@ class LogisticsTask(models.Model):
                 subject=(_('Entrega realizada') if entregado
                          else _('Entrega no realizada')),
                 partner_ids=destinatarios,
-                subtype_xmlid='mail.mt_comment',
+                # `mt_note` en vez de `mt_comment`: el subtipo nota es
+                # INTERNO. Notifica igual al vendedor que se le nombra en
+                # `partner_ids`, pero nunca sale hacia un seguidor externo.
+                # Con `mt_comment`, si el cliente quedó como seguidor del
+                # pedido —cosa que pasa al enviarle la cotización por
+                # correo— le habría llegado el nombre del piloto, la placa
+                # del vehículo y el número de ruta.
+                subtype_xmlid='mail.mt_note',
             )
 
             # `opportunity_id` lo aporta el puente sale_crm. Si esta base no
@@ -413,7 +420,7 @@ class LogisticsTask(models.Model):
                     subject=(_('Entrega realizada') if entregado
                              else _('Entrega no realizada')),
                     partner_ids=destinatarios,
-                    subtype_xmlid='mail.mt_comment',
+                    subtype_xmlid='mail.mt_note',
                 )
         except Exception as error:  # noqa: BLE001 — nunca bloquear al piloto
             _logger.warning(
