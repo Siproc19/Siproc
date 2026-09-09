@@ -1,6 +1,8 @@
 # -*- coding: utf-8 -*-
-from odoo import models, fields, api
 import logging
+import secrets
+
+from odoo import models, fields, api, _
 
 _logger = logging.getLogger(__name__)
 
@@ -27,8 +29,41 @@ class LogisticsDriver(models.Model):
     user_id = fields.Many2one(
         'res.users',
         string='Usuario Odoo',
-        help='Usuario para acceder a la app del piloto',
+        help='Opcional. Un piloto puede trabajar solo con su enlace '
+             'personal, sin usuario de Odoo y sin consumir licencia.',
     )
+    # ── Acceso sin usuario de Odoo ───────────────────────────────────────
+    #
+    # Un piloto no necesita usuario de Odoo. Este token lo identifica: con
+    # él entra a su app de rutas, marca entregas y manda posición, sin
+    # iniciar sesión y sin consumir una licencia.
+    #
+    # Es una credencial al portador: quien tenga el enlace puede actuar
+    # como ese piloto. Por eso es largo, es secreto, solo lo ve el Jefe de
+    # Logística, y se puede regenerar en cualquier momento — al hacerlo,
+    # el enlace anterior deja de servir al instante.
+    gps_token = fields.Char(
+        string='Token del Piloto', copy=False, readonly=True, index=True,
+        groups='logistics_route_manager.group_logistics_manager',
+        help='Clave privada de este piloto. Si se filtra, regenérela.',
+    )
+    app_url = fields.Char(
+        string='Enlace de su app', compute='_compute_gps_push_url',
+        groups='logistics_route_manager.group_logistics_manager',
+        help='Enlace personal del piloto. Se le manda por WhatsApp una '
+             'sola vez; él lo agrega a la pantalla de inicio.',
+    )
+    gps_push_url = fields.Char(
+        string='Dirección para el rastreador', compute='_compute_gps_push_url',
+        groups='logistics_route_manager.group_logistics_manager',
+        help='Péguela tal cual en la app de rastreo en segundo plano.',
+    )
+    battery_level = fields.Integer(
+        string='Batería del Teléfono (%)', readonly=True,
+        help='Último nivel de batería informado por el rastreador. '
+             'Un teléfono descargado es la causa más común de «sin señal».',
+    )
+
     license_number = fields.Char(string='Número de Licencia', tracking=True)
     license_expiry = fields.Date(string='Vencimiento de Licencia', tracking=True)
     license_type = fields.Selection([
@@ -37,6 +72,48 @@ class LogisticsDriver(models.Model):
         ('c', 'Tipo C'),
         ('e', 'Tipo E'),
     ], string='Tipo de Licencia')
+
+    # ── Token de rastreo ─────────────────────────────────────────────────
+
+    @staticmethod
+    def _nuevo_token():
+        """Token largo y aleatorio, apto para ir en una URL."""
+        return secrets.token_urlsafe(32)
+
+    @api.model_create_multi
+    def create(self, vals_list):
+        for vals in vals_list:
+            vals.setdefault('gps_token', self._nuevo_token())
+        return super().create(vals_list)
+
+    def action_regenerar_token_gps(self):
+        """Cambia el token. El rastreador viejo deja de funcionar al instante."""
+        for rec in self:
+            rec.sudo().gps_token = self._nuevo_token()
+            rec.message_post(body=_(
+                'Se regeneró el token de rastreo. Hay que volver a '
+                'configurar la app del celular con la dirección nueva.'
+            ))
+        return True
+
+    @api.depends('gps_token')
+    def _compute_gps_push_url(self):
+        base = self.env['ir.config_parameter'].sudo().get_param('web.base.url', '')
+        for rec in self:
+            token = rec.sudo().gps_token
+            if token:
+                rec.app_url = f'{base}/logistics/driver/app?token={token}'
+                # Marcadores de GPSLogger: la app los sustituye por los
+                # valores reales de cada lectura.
+                rec.gps_push_url = (
+                    f'{base}/logistics/gps/push'
+                    f'?token={token}'
+                    '&lat=%LAT&lon=%LON&speed=%SPD&heading=%DIR'
+                    '&acc=%ACC&batt=%BATT'
+                )
+            else:
+                rec.app_url = False
+                rec.gps_push_url = False
 
     phone = fields.Char(
         string='Teléfono (GPS)',

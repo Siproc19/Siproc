@@ -11,17 +11,61 @@ from odoo.tools import file_open
 _logger = logging.getLogger(__name__)
 
 
+def piloto_de_la_peticion(token=None):
+    """Devuelve el piloto de esta petición, o False.
+
+    Dos formas de identificarse, en este orden:
+
+    1. Un token en la URL. Es el modo pensado para pilotos SIN usuario de
+       Odoo: no consumen licencia y nunca ven el backend.
+    2. La sesión de Odoo, para los pilotos que sí tienen usuario.
+
+    El token es una credencial al portador. Todo lo que se hace con él
+    queda acotado al piloto dueño del token: nunca puede tocar la ruta de
+    otro. Esa comprobación se hace en cada endpoint, no aquí.
+    """
+    Piloto = request.env['logistics.driver'].sudo()
+    if token:
+        piloto = Piloto.search([('gps_token', '=', token)], limit=1)
+        if piloto:
+            return piloto
+        return False
+    usuario = request.env.user
+    if usuario and not usuario._is_public():
+        return Piloto.search([('user_id', '=', usuario.id)], limit=1)
+    return False
+
+
+def tarea_del_piloto(task_id, piloto):
+    """La tarea, solo si es de una ruta de ESE piloto."""
+    if not piloto:
+        return False
+    tarea = request.env['logistics.task'].sudo().browse(task_id)
+    if not tarea.exists() or tarea.route_id.driver_id != piloto:
+        return False
+    return tarea
+
+
 class DriverAppController(http.Controller):
     """Endpoints para la Progressive Web App (PWA) del piloto."""
 
-    @http.route('/logistics/driver/app', type='http', auth='user', website=False)
-    def driver_app(self, **kwargs):
-        """Sirve la PWA del piloto — interfaz móvil simplificada."""
-        driver = request.env['logistics.driver'].sudo().search([
-            ('user_id', '=', request.env.user.id)
-        ], limit=1)
+    @http.route('/logistics/driver/app', type='http', auth='public', website=False)
+    def driver_app(self, token=None, **kwargs):
+        """Sirve la app del piloto.
+
+        Se entra de dos maneras: con el enlace personal que lleva el token
+        —para pilotos sin usuario de Odoo— o con la sesión iniciada, para
+        los que sí tienen usuario.
+        """
+        driver = piloto_de_la_peticion(token)
 
         if not driver:
+            if token:
+                # Token inválido o revocado. No se da pista de por qué.
+                return request.not_found()
+            # Sin token y sin sesión: que inicie sesión.
+            if request.env.user._is_public():
+                return request.redirect('/web/login?redirect=/logistics/driver/app')
             return request.not_found()
 
         from odoo.fields import Date
@@ -47,13 +91,16 @@ class DriverAppController(http.Controller):
             'route': route,
             'api_key': api_key,
             'gps_interval': gps_interval,
+            # El token viaja a la página para que sus llamadas se
+            # identifiquen igual, sin sesión.
+            'token': token or '',
             # Markup evita que QWeb escape las comillas: dentro de un <script>
             # un &#34; es un error de sintaxis y tumba toda la app.
             'route_data': Markup(json.dumps(route.get_route_data_json())) if route else Markup('{}'),
         })
 
-    @http.route('/logistics/route/<int:route_id>/start', type='jsonrpc', auth='user', methods=['POST'])
-    def start_route(self, route_id, **kwargs):
+    @http.route('/logistics/route/<int:route_id>/start', type='jsonrpc', auth='public', methods=['POST'])
+    def start_route(self, route_id, token=None, **kwargs):
         """El piloto tocó «Iniciar Ruta» en su celular.
 
         Antes el botón solo encendía el rastreo GPS en el teléfono y nunca
@@ -63,14 +110,12 @@ class DriverAppController(http.Controller):
         inventario no cambiaban de estado.
         """
         try:
-            route = request.env['logistics.route'].sudo().browse(route_id)
-            if not route.exists():
-                return {'success': False, 'error': 'La ruta no existe.'}
+            piloto = piloto_de_la_peticion(token)
+            if not piloto:
+                return {'success': False, 'error': 'No identificado.'}
 
-            piloto = request.env['logistics.driver'].sudo().search(
-                [('user_id', '=', request.env.user.id)], limit=1
-            )
-            if not piloto or route.driver_id != piloto:
+            route = request.env['logistics.route'].sudo().browse(route_id)
+            if not route.exists() or route.driver_id != piloto:
                 return {'success': False, 'error': 'Esta ruta no está asignada a usted.'}
 
             if route.state == 'confirmed':
@@ -80,13 +125,13 @@ class DriverAppController(http.Controller):
             _logger.exception("Error al iniciar la ruta. route_id=%s", route_id)
             return {'success': False, 'error': str(e)}
 
-    @http.route('/logistics/task/<int:task_id>/arrived', type='jsonrpc', auth='user', methods=['POST'])
-    def mark_task_arrived(self, task_id, **kwargs):
+    @http.route('/logistics/task/<int:task_id>/arrived', type='jsonrpc', auth='public', methods=['POST'])
+    def mark_task_arrived(self, task_id, token=None, **kwargs):
         """El piloto marcó que llegó a la parada."""
         try:
-            task = request.env['logistics.task'].sudo().browse(task_id)
-            if not task.exists():
-                return {'success': False, 'error': 'La tarea no existe.'}
+            task = tarea_del_piloto(task_id, piloto_de_la_peticion(token))
+            if not task:
+                return {'success': False, 'error': 'Parada no encontrada.'}
 
             task.action_mark_arrived()
             return {'success': True}
@@ -94,15 +139,14 @@ class DriverAppController(http.Controller):
             _logger.exception("Error al marcar tarea como llegada. task_id=%s", task_id)
             return {'success': False, 'error': str(e)}
 
-    @http.route('/logistics/task/<int:task_id>/complete', type='jsonrpc', auth='user', methods=['POST'])
-    def complete_task(self, task_id, **kwargs):
+    @http.route('/logistics/task/<int:task_id>/complete', type='jsonrpc', auth='public', methods=['POST'])
+    def complete_task(self, task_id, token=None, **kwargs):
         """El piloto completó la tarea."""
         try:
             data = kwargs  # `params` de la llamada JSON-RPC, ya desarmado por Odoo
-            task = request.env['logistics.task'].sudo().browse(task_id)
-
-            if not task.exists():
-                return {'success': False, 'error': 'La tarea no existe.'}
+            task = tarea_del_piloto(task_id, piloto_de_la_peticion(token))
+            if not task:
+                return {'success': False, 'error': 'Parada no encontrada.'}
 
             # Guardar evidencia si viene
             vals = {}
@@ -138,16 +182,15 @@ class DriverAppController(http.Controller):
             _logger.exception("Error al completar tarea. task_id=%s", task_id)
             return {'success': False, 'error': str(e)}
 
-    @http.route('/logistics/task/<int:task_id>/fail', type='jsonrpc', auth='user', methods=['POST'])
-    def fail_task(self, task_id, **kwargs):
+    @http.route('/logistics/task/<int:task_id>/fail', type='jsonrpc', auth='public', methods=['POST'])
+    def fail_task(self, task_id, token=None, **kwargs):
         """El piloto reportó que no pudo completar la tarea."""
         try:
             data = kwargs  # `params` de la llamada JSON-RPC, ya desarmado por Odoo
             reason = data.get('reason', 'Sin razón especificada')
-            task = request.env['logistics.task'].sudo().browse(task_id)
-
-            if not task.exists():
-                return {'success': False, 'error': 'La tarea no existe.'}
+            task = tarea_del_piloto(task_id, piloto_de_la_peticion(token))
+            if not task:
+                return {'success': False, 'error': 'Parada no encontrada.'}
 
             task.action_mark_failed(reason)
             return {'success': True}

@@ -10,6 +10,7 @@ class LogisticsGpsTracker {
         this.routeId     = options.routeId  || null;
         this.interval    = options.interval || 15; // segundos
         this.serverUrl   = options.serverUrl || "/logistics/gps/update";
+        this.token       = options.token || "";
         this.isTracking  = false;
         this.watchId     = null;
         this.sendTimer   = null;
@@ -106,7 +107,7 @@ class LogisticsGpsTracker {
 
     async _sendPosition() {
         if (!this.lastPosition) return;
-        const data = { ...this.lastPosition };
+        const data = { ...this.lastPosition, token: this.token };
 
         // Si hay cola offline, intentar enviar primero
         await this._syncOfflineQueue();

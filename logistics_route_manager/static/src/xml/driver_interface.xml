@@ -128,6 +128,7 @@
                             routeData:  <t t-out="route_data"/>,
                             apiKey:     "<t t-esc="api_key"/>",
                             gpsInterval: <t t-esc="gps_interval"/>,
+                            token:      "<t t-esc="token"/>",
                         });
                     });
                 </script>

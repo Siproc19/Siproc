@@ -10,6 +10,8 @@ class DriverApp {
         this.routeData     = config.routeData || {};
         this.apiKey        = config.apiKey || "";
         this.gpsInterval   = config.gpsInterval || 15;
+        // Identifica al piloto cuando no hay sesión de Odoo.
+        this.token         = config.token || "";
         this.tasks         = this.routeData.tasks || [];
         this.currentTaskIndex = 0;
         this.gpsTracker    = null;
@@ -169,7 +171,8 @@ class DriverApp {
             const res = await fetch(`/logistics/task/${taskId}/arrived`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ jsonrpc: "2.0", method: "call", params: {} }),
+                body: JSON.stringify({ jsonrpc: "2.0", method: "call",
+                                       params: { token: this.token } }),
             });
             const data = await res.json();
             if (data.result?.success) {
@@ -202,7 +205,7 @@ class DriverApp {
         const spent      = document.getElementById("spent-amount");
 
         const boton = document.getElementById("complete-modal-confirm");
-        const params = {};
+        const params = { token: this.token };
 
         // La foto ya viene reducida desde que se eligió. Si por lo que sea no
         // se pudo reducir, se manda tal cual.
@@ -409,7 +412,8 @@ class DriverApp {
             const res = await fetch(`/logistics/task/${taskId}/fail`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ jsonrpc: "2.0", method: "call", params: { reason } }),
+                body: JSON.stringify({ jsonrpc: "2.0", method: "call",
+                                       params: { reason, token: this.token } }),
             });
             const data = await res.json();
             if (data.result?.success) {
@@ -428,6 +432,7 @@ class DriverApp {
             driverId: this.driverId,
             routeId:  this.routeId,
             interval: this.gpsInterval,
+            token:    this.token,
             onPositionUpdate: (pos) => {
                 const speedEl = document.getElementById("driver-speed");
                 if (speedEl) speedEl.textContent = `${pos.speed} km/h`;
@@ -528,7 +533,8 @@ class DriverApp {
                 const res = await fetch(`/logistics/route/${this.routeId}/start`, {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ jsonrpc: "2.0", method: "call", params: {} }),
+                    body: JSON.stringify({ jsonrpc: "2.0", method: "call",
+                                       params: { token: this.token } }),
                 });
                 const data = await res.json();
                 if (data.result?.success) {

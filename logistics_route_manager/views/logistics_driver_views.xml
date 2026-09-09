@@ -43,7 +43,30 @@
                             <field name="current_longitude" readonly="1"/>
                             <field name="current_speed" readonly="1" string="Velocidad (km/h)"/>
                             <field name="last_gps_update" readonly="1"/>
+                            <field name="battery_level" readonly="1"
+                                   invisible="not battery_level"/>
                         </group>
+                    </group>
+
+                    <group string="🔑 Acceso del piloto — sin usuario de Odoo"
+                           groups="logistics_route_manager.group_logistics_manager">
+                        <div class="alert alert-warning" colspan="2" role="alert">
+                            <b>Estos dos enlaces son secretos.</b> Quien los tenga
+                            puede actuar como este piloto. Mándelos solo a él, por
+                            mensaje privado. Si se filtran, use
+                            <b>Regenerar token</b>: los anteriores dejan de
+                            funcionar al instante.
+                        </div>
+                        <field name="app_url" readonly="1" widget="CopyClipboardChar"
+                               string="1. App del piloto"
+                               help="Se lo manda por WhatsApp. Él lo abre y lo agrega a su pantalla de inicio."/>
+                        <field name="gps_push_url" readonly="1" widget="CopyClipboardChar"
+                               string="2. Rastreo en segundo plano"
+                               help="Se pega en la app de rastreo del celular, para que mande posición con el teléfono bloqueado."/>
+                        <button name="action_regenerar_token_gps" type="object"
+                                string="Regenerar token" icon="fa-refresh"
+                                class="btn-secondary" colspan="2"
+                                confirm="Se van a invalidar los enlaces actuales de este piloto. Tendrá que mandarle los nuevos. ¿Continuar?"/>
                     </group>
                     <notebook>
                         <page string="Ruta Actual" name="current_route">
