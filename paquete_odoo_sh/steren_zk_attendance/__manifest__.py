@@ -1,6 +1,6 @@
 {
     'name': 'Checador Steren/ZKTeco - Integración de Asistencia',
-    'version': '19.0.1.0.0',
+    'version': '19.0.1.0.1',
     'category': 'Human Resources/Attendances',
     'summary': 'Sincroniza marcaciones de checadores biométricos ZKTeco (incluye Steren CLK-960) con Asistencias de Odoo',
     'description': """
@@ -25,9 +25,14 @@ Requisitos
 ----------
 Este módulo requiere la librería Python "pyzk" instalada en el servidor de
 Odoo (no dentro de la base de datos, sino en el entorno donde corre el
-proceso de Odoo)::
+proceso de Odoo).
 
-    pip install pyzk
+IMPORTANTE si usas Odoo.sh: el archivo "requirements.txt" incluido en este
+paquete debe quedar en la RAÍZ de tu repositorio (junto a tus demás carpetas
+de módulos), NUNCA dentro de la carpeta de este módulo. Odoo.sh solo detecta
+requirements.txt ahí o en la carpeta que contiene a los módulos. Si tu Odoo
+es autoalojado, en cambio, basta con correr "pip install pyzk" en el entorno
+donde corre el proceso de Odoo.
 
 Sin esa librería el módulo se instala igual, pero los botones de conexión
 mostrarán un aviso pidiendo instalarla.
