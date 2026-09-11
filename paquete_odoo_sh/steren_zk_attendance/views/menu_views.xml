@@ -7,4 +7,10 @@
               action="zk_biometric_device_action"
               sequence="100"/>
 
+    <menuitem id="menu_hr_employee_zk_link"
+              name="Vincular Empleados con Checador"
+              parent="hr_attendance.menu_hr_attendance_root"
+              action="hr_employee_action_zk"
+              sequence="101"/>
+
 </odoo>

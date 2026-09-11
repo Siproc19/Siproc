@@ -17,4 +17,27 @@
         </field>
     </record>
 
+    <!-- Pantalla propia e independiente para vincular empleados con su ID
+         de checador. No depende de la vista de formulario de Empleados
+         (que en algunas instalaciones tiene personalizaciones de Studio
+         que pueden fallar), así que esta lista funciona siempre. -->
+    <record id="hr_employee_view_list_zk" model="ir.ui.view">
+        <field name="name">hr.employee.list.zk.biometric</field>
+        <field name="model">hr.employee</field>
+        <field name="arch" type="xml">
+            <list editable="bottom" create="false" delete="false">
+                <field name="name" readonly="1"/>
+                <field name="department_id" readonly="1"/>
+                <field name="zk_device_user_id"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="hr_employee_action_zk" model="ir.actions.act_window">
+        <field name="name">Vincular Empleados con Checador</field>
+        <field name="res_model">hr.employee</field>
+        <field name="view_mode">list</field>
+        <field name="view_id" ref="hr_employee_view_list_zk"/>
+    </record>
+
 </odoo>
