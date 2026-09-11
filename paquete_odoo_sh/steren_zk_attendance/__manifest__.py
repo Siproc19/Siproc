@@ -1,6 +1,6 @@
 {
     'name': 'Checador Steren/ZKTeco - Integración de Asistencia',
-    'version': '19.0.1.0.1',
+    'version': '19.0.1.0.2',
     'category': 'Human Resources/Attendances',
     'summary': 'Sincroniza marcaciones de checadores biométricos ZKTeco (incluye Steren CLK-960) con Asistencias de Odoo',
     'description': """
@@ -42,7 +42,7 @@ mostrarán un aviso pidiendo instalarla.
     'license': 'LGPL-3',
     'depends': ['hr_attendance'],
     'external_dependencies': {
-        'python': ['zk'],
+        'python': ['pyzk'],
     },
     'data': [
         'security/ir.model.access.csv',

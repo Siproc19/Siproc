@@ -16,7 +16,7 @@ class ZkAttendanceLog(models.Model):
     attendance_id = fields.Many2one(
         'hr.attendance', string='Registro de asistencia generado')
 
-    _sql_constraints = [
-        ('unique_punch', 'unique(device_id, device_user_id, punch_datetime)',
-         'Esta marcación ya había sido importada anteriormente.'),
-    ]
+    _unique_punch = models.Constraint(
+        'unique(device_id, device_user_id, punch_datetime)',
+        'Esta marcación ya había sido importada anteriormente.',
+    )

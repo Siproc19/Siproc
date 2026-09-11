@@ -50,9 +50,9 @@
             <form>
                 <header>
                     <button name="action_test_connection" type="object"
-                            string="Probar conexión" class="btn-secondary"/>
+                            string="Probar conexión directa" class="btn-secondary"/>
                     <button name="action_download_attendance" type="object"
-                            string="Descargar asistencias" class="btn-primary"/>
+                            string="Descargar asistencias (directo)" class="btn-secondary"/>
                     <field name="state" widget="statusbar"
                            statusbar_visible="draft,connected,error"/>
                 </header>
@@ -68,14 +68,11 @@
                         <h1><field name="name" placeholder="Ej. Checador entrada principal"/></h1>
                     </div>
                     <group>
-                        <group string="Conexión">
-                            <field name="ip_address" placeholder="192.168.1.201"/>
-                            <field name="port"/>
-                            <field name="password"/>
-                            <field name="timeout"/>
-                            <field name="force_udp"/>
-                            <field name="tz"/>
-                            <field name="active"/>
+                        <group string="🔗 Enlace desde la oficina (recomendado)">
+                            <field name="webhook_url" readonly="1"/>
+                            <field name="token" readonly="1"/>
+                            <button name="action_regenerate_token" type="object"
+                                    string="Regenerar token" class="btn-link"/>
                         </group>
                         <group string="Estado">
                             <field name="device_name"/>
@@ -83,6 +80,17 @@
                             <field name="last_sync"/>
                             <field name="last_error"/>
                         </group>
+                    </group>
+                    <group string="Conexión directa (opcional, solo si Odoo puede alcanzar la red del checador)">
+                        <field name="ip_address" placeholder="192.168.1.201"/>
+                        <field name="port"/>
+                        <field name="password"/>
+                        <field name="timeout"/>
+                        <field name="force_udp"/>
+                    </group>
+                    <group>
+                        <field name="tz"/>
+                        <field name="active"/>
                     </group>
                 </sheet>
             </form>
