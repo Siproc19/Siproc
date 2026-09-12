@@ -385,10 +385,9 @@ class LogisticsTask(models.Model):
         trabajo en campo y no puede quedar bloqueado por esto.
         """
         self.ensure_one()
-        pedido = self.sale_order_id
+        pedido = self._pedido_de_esta_parada()
         if not pedido:
             return
-        pedido = pedido.sudo()
 
         try:
             cuerpo = self._cuerpo_aviso_entrega(entregado, motivo)
@@ -428,12 +427,40 @@ class LogisticsTask(models.Model):
                 self.id, error,
             )
 
+    def _pedido_de_esta_parada(self):
+        """El pedido de venta de esta parada, venga por donde venga.
+
+        Lo normal es que la parada se haya creado con el asistente «Crear
+        ruta desde entregas», que ya la deja ligada al pedido. Pero si
+        alguien armó la ruta a mano y solo puso la transferencia, el enlace
+        al pedido queda vacío y antes el aviso no salía. Aquí se recupera
+        desde la transferencia.
+        """
+        self.ensure_one()
+        if self.sale_order_id:
+            return self.sale_order_id.sudo()
+        picking = self.stock_picking_id
+        if picking and 'sale_id' in picking._fields:
+            pedido = picking.sudo().sale_id
+            if pedido:
+                return pedido
+        return self.env['sale.order']
+
     def _destinatarios_aviso(self, pedido):
-        """A quién se le notifica: el vendedor responsable del pedido."""
+        """A quién se le avisa.
+
+        Primero el vendedor asignado. Si el pedido no tiene vendedor —pasa
+        cuando se crea desde bodega o por importación—, se le avisa a quien
+        creó el documento, para que el aviso nunca se quede sin dueño.
+        """
+        destinatarios = self.env['res.partner']
         vendedor = pedido.user_id
         if vendedor and vendedor.partner_id:
-            return vendedor.partner_id.ids
-        return []
+            destinatarios |= vendedor.partner_id
+        creador = pedido.create_uid
+        if creador and creador.partner_id and not creador._is_public():
+            destinatarios |= creador.partner_id
+        return destinatarios.ids
 
     def _cuerpo_aviso_entrega(self, entregado, motivo=''):
         """Arma el texto del aviso con los datos de la entrega real."""
