@@ -19,9 +19,18 @@
             </xpath>
 
             <xpath expr="//notebook" position="inside">
-                <page string="🚚 Logística" name="logistics"
-                      invisible="logistics_status == 'no_route'">
-                    <group>
+                <!-- La pestaña se ve siempre. Escondida cuando no había ruta,
+                     Ventas no sabía si el pedido todavía no salía o si el
+                     módulo estaba fallando. Ahora lo dice con todas sus
+                     letras. -->
+                <page string="🚚 Logística" name="logistics">
+                    <div class="alert alert-info" role="status"
+                         invisible="logistics_status != 'no_route'">
+                        Este pedido todavía no va en ninguna ruta. Bodega lo
+                        asigna desde <b>Inventario → Transferencias</b>,
+                        eligiendo la entrega y creando la ruta del día.
+                    </div>
+                    <group invisible="logistics_status == 'no_route'">
                         <group string="Ruta">
                             <field name="logistics_status"/>
                             <field name="logistics_route_date"/>
@@ -33,6 +42,7 @@
                     </group>
 
                     <field name="logistics_task_ids" readonly="1"
+                           invisible="logistics_status == 'no_route'"
                            groups="logistics_route_manager.group_logistics_manager,logistics_route_manager.group_logistics_user,logistics_route_manager.group_logistics_driver">
                         <list string="Paradas">
                             <field name="route_id"/>

@@ -79,17 +79,44 @@ class SaleOrder(models.Model):
         string='Vehículo', compute='_compute_logistics_info',
     )
 
-    @api.depends('logistics_task_ids.route_id')
+    def _tareas_logisticas(self):
+        """Todas las paradas que llevan este pedido.
+
+        Hay dos formas de llegar a la parada y las dos cuentan:
+
+        1. Enlace directo `sale_order_id` — se llena cuando la parada se
+           arma desde la orden de entrega.
+        2. A través de la orden de entrega del pedido — la parada apunta al
+           `stock.picking` y el picking es de este pedido.
+
+        Antes solo se miraba el enlace directo. Si Bodega armaba la ruta
+        eligiendo la entrega, la parada quedaba bien amarrada al picking
+        pero el pedido de venta no se enteraba: la pestaña 🚚 Logística
+        desaparecía aunque la entrega ya estuviera hecha. Por eso ahora se
+        busca por los dos caminos.
+        """
+        self.ensure_one()
+        if not self.id:
+            return self.env['logistics.task'].sudo().browse()
+        dominio = [('sale_order_id', '=', self.id)]
+        entregas = self.picking_ids.ids if 'picking_ids' in self._fields else []
+        if entregas:
+            dominio = ['|', ('sale_order_id', '=', self.id),
+                       ('stock_picking_id', 'in', entregas)]
+        return self.env['logistics.task'].sudo().search(dominio)
+
+    @api.depends('logistics_task_ids.route_id', 'picking_ids')
     def _compute_logistics_route_count(self):
         for rec in self:
             rec.logistics_route_count = len(
-                rec.sudo().logistics_task_ids.mapped('route_id')
+                rec._tareas_logisticas().mapped('route_id')
             )
 
-    @api.depends('logistics_task_ids.state', 'logistics_task_ids.route_id.state')
+    @api.depends('logistics_task_ids.state', 'logistics_task_ids.route_id.state',
+                 'picking_ids')
     def _compute_logistics_status(self):
         for rec in self:
-            tasks = rec.sudo().logistics_task_ids
+            tasks = rec._tareas_logisticas()
             if not tasks:
                 rec.logistics_status = 'no_route'
                 continue
@@ -112,10 +139,11 @@ class SaleOrder(models.Model):
         'logistics_task_ids.route_id.driver_id',
         'logistics_task_ids.route_id.vehicle_id',
         'logistics_task_ids.actual_departure',
+        'picking_ids',
     )
     def _compute_logistics_info(self):
         for rec in self:
-            tareas = rec.sudo().logistics_task_ids
+            tareas = rec._tareas_logisticas()
             # La parada más reciente manda: es la que refleja el estado actual.
             task = tareas.sorted(
                 lambda t: (t.route_id.date or fields.Date.today(), t.id), reverse=True
@@ -142,7 +170,7 @@ class SaleOrder(models.Model):
         restringido a esos grupos en la vista.
         """
         self.ensure_one()
-        routes = self.logistics_task_ids.mapped('route_id')
+        routes = self._tareas_logisticas().mapped('route_id')
         action = {
             'type': 'ir.actions.act_window',
             'name': _('Rutas Logísticas'),
