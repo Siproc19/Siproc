@@ -20,6 +20,7 @@
                             <field name="company_id" groups="base.group_multi_company"/>
                             <field name="modo"/>
                             <field name="auto_certify"/>
+                            <field name="auto_consultar_nit"/>
                             <field name="active" invisible="1"/>
                         </group>
                         <group string="Datos Tributarios">

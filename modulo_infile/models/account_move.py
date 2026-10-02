@@ -38,6 +38,13 @@ class AccountMove(models.Model):
                                  copy=False)
     fel_ultima_consulta_sat = fields.Datetime(string="Última consulta SAT",
                                               readonly=True, copy=False)
+    fel_motivo_anulacion = fields.Text(
+        string="Motivo de Anulación", readonly=True, copy=False,
+        help="Razón de anulación enviada a SAT (MotivoAnulacion).")
+    fel_fecha_anulacion = fields.Datetime(
+        string="Fecha de Anulación", readonly=True, copy=False)
+    fel_usuario_anulacion_id = fields.Many2one(
+        'res.users', string="Anulado por", readonly=True, copy=False)
     fel_sync_ok = fields.Boolean(string="Sincronizado con SAT", readonly=True,
                                  copy=False, default=False)
 
@@ -229,6 +236,23 @@ class AccountMove(models.Model):
     # Anular
     # ------------------------------------------------------------------
     def action_anular_fel(self):
+        """Abre el asistente que solicita el motivo de anulación (requisito SAT)."""
+        self.ensure_one()
+        if self.fel_estado != 'certified':
+            raise UserError(_("Solo se pueden anular documentos certificados."))
+        return {
+            'type': 'ir.actions.act_window',
+            'name': _('Anular documento FEL'),
+            'res_model': 'infile.cancel.wizard',
+            'view_mode': 'form',
+            'target': 'new',
+            'context': {'default_move_id': self.id},
+        }
+
+    def fel_anular_documento(self, motivo):
+        motivo = (motivo or '').strip()
+        if len(motivo) < 5:
+            raise UserError(_("Debe indicar el motivo de anulación (mínimo 5 caracteres)."))
         Config = self.env['infile.config']
         for move in self:
             if move.fel_estado != 'certified':
@@ -238,7 +262,7 @@ class AccountMove(models.Model):
             cfg = Config.get_config(move.company_id)
             try:
                 builder = DteBuilder(move, cfg.as_dict())
-                xml_anulacion = builder.build_anulacion()
+                xml_anulacion = builder.build_anulacion(motivo)
                 move.fel_xml_enviado = xml_anulacion
                 client = cfg.get_client(move=move)
                 resultado = client.anular(xml_anulacion, move.fel_uuid)
@@ -246,10 +270,14 @@ class AccountMove(models.Model):
                     move.write({
                         'fel_estado': 'cancelled',
                         'fel_xml_respuesta': resultado.get('xml_respuesta', ''),
+                        'fel_motivo_anulacion': motivo[:255],
+                        'fel_fecha_anulacion': fields.Datetime.now(),
+                        'fel_usuario_anulacion_id': self.env.user.id,
                     })
                     move.message_post(body=_(
                         "<strong>❌ Documento anulado en FEL</strong><br/>"
-                        "<b>UUID:</b> %s") % move.fel_uuid)
+                        "<b>UUID:</b> %(uuid)s<br/><b>Motivo:</b> %(motivo)s")
+                        % {'uuid': move.fel_uuid, 'motivo': motivo[:255]})
                 else:
                     raise UserError(_("Error al anular: %s")
                                     % (resultado.get('mensaje', '') if resultado else ''))

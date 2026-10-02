@@ -1,7 +1,10 @@
 # -*- coding: utf-8 -*-
 import re
-from odoo import models, fields, _
+import logging
+from odoo import api, models, fields, _
 from odoo.exceptions import UserError
+
+_logger = logging.getLogger(__name__)
 
 
 class ResPartner(models.Model):
@@ -21,6 +24,26 @@ class ResPartner(models.Model):
             raise UserError(_("No hay configuración FEL INFILE activa."))
         return cfg.get_client()
 
+    @api.onchange('vat')
+    def _onchange_vat_infile_nombre(self):
+        """Al escribir el NIT, coloca el nombre registrado en SAT."""
+        for partner in self:
+            nit = re.sub(r'[^0-9kK]', '', str(partner.vat or '')).upper()
+            if len(nit) < 4 or nit in ('CF',):
+                continue
+            cfg = self.env['infile.config'].sudo().get_config()
+            if not cfg or not cfg.auto_consultar_nit:
+                continue
+            try:
+                resultado = cfg.get_client().consultar_nit(nit)
+            except Exception as exc:  # no bloquear la captura del contacto
+                _logger.warning("Consulta automática de NIT %s falló: %s", nit, exc)
+                continue
+            nombre = (resultado.get('nombre') or '').strip()
+            if nombre:
+                partner.name = nombre
+                partner.infile_nombre_consultado = nombre
+
     def action_consultar_nit_infile(self):
         for partner in self:
             if not partner.vat:
@@ -32,7 +55,7 @@ class ResPartner(models.Model):
                 'infile_nombre_consultado': nombre or False,
                 'infile_ultima_consulta': fields.Datetime.now(),
             }
-            if nombre and (not partner.name or partner.name == partner.vat):
+            if nombre:
                 vals['name'] = nombre
             if resultado.get('nit'):
                 vals['vat'] = resultado['nit']

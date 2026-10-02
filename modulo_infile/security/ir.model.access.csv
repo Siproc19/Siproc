@@ -5,3 +5,4 @@ access_infile_config_consulta,infile.config.consulta,model_infile_config,group_f
 access_infile_log_admin,infile.log.admin,model_infile_log,group_fel_administrador,1,1,1,1
 access_infile_log_user,infile.log.user,model_infile_log,group_fel_usuario,1,0,1,0
 access_infile_log_consulta,infile.log.consulta,model_infile_log,group_fel_consulta,1,0,0,0
+access_infile_cancel_wizard_admin,infile.cancel.wizard.admin,model_infile_cancel_wizard,group_fel_administrador,1,1,1,1

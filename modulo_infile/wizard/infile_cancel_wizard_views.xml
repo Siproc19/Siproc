@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_infile_cancel_wizard_form" model="ir.ui.view">
+        <field name="name">infile.cancel.wizard.form</field>
+        <field name="model">infile.cancel.wizard</field>
+        <field name="arch" type="xml">
+            <form string="Anular documento FEL">
+                <group>
+                    <field name="move_id"/>
+                    <field name="fel_serie"/>
+                    <field name="fel_numero"/>
+                    <field name="fel_uuid"/>
+                </group>
+                <group>
+                    <field name="motivo" placeholder="Ej.: Error en los datos del cliente, devolución de mercadería, factura emitida por error..."/>
+                </group>
+                <footer>
+                    <button string="Confirmar anulación ante SAT" name="action_confirm_cancel"
+                            type="object" class="btn-danger"/>
+                    <button string="Cancelar" special="cancel" class="btn-secondary"/>
+                </footer>
+            </form>
+        </field>
+    </record>
+</odoo>

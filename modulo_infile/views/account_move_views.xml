@@ -23,9 +23,8 @@
                         invisible="not fel_enabled or not fel_uuid"/>
                 <button name="action_anular_fel" type="object"
                         string="Anular FEL"
-                        groups="modulo_infile.group_fel_usuario"
-                        invisible="not fel_enabled or fel_estado != 'certified'"
-                        confirm="¿Confirma la anulación de este documento ante SAT?"/>
+                        groups="modulo_infile.group_fel_administrador"
+                        invisible="not fel_enabled or fel_estado != 'certified'"/>
                 <button name="action_imprimir_dte" type="object"
                         string="Imprimir DTE" icon="fa-print"
                         invisible="not fel_enabled or fel_estado != 'certified'"/>
@@ -53,6 +52,11 @@
                             <field name="fel_pdf_url" widget="url"
                                    invisible="not fel_pdf_url"/>
                         </group>
+                    </group>
+                    <group string="Anulación" invisible="fel_estado != 'cancelled'">
+                        <field name="fel_motivo_anulacion"/>
+                        <field name="fel_fecha_anulacion"/>
+                        <field name="fel_usuario_anulacion_id"/>
                     </group>
                     <notebook>
                         <page string="XML Enviado">

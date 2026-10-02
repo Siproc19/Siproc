@@ -58,6 +58,11 @@ class InfileConfig(models.Model):
                                          default='1')
 
     # Parámetros
+    auto_consultar_nit = fields.Boolean(
+        string='Autocompletar nombre desde SAT',
+        default=True,
+        help="Al escribir un NIT en un contacto, se consulta y se coloca "
+             "automáticamente el nombre registrado en SAT.")
     auto_certify = fields.Boolean(
         string='Certificar automáticamente al validar factura', default=False)
 

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 {
     "name": "SIPROC FEL INFILE Guatemala",
-    "version": "19.0.2.0.0",
+    "version": "19.0.2.1.0",
     "author": "Ronald de León / SIPROC",
     "website": "https://siproc.com",
     "license": "LGPL-3",
@@ -29,6 +29,7 @@ FEL Guatemala - INFILE (reorganizado)
         "views/infile_config_views.xml",
         "views/account_move_views.xml",
         "views/res_partner_views.xml",
+        "wizard/infile_cancel_wizard_views.xml",
         "report/fel_dte_report.xml",
         "data/ir_cron.xml",
     ],
