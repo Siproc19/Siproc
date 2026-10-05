@@ -1,0 +1,100 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="siproc_upside_line_view_list" model="ir.ui.view">
+        <field name="name">siproc.upside.line.list</field>
+        <field name="model">siproc.upside.line</field>
+        <field name="arch" type="xml">
+            <list string="Upside Potential / Plan B" create="0" decoration-success="estado == 'won'"
+                  decoration-muted="estado == 'lost'">
+                <header>
+                    <button name="%(siproc_crm_upside.action_upside_report_wizard)d" type="action"
+                            string="Descargar reporte semanal" class="btn-primary" display="always"/>
+                </header>
+                <field name="partner_id"/>
+                <field name="lead_id" optional="show"/>
+                <field name="name" string="Proyecto"/>
+                <field name="valor_cliente" sum="Total"/>
+                <field name="monto" sum="Total"/>
+                <field name="unidades" sum="Total"/>
+                <field name="frecuencia"/>
+                <field name="fecha_inicio" optional="show"/>
+                <field name="fecha_fin" optional="show"/>
+                <field name="stage_id" optional="hide"/>
+                <field name="avance_pct" string="Avance %"/>
+                <field name="comentario" optional="show"/>
+                <field name="probability" string="Prob. %"/>
+                <field name="user_id" optional="hide" widget="many2one_avatar_user"/>
+                <field name="plan_tipo" optional="hide"/>
+                <field name="estado" optional="hide"/>
+                <field name="currency_id" column_invisible="True"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="siproc_upside_line_view_pivot" model="ir.ui.view">
+        <field name="name">siproc.upside.line.pivot</field>
+        <field name="model">siproc.upside.line</field>
+        <field name="arch" type="xml">
+            <pivot string="Upside Potential / Plan B" sample="1">
+                <field name="plan_tipo" type="row"/>
+                <field name="partner_id" type="row"/>
+                <field name="valor_cliente" type="measure"/>
+                <field name="monto" type="measure"/>
+            </pivot>
+        </field>
+    </record>
+
+    <record id="siproc_upside_line_view_graph" model="ir.ui.view">
+        <field name="name">siproc.upside.line.graph</field>
+        <field name="model">siproc.upside.line</field>
+        <field name="arch" type="xml">
+            <graph string="Upside Potential / Plan B" type="bar" stacked="1" sample="1">
+                <field name="partner_id"/>
+                <field name="plan_tipo"/>
+                <field name="valor_cliente" type="measure"/>
+            </graph>
+        </field>
+    </record>
+
+    <record id="siproc_upside_line_view_search" model="ir.ui.view">
+        <field name="name">siproc.upside.line.search</field>
+        <field name="model">siproc.upside.line</field>
+        <field name="arch" type="xml">
+            <search>
+                <field name="partner_id"/>
+                <field name="name"/>
+                <field name="lead_id"/>
+                <field name="user_id"/>
+                <filter string="Mis oportunidades" name="mine" domain="[('user_id', '=', uid)]"/>
+                <separator/>
+                <filter string="Upside Potential" name="plan_upside" domain="[('plan_tipo', '=', 'upside')]"/>
+                <filter string="Plan B" name="plan_b" domain="[('plan_tipo', '=', 'plan_b')]"/>
+                <filter string="Prospección" name="plan_prospeccion" domain="[('plan_tipo', '=', 'prospeccion')]"/>
+                <separator/>
+                <filter string="En proceso" name="abiertos" domain="[('estado', '=', 'pending')]"/>
+                <filter string="Ganados" name="ganados" domain="[('estado', '=', 'won')]"/>
+                <filter string="Perdidos" name="perdidos" domain="[('estado', '=', 'lost'), ('active', '=', False)]"/>
+                <separator/>
+                <filter string="Fecha fin" name="fecha_fin" date="fecha_fin"/>
+                <filter string="Plan" name="groupby_plan" context="{'group_by': 'plan_tipo'}"/>
+                <filter string="Cliente" name="groupby_cliente" context="{'group_by': 'partner_id'}"/>
+                <filter string="Valor de avance" name="groupby_avance" context="{'group_by': 'avance_id'}"/>
+                <filter string="Etapa del CRM" name="groupby_etapa" context="{'group_by': 'stage_id'}"/>
+                <filter string="Vendedor" name="groupby_vendedor" context="{'group_by': 'user_id'}"/>
+            </search>
+        </field>
+    </record>
+
+    <record id="action_siproc_upside_line" model="ir.actions.act_window">
+        <field name="name">Upside Potential / Plan B</field>
+        <field name="res_model">siproc.upside.line</field>
+        <field name="view_mode">list,pivot,graph</field>
+        <field name="search_view_id" ref="siproc_upside_line_view_search"/>
+        <field name="context">{'search_default_abiertos': 1, 'search_default_groupby_plan': 1, 'search_default_groupby_cliente': 1}</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">Todavía no hay productos en el Upside Potential</p>
+            <p>Abre una oportunidad del CRM, elige su plan (Upside Potential, Plan B o Prospección) en la pestaña
+               "Upside / Plan B" y agrega los productos con su monto y frecuencia.</p>
+        </field>
+    </record>
+</odoo>

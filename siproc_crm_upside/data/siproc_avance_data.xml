@@ -1,0 +1,73 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo noupdate="1">
+    <record id="avance_perfilar" model="siproc.avance">
+        <field name="name">Perfilar cliente</field>
+        <field name="peso">5</field>
+        <field name="sequence">1</field>
+    </record>
+    <record id="avance_contactar" model="siproc.avance">
+        <field name="name">Contactar</field>
+        <field name="peso">10</field>
+        <field name="sequence">2</field>
+    </record>
+    <record id="avance_cita" model="siproc.avance">
+        <field name="name">Cita</field>
+        <field name="peso">15</field>
+        <field name="sequence">3</field>
+    </record>
+    <record id="avance_conocer" model="siproc.avance">
+        <field name="name">Conocer al cliente / consumos</field>
+        <field name="peso">20</field>
+        <field name="sequence">4</field>
+    </record>
+    <record id="avance_seguimiento" model="siproc.avance">
+        <field name="name">Seguimiento</field>
+        <field name="peso">25</field>
+        <field name="sequence">5</field>
+    </record>
+    <record id="avance_cotizar" model="siproc.avance">
+        <field name="name">Cotizar</field>
+        <field name="peso">30</field>
+        <field name="sequence">6</field>
+    </record>
+    <record id="avance_muestras" model="siproc.avance">
+        <field name="name">Muestras de producto</field>
+        <field name="peso">40</field>
+        <field name="sequence">7</field>
+    </record>
+    <record id="avance_aprob_precio" model="siproc.avance">
+        <field name="name">Aprobación de precio</field>
+        <field name="peso">50</field>
+        <field name="sequence">8</field>
+    </record>
+    <record id="avance_codigo_proveedor" model="siproc.avance">
+        <field name="name">Creación de código de proveedor</field>
+        <field name="peso">55</field>
+        <field name="sequence">9</field>
+    </record>
+    <record id="avance_prueba" model="siproc.avance">
+        <field name="name">Prueba industrial</field>
+        <field name="peso">60</field>
+        <field name="sequence">10</field>
+    </record>
+    <record id="avance_aprob_prueba" model="siproc.avance">
+        <field name="name">Aprobación de prueba</field>
+        <field name="peso">70</field>
+        <field name="sequence">11</field>
+    </record>
+    <record id="avance_credito" model="siproc.avance">
+        <field name="name">Solicitud de crédito</field>
+        <field name="peso">75</field>
+        <field name="sequence">12</field>
+    </record>
+    <record id="avance_negociacion" model="siproc.avance">
+        <field name="name">Negociación de orden</field>
+        <field name="peso">80</field>
+        <field name="sequence">13</field>
+    </record>
+    <record id="avance_orden" model="siproc.avance">
+        <field name="name">Orden de compra</field>
+        <field name="peso">85</field>
+        <field name="sequence">14</field>
+    </record>
+</odoo>

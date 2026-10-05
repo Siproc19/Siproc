@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <menuitem id="menu_siproc_upside_root" name="Upside SIPROC" parent="crm.crm_menu_root" sequence="25"/>
+    <menuitem id="menu_siproc_upside_resumen" name="Upside Potential y Plan B" parent="menu_siproc_upside_root"
+              action="action_upside_resumen" sequence="1"/>
+    <menuitem id="menu_siproc_upside_prospeccion" name="Prospección" parent="menu_siproc_upside_root"
+              action="action_upside_prospeccion" sequence="2"/>
+    <menuitem id="menu_siproc_upside_ganados" name="Clientes ganados" parent="menu_siproc_upside_root"
+              action="action_upside_ganados" sequence="3"/>
+    <menuitem id="menu_siproc_upside_perdidos" name="Clientes perdidos" parent="menu_siproc_upside_root"
+              action="action_upside_perdidos" sequence="4"/>
+    <menuitem id="menu_siproc_upside_report" name="Detalle por producto" parent="menu_siproc_upside_root"
+              action="action_siproc_upside_line" sequence="5"/>
+    <menuitem id="menu_siproc_upside_wizard" name="Reporte semanal (Excel)" parent="menu_siproc_upside_root"
+              action="action_upside_report_wizard" sequence="6"/>
+    <menuitem id="menu_siproc_avance" name="Valor de avance" parent="crm.crm_menu_config"
+              action="action_siproc_avance" sequence="30" groups="sales_team.group_sale_manager"/>
+</odoo>

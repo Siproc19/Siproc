@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="siproc_upside_report_wizard_form" model="ir.ui.view">
+        <field name="name">siproc.upside.report.wizard.form</field>
+        <field name="model">siproc.upside.report.wizard</field>
+        <field name="arch" type="xml">
+            <form string="Reporte semanal Upside Potential / Plan B">
+                <p class="text-muted">
+                    Genera el Excel con las hojas Valor de avance, UP Side Potential, Plan B, Prospección,
+                    Clientes ganados y Clientes perdidos. Ganados y perdidos son los que se cerraron en la semana elegida.
+                </p>
+                <group>
+                    <group>
+                        <field name="fecha_desde"/>
+                        <field name="fecha_hasta"/>
+                    </group>
+                    <group>
+                        <field name="user_ids" widget="many2many_avatar_user"/>
+                    </group>
+                </group>
+                <footer>
+                    <button name="action_descargar" type="object" string="Descargar Excel" class="btn-primary"/>
+                    <button string="Cancelar" special="cancel" class="btn-secondary"/>
+                </footer>
+            </form>
+        </field>
+    </record>
+
+    <record id="action_upside_report_wizard" model="ir.actions.act_window">
+        <field name="name">Reporte semanal (Excel)</field>
+        <field name="res_model">siproc.upside.report.wizard</field>
+        <field name="view_mode">form</field>
+        <field name="target">new</field>
+    </record>
+</odoo>
