@@ -87,6 +87,55 @@ class DteBuilder(object):
         out.append('        </dte:Frases>')
         return out
 
+    def _abonos_cambiaria_xml(self):
+        """Complemento obligatorio para FCAM/FCAP (esquema CompCambiaria 0.1.0).
+
+        Cada "Abono" corresponde a una cuota del plan de pagos. Se toman las
+        líneas por cobrar (account_type = asset_receivable) que Odoo ya generó
+        a partir de los Términos de Pago de la factura: cada una trae su
+        fecha de vencimiento (date_maturity) y su monto, exactamente como
+        quedó pactado el crédito. Si la factura solo tiene una cuota (p.ej.
+        "Pago inmediato"), se genera un único Abono — la SAT exige el bloque
+        igual, aunque no haya plazos múltiples.
+        """
+        move = self.move
+        from odoo.exceptions import UserError
+        from odoo import _
+
+        lineas_venc = move.line_ids.filtered(
+            lambda l: l.account_id.account_type == 'asset_receivable')
+        lineas_venc = lineas_venc.sorted(
+            key=lambda l: (l.date_maturity or move.invoice_date_due
+                           or move.invoice_date or move.date))
+
+        if not lineas_venc:
+            raise UserError(_(
+                "El documento es Factura Cambiaria (FCAM/FCAP) pero no tiene "
+                "líneas de vencimiento (plan de abonos). Revise los "
+                "'Términos de pago' de la factura: deben tener al menos una "
+                "cuota con fecha de vencimiento y monto definidos."))
+
+        out = []
+        out.append('          <dte:Complemento IDComplemento="AbonosFacturaCambiaria" '
+                   'NombreComplemento="AbonosFacturaCambiaria" '
+                   'URIComplemento="http://www.sat.gob.gt/dte/fel/CompCambiaria/0.1.0">')
+        out.append('            <cfc:AbonosFacturaCambiaria '
+                   'xmlns:cfc="http://www.sat.gob.gt/dte/fel/CompCambiaria/0.1.0" '
+                   'Version="1">')
+        for numero, linea in enumerate(lineas_venc, start=1):
+            fecha_vencimiento = (linea.date_maturity or move.invoice_date_due
+                                 or move.invoice_date or move.date)
+            monto_abono = abs(linea.amount_currency or linea.balance or 0.0)
+            out.append('              <cfc:Abono>')
+            out.append('                <cfc:NumeroAbono>%s</cfc:NumeroAbono>' % numero)
+            out.append('                <cfc:FechaVencimiento>%s</cfc:FechaVencimiento>'
+                       % fecha_vencimiento.strftime('%Y-%m-%d'))
+            out.append('                <cfc:MontoAbono>%s</cfc:MontoAbono>' % fmt(monto_abono))
+            out.append('              </cfc:Abono>')
+        out.append('            </cfc:AbonosFacturaCambiaria>')
+        out.append('          </dte:Complemento>')
+        return '\n'.join(out)
+
     def build(self):
         move = self.move
         config = self.config
@@ -243,24 +292,35 @@ class DteBuilder(object):
         x.append('          <dte:GranTotal>%s</dte:GranTotal>' % fmt(round(suma_total, 2)))
         x.append('        </dte:Totales>')
 
-        # Complemento de notas de crédito/débito
+        # Complementos (notas de crédito/débito y/o abonos de factura cambiaria)
+        complementos = []
+
         if move.move_type == 'out_refund' and move.fel_tipo_documento == 'NCRE':
             origen = move.reversed_entry_id
             if origen and origen.fel_uuid:
                 motivo = xml_escape(move.ref or "Anulación")
-                x.append('        <dte:Complementos>')
-                x.append('          <dte:Complemento IDComplemento="ReferenciasNota" '
-                         'NombreComplemento="ReferenciasNota" '
-                         'URIComplemento="http://www.sat.gob.gt/fel/notas.xsd">')
-                x.append('            <cno:ReferenciasNota '
-                         'xmlns:cno="http://www.sat.gob.gt/fel/notas.xsd" Version="0.0" '
-                         'FechaEmisionDocumentoOrigen="%s" MotivoAjuste="%s" '
-                         'NumeroAutorizacionDocumentoOrigen="%s" '
-                         'SerieDocumentoOrigen="%s" NumeroDocumentoOrigen="%s"/>'
-                         % (origen.invoice_date, motivo, origen.fel_uuid,
-                            origen.fel_serie or "", origen.fel_numero or ""))
-                x.append('          </dte:Complemento>')
-                x.append('        </dte:Complementos>')
+                complementos.append(
+                    '          <dte:Complemento IDComplemento="ReferenciasNota" '
+                    'NombreComplemento="ReferenciasNota" '
+                    'URIComplemento="http://www.sat.gob.gt/fel/notas.xsd">\n'
+                    '            <cno:ReferenciasNota '
+                    'xmlns:cno="http://www.sat.gob.gt/fel/notas.xsd" Version="0.0" '
+                    'FechaEmisionDocumentoOrigen="%s" MotivoAjuste="%s" '
+                    'NumeroAutorizacionDocumentoOrigen="%s" '
+                    'SerieDocumentoOrigen="%s" NumeroDocumentoOrigen="%s"/>\n'
+                    '          </dte:Complemento>'
+                    % (origen.invoice_date, motivo, origen.fel_uuid,
+                       origen.fel_serie or "", origen.fel_numero or ""))
+
+        if tipo_documento in ('FCAM', 'FCAP'):
+            abonos_xml = self._abonos_cambiaria_xml()
+            if abonos_xml:
+                complementos.append(abonos_xml)
+
+        if complementos:
+            x.append('        <dte:Complementos>')
+            x.extend(complementos)
+            x.append('        </dte:Complementos>')
 
         x.append('      </dte:DatosEmision>')
         x.append('    </dte:DTE>')
