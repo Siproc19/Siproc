@@ -1,6 +1,6 @@
 {
     'name': 'SIPROC · Upside Potential y Plan B',
-    'version': '19.0.1.0.0',
+    'version': '19.0.1.1.0',
     'summary': 'Seguimiento Upside Potential / Plan B / Prospección dentro del CRM y reporte semanal en Excel',
     'description': """
 Agrega al CRM la metodología de seguimiento comercial de SIPROC:
@@ -26,6 +26,7 @@ Agrega al CRM la metodología de seguimiento comercial de SIPROC:
         'views/resumen_views.xml',
         'views/menus.xml',
     ],
+    'post_init_hook': 'post_init_hook',
     'installable': True,
     'application': False,
 }

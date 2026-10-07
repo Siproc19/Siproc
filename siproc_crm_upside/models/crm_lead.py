@@ -32,6 +32,8 @@ class CrmLead(models.Model):
     monto_reporte = fields.Monetary(string='Monto Q.', compute='_compute_reporte', store=True,
                                     currency_field='company_currency', aggregator='sum',
                                     help='Monto por compra de los productos; si no hay productos, el ingreso recurrente.')
+    fecha_perdido = fields.Datetime(string='Fecha de pérdida', readonly=True, copy=False, index=True,
+                                    help='Día en que la oportunidad se marcó como perdida.')
     sincronizar_ingreso = fields.Boolean(
         string='Usar valor del cliente como ingreso esperado', default=True,
         help='Si está activo, el "Ingreso esperado" de la oportunidad se iguala al valor del cliente '
@@ -101,7 +103,18 @@ class CrmLead(models.Model):
         res = super().write(vals)
         if vals.get('plan_tipo'):
             self._auto_cargar_desde_cotizacion()
+        if 'fecha_perdido' not in vals and {'active', 'probability', 'stage_id'} & set(vals):
+            self._actualizar_fecha_perdido()
         return res
+
+    def _actualizar_fecha_perdido(self):
+        """Guarda el día en que se pierde la oportunidad (Odoo no lo registra) y lo borra si se restaura."""
+        perdidas = self.filtered(lambda l: l.won_status == 'lost' and not l.fecha_perdido)
+        if perdidas:
+            perdidas.write({'fecha_perdido': fields.Datetime.now()})
+        restauradas = self.filtered(lambda l: l.won_status != 'lost' and l.fecha_perdido)
+        if restauradas:
+            restauradas.write({'fecha_perdido': False})
 
     def action_cargar_productos_cotizacion(self):
         """Reemplaza los productos del proyecto por los de la cotización más reciente."""

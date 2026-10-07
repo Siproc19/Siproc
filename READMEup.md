@@ -18,7 +18,7 @@ Lleva el Excel semanal "Up Side potential / Plan B" dentro del CRM de Odoo, para
   - **Upside Potential y Plan B:** oportunidades en curso agrupadas por plan, con subtotales.
   - **Prospección**
   - **Clientes ganados** (por fecha de cierre)
-  - **Clientes perdidos** (con el motivo)
+  - **Clientes perdidos**, con el motivo y filtrados por **fecha de pérdida**
   - **Detalle por producto**
   - **Reporte semanal (Excel):** descarga el Excel con las mismas hojas de siempre:
   - Valor de avance
@@ -56,6 +56,15 @@ No hay que importar nada: el módulo trabaja sobre las oportunidades que ya est�
    - Se toma la cotización **más reciente** que no esté cancelada, para no sumar dos veces las versiones anteriores de la misma cotización.
    - Para guardarlos y ajustarlos (frecuencia, valor del cliente), usa el botón **Cargar productos de la cotización** en la pestaña *Upside / Plan B*.
    - Si no tiene cotización, el reporte usa el ingreso esperado y el ingreso recurrente de la oportunidad.
+
+## Fecha de pérdida
+
+Odoo no guarda el día en que una oportunidad se marca como perdida. Por eso el módulo agrega el campo **Fecha de pérdida**:
+- Se llena solo al pulsar **Perdido**.
+- Se borra si la oportunidad se restaura.
+- Para las que ya estaban perdidas antes de instalar el módulo, se toma la fecha del cambio a "Perdido" que aparece en el historial de la oportunidad.
+
+El reporte semanal y el menú **Clientes perdidos** usan esa fecha. Así solo salen las que se perdieron en la semana o el periodo elegido.
 
 ## Uso semanal
 

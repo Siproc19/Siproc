@@ -81,6 +81,7 @@
                 <filter string="Upside Potential" name="plan_upside" domain="[('plan_tipo', '=', 'upside')]"/>
                 <filter string="Plan B" name="plan_b" domain="[('plan_tipo', '=', 'plan_b')]"/>
                 <filter string="Prospección" name="plan_prospeccion" domain="[('plan_tipo', '=', 'prospeccion')]"/>
+                <filter string="Fecha de pérdida" name="fecha_perdido" date="fecha_perdido"/>
                 <filter string="Plan" name="groupby_plan" context="{'group_by': 'plan_tipo'}"/>
                 <filter string="Valor de avance" name="groupby_avance" context="{'group_by': 'avance_id'}"/>
             </xpath>

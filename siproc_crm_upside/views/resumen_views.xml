@@ -26,6 +26,7 @@
                 <field name="stage_id" optional="show"/>
                 <field name="lost_reason_id" optional="hide"/>
                 <field name="date_closed" optional="hide"/>
+                <field name="fecha_perdido" optional="hide"/>
                 <field name="user_id" widget="many2one_avatar_user" optional="show"/>
                 <field name="won_status" column_invisible="True"/>
                 <field name="company_currency" column_invisible="True"/>
@@ -67,6 +68,6 @@
         <field name="view_id" ref="crm_lead_view_list_upside"/>
         <field name="search_view_id" ref="crm.view_crm_case_opportunities_filter"/>
         <field name="domain">[('type', '=', 'opportunity'), ('plan_tipo', '!=', False)]</field>
-        <field name="context">{'search_default_filter_won_status_lost': 1}</field>
+        <field name="context">{'search_default_filter_won_status_lost': 1, 'search_default_fecha_perdido': 1}</field>
     </record>
 </odoo>

@@ -46,10 +46,10 @@ class SiprocUpsideReportWizard(models.TransientModel):
         desde_dt = fields.Datetime.to_datetime(self.fecha_desde)
         abiertos = Lead.search(base + [('won_status', '=', 'pending'), ('active', '=', True),
                                        ('plan_tipo', '!=', False)])
-        ganados = Lead.search(base + [('won_status', '=', 'won'),
+        ganados = Lead.search(base + [('won_status', '=', 'won'), ('plan_tipo', '!=', False),
                                       ('date_closed', '>=', desde_dt), ('date_closed', '<', hasta_dt)])
-        perdidos = Lead.search(base + [('won_status', '=', 'lost'),
-                                       ('write_date', '>=', desde_dt), ('write_date', '<', hasta_dt)])
+        perdidos = Lead.search(base + [('won_status', '=', 'lost'), ('plan_tipo', '!=', False),
+                                       ('fecha_perdido', '>=', desde_dt), ('fecha_perdido', '<', hasta_dt)])
         return {
             'upside': abiertos.filtered(lambda l: l.plan_tipo == 'upside'),
             'plan_b': abiertos.filtered(lambda l: l.plan_tipo == 'plan_b'),
