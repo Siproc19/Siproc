@@ -22,6 +22,17 @@ class LogisticsGpsTracker {
         // Avisos de lo que pasa con cada envío al servidor.
         this.onSent = options.onSent || null;
         this.onSendError = options.onSendError || null;
+
+        // ── Vida de la pantalla ──────────────────────────────────────────
+        // Cuando el piloto se pasa a Waze, el teléfono congela esta página:
+        // el navegador deja de correr nuestro código. No hay forma de
+        // evitarlo desde una app web. Lo que sí se puede es:
+        //   * mandar la última posición JUSTO ANTES de irse,
+        //   * y mandar una nueva EN CUANTO vuelve.
+        // Así la Torre nunca ve el hueco completo.
+        this.wakeLock = null;
+        this._alCambiarVisibilidad = () => this._manejarVisibilidad();
+        this._alEsconderse = () => this._mandarUltimaSeñalDeSalida();
     }
 
     // ── Iniciar rastreo ───────────────────────────────────────────────────────
@@ -39,6 +50,12 @@ class LogisticsGpsTracker {
         this._startWatchPosition();
         this._startSendTimer();
         this._syncOfflineQueue();
+        document.addEventListener("visibilitychange", this._alCambiarVisibilidad);
+        // `pagehide` es el único aviso confiable en iOS; en Android llega
+        // `visibilitychange`. Se escuchan los dos y el envío se protege
+        // contra repetirse.
+        window.addEventListener("pagehide", this._alEsconderse);
+        this._pedirWakeLock();
         console.log("🟢 GpsTracker iniciado para piloto ID:", this.driverId);
     }
 
@@ -53,7 +70,97 @@ class LogisticsGpsTracker {
             clearInterval(this.sendTimer);
             this.sendTimer = null;
         }
+        document.removeEventListener("visibilitychange", this._alCambiarVisibilidad);
+        window.removeEventListener("pagehide", this._alEsconderse);
+        this._soltarWakeLock();
         console.log("🔴 GpsTracker detenido.");
+    }
+
+    // ── Que la pantalla no se apague sola ────────────────────────────────────
+    async _pedirWakeLock() {
+        // Con la pantalla apagada el navegador también congela la página.
+        // El Wake Lock la mantiene encendida mientras la app está al frente.
+        // No todos los teléfonos lo tienen; si falta, no pasa nada.
+        if (!("wakeLock" in navigator)) return;
+        try {
+            this.wakeLock = await navigator.wakeLock.request("screen");
+            this.wakeLock.addEventListener("release", () => {
+                this.wakeLock = null;
+            });
+        } catch (e) {
+            console.warn("GpsTracker: no se pudo mantener la pantalla encendida:", e.message);
+        }
+    }
+
+    _soltarWakeLock() {
+        if (this.wakeLock) {
+            try { this.wakeLock.release(); } catch { /* ya se soltó */ }
+            this.wakeLock = null;
+        }
+    }
+
+    // ── Irse a Waze y volver ────────────────────────────────────────────────
+    _manejarVisibilidad() {
+        if (!this.isTracking) return;
+        if (document.visibilityState === "hidden") {
+            this._mandarUltimaSeñalDeSalida();
+            return;
+        }
+        // Volvió. El sistema operativo nos devolvió el control: se pide una
+        // posición fresca de inmediato en vez de esperar al próximo ciclo,
+        // y se vacía lo que quedó guardado en el teléfono.
+        this._pedirWakeLock();
+        this._posicionInmediata();
+        this._syncOfflineQueue();
+    }
+
+    _posicionInmediata() {
+        if (!navigator.geolocation) return;
+        navigator.geolocation.getCurrentPosition(
+            (position) => {
+                this._onPositionReceived(position);
+                this._sendPosition();
+            },
+            () => this._sendPosition(),   // sin lectura nueva, manda la última
+            { enableHighAccuracy: true, timeout: 8000, maximumAge: 0 }
+        );
+    }
+
+    /**
+     * Manda la última posición justo antes de que el teléfono nos congele.
+     *
+     * `fetch` normal no sirve aquí: el navegador puede matarlo a medias al
+     * cambiar de app. `sendBeacon` está hecho exactamente para esto — el
+     * sistema se encarga de entregarlo aunque la página ya se haya ido.
+     */
+    _mandarUltimaSeñalDeSalida() {
+        if (!this.lastPosition || !this.token) return;
+        if (!navigator.sendBeacon) return;
+
+        // No repetir el mismo punto si `pagehide` y `visibilitychange`
+        // llegan los dos.
+        if (this._ultimoBeacon === this.lastPosition.timestamp) return;
+        this._ultimoBeacon = this.lastPosition.timestamp;
+
+        const p = this.lastPosition;
+        const datos = new URLSearchParams({
+            token: this.token,
+            lat: p.latitude,
+            lon: p.longitude,
+            // El endpoint de rastreador recibe metros por segundo.
+            speed: (p.speed || 0) / 3.6,
+            heading: p.heading || 0,
+            acc: p.accuracy || 0,
+        });
+        try {
+            navigator.sendBeacon(
+                "/logistics/gps/push",
+                new Blob([datos.toString()],
+                         { type: "application/x-www-form-urlencoded" })
+            );
+        } catch (e) {
+            console.warn("GpsTracker: no se pudo mandar la señal de salida:", e.message);
+        }
     }
 
     // ── Observar cambios de posición GPS ─────────────────────────────────────

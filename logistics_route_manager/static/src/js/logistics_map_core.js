@@ -78,6 +78,37 @@ export function stopIcon(position, color) {
 }
 
 /**
+ * Marcador del punto donde el piloto CERRÓ la parada.
+ *
+ * Distinto del círculo numerado a propósito: ese dice a dónde tenía que ir,
+ * este dice dónde estuvo de verdad cuando apretó el botón. Verlos separados
+ * en el mapa es justamente la información útil.
+ */
+export function closedIcon(entregada) {
+    const color = entregada ? TASK_COLORS.completed : TASK_COLORS.failed;
+    const glifo = entregada ? "✓" : "✕";
+    return L.divIcon({
+        className: "o_logistics_closed_icon",
+        html: `<div class="o_logistics_closed_pin" style="border-color:${color};color:${color};">${glifo}</div>`,
+        iconSize: [22, 22],
+        iconAnchor: [11, 11],
+        popupAnchor: [0, -12],
+    });
+}
+
+/** Metros entre dos puntos, por la fórmula del semiverseno. */
+export function metrosEntre(lat1, lon1, lat2, lon2) {
+    const R = 6371000;
+    const rad = Math.PI / 180;
+    const dLat = (lat2 - lat1) * rad;
+    const dLon = (lon2 - lon1) * rad;
+    const a =
+        Math.sin(dLat / 2) ** 2 +
+        Math.cos(lat1 * rad) * Math.cos(lat2 * rad) * Math.sin(dLon / 2) ** 2;
+    return Math.round(2 * R * Math.asin(Math.sqrt(a)));
+}
+
+/**
  * Decodifica una polilínea codificada de Google (la que devuelve la
  * Directions API) a una lista de pares [lat, lng] para Leaflet.
  */

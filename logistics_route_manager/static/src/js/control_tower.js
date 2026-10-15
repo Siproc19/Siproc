@@ -174,6 +174,17 @@ export class ControlTower extends Component {
         });
     }
 
+    /** «Con retraso» a secas no dice nada. Lo útil es de cuándo es el punto
+     *  que se está viendo en el mapa: dos minutos es tráfico, cuarenta es
+     *  un teléfono apagado. */
+    antiguedadGps(unit) {
+        const minutos = unit.minutes_since_gps;
+        if (!minutos && minutos !== 0) return "sin datos todavía";
+        if (minutos < 1) return "hace menos de un minuto";
+        if (minutos < 60) return `hace ${Math.round(minutos)} min`;
+        return `hace ${Math.floor(minutos / 60)} h ${Math.round(minutos % 60)} min`;
+    }
+
     unitPopup(unit) {
         const status = GPS_STATUS[unit.gps_status] || GPS_STATUS.offline;
         return `
@@ -182,6 +193,7 @@ export class ControlTower extends Component {
                 <div>${escapeHtml(unit.vehicle_name)} · ${escapeHtml(unit.vehicle_plate)}</div>
                 <div><strong>Ruta:</strong> ${escapeHtml(unit.route_name)}</div>
                 <div><strong>GPS:</strong> <span style="color:${status.color};">${status.label}</span></div>
+                <div><strong>Última posición:</strong> ${escapeHtml(this.antiguedadGps(unit))}</div>
                 <div><strong>Velocidad:</strong> ${unit.speed} km/h</div>
                 <div><strong>Avance:</strong> ${unit.completed_tasks} / ${unit.total_tasks} paradas</div>
                 <div><strong>Siguiente:</strong> ${escapeHtml(unit.next_task_name) || "—"}</div>

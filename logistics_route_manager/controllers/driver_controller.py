@@ -164,7 +164,10 @@ class DriverAppController(http.Controller):
             if vals:
                 task.write(vals)
 
-            task.action_mark_completed()
+            # La lectura que trae el teléfono al apretar el botón es la
+            # más exacta de dónde ocurrió la entrega.
+            task.action_mark_completed(
+                latitud=data.get('latitude'), longitud=data.get('longitude'))
 
             # Retornar siguiente tarea
             next_task = task.route_id.task_ids.filtered(
@@ -192,7 +195,9 @@ class DriverAppController(http.Controller):
             if not task:
                 return {'success': False, 'error': 'Parada no encontrada.'}
 
-            task.action_mark_failed(reason)
+            task.action_mark_failed(
+                reason,
+                latitud=data.get('latitude'), longitud=data.get('longitude'))
             return {'success': True}
         except Exception as e:
             _logger.exception("Error al marcar tarea como fallida. task_id=%s", task_id)

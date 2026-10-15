@@ -61,6 +61,18 @@ class LogisticsTask(models.Model):
     latitude = fields.Float(string='Latitud', digits=(10, 7))
     longitude = fields.Float(string='Longitud', digits=(10, 7))
 
+    # ── Dónde se cerró de verdad la parada ────────────────────────────────────
+    # Las coordenadas de arriba son las PLANIFICADAS: vienen de la ficha del
+    # cliente y muchas veces están vacías o apuntan a la oficina. Estas otras
+    # son las REALES, las que mandó el teléfono del piloto en el momento de
+    # marcar. Son la prueba de dónde estuvo, y quedan para siempre: aunque
+    # nadie haya puesto coordenadas en la parada, después de la primera
+    # entrega el punto ya existe y el mapa lo puede pintar.
+    closed_latitude = fields.Float(
+        string='Latitud donde se cerró', digits=(10, 7), readonly=True, copy=False)
+    closed_longitude = fields.Float(
+        string='Longitud donde se cerró', digits=(10, 7), readonly=True, copy=False)
+
     # ── Tiempos ───────────────────────────────────────────────────────────────
     estimated_arrival = fields.Datetime(string='Llegada Estimada')
     actual_arrival = fields.Datetime(string='Llegada Real', readonly=True)
@@ -277,12 +289,52 @@ class LogisticsTask(models.Model):
             {'task_id': self.id, 'task_name': self.name}
         )
 
-    def action_mark_completed(self):
+    def _coordenadas_del_cierre(self, latitud=None, longitud=None):
+        """Dónde estaba el piloto al cerrar esta parada.
+
+        Por orden de confianza:
+
+        1. La lectura que manda el teléfono en el mismo momento de apretar
+           el botón. Es la más exacta que va a haber.
+        2. La última posición conocida del piloto.
+        3. La coordenada planificada de la parada, que al menos ubica al
+           cliente.
+
+        Si no hay ninguna, se devuelve vacío: el mapa lo dice en lugar de
+        inventar un punto.
+        """
+        self.ensure_one()
+
+        def valida(lat, lon):
+            try:
+                lat, lon = float(lat), float(lon)
+            except (TypeError, ValueError):
+                return None
+            if not lat or not lon:
+                return None
+            if not (-90.0 <= lat <= 90.0) or not (-180.0 <= lon <= 180.0):
+                return None
+            return lat, lon
+
+        del_telefono = valida(latitud, longitud)
+        if del_telefono:
+            return del_telefono
+        piloto = self.route_id.driver_id
+        if piloto.current_latitude and piloto.current_longitude:
+            return piloto.current_latitude, piloto.current_longitude
+        if self.latitude and self.longitude:
+            return self.latitude, self.longitude
+        return 0.0, 0.0
+
+    def action_mark_completed(self, latitud=None, longitud=None):
         """Piloto completó la tarea."""
         self.ensure_one()
+        latitud, longitud = self._coordenadas_del_cierre(latitud, longitud)
         self.write({
             'state': 'completed',
             'actual_departure': fields.Datetime.now(),
+            'closed_latitude': latitud,
+            'closed_longitude': longitud,
         })
         self._sync_delivery_document()
         self._avisar_a_ventas_y_crm(entregado=True)
@@ -358,13 +410,16 @@ class LogisticsTask(models.Model):
             route=self.route_id.name or '', reason=reason or _('sin especificar'),
         ))
 
-    def action_mark_failed(self, reason=''):
+    def action_mark_failed(self, reason='', latitud=None, longitud=None):
         """Marcar tarea como fallida."""
         self.ensure_one()
+        latitud, longitud = self._coordenadas_del_cierre(latitud, longitud)
         self.write({
             'state': 'failed',
             'failure_reason': reason,
             'actual_departure': fields.Datetime.now(),
+            'closed_latitude': latitud,
+            'closed_longitude': longitud,
         })
         self._sync_delivery_document_failed(reason)
         self._avisar_a_ventas_y_crm(entregado=False, motivo=reason)

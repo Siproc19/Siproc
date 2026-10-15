@@ -165,6 +165,48 @@
     box-shadow: 0 1px 5px rgba(0, 0, 0, 0.3);
 }
 
+/* Punto donde el piloto cerró la parada. Relleno blanco y borde de color:
+   a simple vista se distingue del círculo numerado, que va macizo. */
+.o_logistics_closed_pin {
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    background: #ffffff;
+    font-size: 13px;
+    font-weight: 700;
+    line-height: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 2px solid currentColor;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.35);
+}
+
+.o_logistics_legend_closed {
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background: #ffffff;
+    border: 2px solid #198754;
+    color: #198754;
+    font-size: 9px;
+    font-weight: 700;
+    font-style: normal;
+    line-height: 1;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.o_logistics_sin_ubicacion .o_logistics_chip {
+    display: inline-block;
+    background: rgba(0, 0, 0, 0.06);
+    border-radius: 10px;
+    padding: 1px 9px;
+    margin: 2px 4px 0 0;
+    font-size: 12px;
+}
+
 /* ── Popups ───────────────────────────────────────────────────────────────── */
 .o_logistics_popup {
     font-size: 13px;

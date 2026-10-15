@@ -351,6 +351,59 @@ class LogisticsRoute(models.Model):
             'target': 'new',
         }
 
+    @api.model
+    def _datos_de_parada(self, tarea):
+        """Lo que el mapa necesita saber de una parada.
+
+        Dos detalles que antes faltaban y hacían que el mapa saliera vacío o
+        incompleto:
+
+        * Si la parada no trae coordenadas propias, se usan las de la ficha
+          del cliente. Muchas paradas se arman desde la orden de entrega y
+          el cliente nunca fue geolocalizado, así que `latitude` quedaba en
+          cero y el mapa las descartaba en silencio.
+        * Se manda también el punto donde el piloto CERRÓ la parada. Es la
+          prueba de dónde estuvo, y no tiene por qué coincidir con el punto
+          planificado.
+        """
+        latitud, longitud = tarea.latitude, tarea.longitude
+        origen = 'parada'
+        if not (latitud and longitud):
+            socio = tarea.partner_id
+            if socio and 'partner_latitude' in socio._fields:
+                if socio.partner_latitude and socio.partner_longitude:
+                    latitud = socio.partner_latitude
+                    longitud = socio.partner_longitude
+                    origen = 'cliente'
+        if not (latitud and longitud) and tarea.closed_latitude and tarea.closed_longitude:
+            # Sin ubicación planificada, pero el piloto ya estuvo ahí.
+            latitud, longitud = tarea.closed_latitude, tarea.closed_longitude
+            origen = 'entrega'
+        if not (latitud and longitud):
+            origen = 'ninguno'
+
+        return {
+            'id': tarea.id,
+            'name': tarea.name,
+            'sequence': tarea.sequence,
+            'task_type': tarea.task_type,
+            'state': tarea.state,
+            'latitude': latitud,
+            'longitude': longitud,
+            'coord_source': origen,
+            'closed_latitude': tarea.closed_latitude,
+            'closed_longitude': tarea.closed_longitude,
+            'address': tarea.address,
+            'contact_name': tarea.contact_name,
+            'contact_phone': tarea.contact_phone,
+            'estimated_arrival': tarea.estimated_arrival.isoformat() if tarea.estimated_arrival else None,
+            'actual_arrival': tarea.actual_arrival.isoformat() if tarea.actual_arrival else None,
+            'actual_departure': tarea.actual_departure.isoformat() if tarea.actual_departure else None,
+            'signature_name': tarea.signature_name or '',
+            'failure_reason': tarea.failure_reason or '',
+            'priority': tarea.priority,
+        }
+
     def get_route_data_json(self):
         """Retorna todos los datos de la ruta en JSON para el mapa."""
         self.ensure_one()
@@ -366,20 +419,7 @@ class LogisticsRoute(models.Model):
                 'is_online': self.driver_id.is_online,
                 'speed': self.driver_id.current_speed,
             },
-            'tasks': [{
-                'id': t.id,
-                'name': t.name,
-                'sequence': t.sequence,
-                'task_type': t.task_type,
-                'state': t.state,
-                'latitude': t.latitude,
-                'longitude': t.longitude,
-                'address': t.address,
-                'contact_name': t.contact_name,
-                'contact_phone': t.contact_phone,
-                'estimated_arrival': t.estimated_arrival.isoformat() if t.estimated_arrival else None,
-                'priority': t.priority,
-            } for t in self.task_ids],
+            'tasks': [self._datos_de_parada(t) for t in self.task_ids],
             'polyline': json.loads(self.route_polyline) if self.route_polyline else None,
             'progress': self.progress_percentage,
         }
@@ -480,6 +520,26 @@ class LogisticsRoute(models.Model):
             ('state', 'in', ('confirmed', 'in_progress')),
         ], order='name asc')
 
+        # Cuánto se aguanta sin noticias antes de pintar de amarillo y de
+        # rojo. Se dejan configurables porque dependen de cómo rastree cada
+        # piloto: con un rastreador en segundo plano llega posición cada
+        # minuto, pero un piloto que solo tiene la app abierta se queda mudo
+        # todo el rato que ande en Waze. Con los valores viejos —fijos en 2 y
+        # 10 minutos— la Torre daba por perdido a cualquiera que navegara.
+        parametros = self.env['ir.config_parameter'].sudo()
+        try:
+            tolerancia_en_linea = int(parametros.get_param(
+                'logistics.gps_online_seconds', 180) or 180)
+        except (TypeError, ValueError):
+            tolerancia_en_linea = 180
+        try:
+            tolerancia_retraso = int(parametros.get_param(
+                'logistics.gps_delay_seconds', 1200) or 1200)
+        except (TypeError, ValueError):
+            tolerancia_retraso = 1200
+        if tolerancia_retraso < tolerancia_en_linea:
+            tolerancia_retraso = tolerancia_en_linea
+
         fleet = []
         alerts = []
         for route in routes:
@@ -493,9 +553,9 @@ class LogisticsRoute(models.Model):
             else:
                 seconds = (fields.Datetime.now() - driver.last_gps_update).total_seconds()
                 minutes_since = round(seconds / 60.0, 1)
-                if seconds <= 120:
+                if seconds <= tolerancia_en_linea:
                     gps_status = 'online'
-                elif seconds <= 600:
+                elif seconds <= tolerancia_retraso:
                     gps_status = 'delay'
                 else:
                     gps_status = 'offline'

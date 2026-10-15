@@ -56,6 +56,26 @@
                     <strong>Desvío detectado.</strong> <t t-esc="state.deviationMessage"/>
                 </div>
 
+                <div t-if="state.sinUbicacion.length"
+                     class="alert alert-info o_logistics_sin_ubicacion" role="status">
+                    <strong>
+                        <t t-esc="state.sinUbicacion.length"/>
+                        <t t-if="state.sinUbicacion.length === 1"> parada no se puede pintar</t>
+                        <t t-else=""> paradas no se pueden pintar</t>
+                        en el mapa:
+                    </strong>
+                    <t t-foreach="state.sinUbicacion" t-as="parada" t-key="parada.posicion">
+                        <span class="o_logistics_chip">
+                            <t t-esc="parada.posicion"/>. <t t-esc="parada.nombre"/>
+                        </span>
+                    </t>
+                    <div class="small mt-1">
+                        No tienen latitud y longitud. Se llenan en la parada, o en la
+                        ficha del cliente. En cuanto el piloto entregue una vez, el punto
+                        queda guardado solo.
+                    </div>
+                </div>
+
                 <div class="o_logistics_map_canvas" t-ref="map"/>
 
                 <div class="o_logistics_map_legend">
@@ -65,6 +85,7 @@
                     <span><i style="background:#198754;"/> Completada</span>
                     <span><i style="background:#dc3545;"/> Fallida</span>
                     <span><i class="o_logistics_legend_line"/> Recorrido real</span>
+                    <span><i class="o_logistics_legend_closed">✓</i> Dónde se entregó</span>
                 </div>
             </t>
         </div>

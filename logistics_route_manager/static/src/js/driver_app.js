@@ -138,6 +138,13 @@ class DriverApp {
         localStorage.setItem("preferred_nav_app", app);
         this.preferredNav = app;
 
+        // Al pasar a Waze el teléfono congela esta pantalla y el rastreo se
+        // queda dormido. Antes de salir se manda la última posición para
+        // que la Torre sepa desde dónde arrancó a navegar.
+        if (this.gpsTracker && this.gpsTracker.isTracking) {
+            this.gpsTracker._mandarUltimaSeñalDeSalida();
+        }
+
         const encodedName = encodeURIComponent(name);
 
         if (app === "waze") {
@@ -221,6 +228,14 @@ class DriverApp {
         }
         if (sigName?.value)  params.signature_name = sigName.value.trim();
         if (spent?.value)    params.spent_amount   = parseFloat(spent.value);
+
+        // Dónde está el teléfono en este momento. Es la prueba de dónde se
+        // hizo la entrega, y queda pintada en el mapa de la ruta.
+        const aqui = this._posicionActual();
+        if (aqui) {
+            params.latitude = aqui.latitude;
+            params.longitude = aqui.longitude;
+        }
 
         if (boton) { boton.disabled = true; boton.textContent = "Guardando…"; }
 
@@ -407,13 +422,23 @@ class DriverApp {
         }
     }
 
+    /** Última lectura del GPS, si el rastreo está corriendo. */
+    _posicionActual() {
+        const p = this.gpsTracker && this.gpsTracker.lastPosition;
+        if (!p || !p.latitude || !p.longitude) {
+            return null;
+        }
+        return { latitude: p.latitude, longitude: p.longitude };
+    }
+
     async reportFail(taskId, reason) {
         try {
             const res = await fetch(`/logistics/task/${taskId}/fail`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ jsonrpc: "2.0", method: "call",
-                                       params: { reason, token: this.token } }),
+                                       params: { reason, token: this.token,
+                                                 ...(this._posicionActual() || {}) } }),
             });
             const data = await res.json();
             if (data.result?.success) {

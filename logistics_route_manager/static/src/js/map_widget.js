@@ -15,8 +15,10 @@ import { useService } from "@web/core/utils/hooks";
 import { Component, onMounted, onWillUnmount, useRef, useState } from "@odoo/owl";
 import {
     TASK_COLORS,
+    closedIcon,
     decodePolyline,
     driverIcon,
+    metrosEntre,
     stopIcon,
     ensureLeaflet,
     escapeHtml,
@@ -46,12 +48,18 @@ export class LogisticsRouteMapWidget extends Component {
             progress: 0,
             completedTasks: 0,
             totalTasks: 0,
+            // Paradas que no se pueden pintar porque nadie les puso
+            // ubicación. Antes se descartaban en silencio y el mapa salía
+            // vacío sin explicar por qué.
+            sinUbicacion: [],
         });
 
         // Objetos Leaflet — fuera de `state`, no deben provocar re-render.
         this.map = null;
         this.driverMarker = null;
         this.stopMarkers = [];
+        this.closedMarkers = [];
+        this.closedLines = [];
         this.trackLine = null;
         this.plannedLine = null;
         this.timer = null;
@@ -145,34 +153,129 @@ export class LogisticsRouteMapWidget extends Component {
 
     drawStops(tasks) {
         this.stopMarkers.forEach((m) => this.map.removeLayer(m));
+        this.closedMarkers.forEach((m) => this.map.removeLayer(m));
+        this.closedLines.forEach((l) => this.map.removeLayer(l));
         this.stopMarkers = [];
+        this.closedMarkers = [];
+        this.closedLines = [];
 
-        tasks
-            .filter((t) => t.latitude && t.longitude)
-            .sort((a, b) => a.sequence - b.sequence)
-            .forEach((task, index) => {
+        const ordenadas = [...tasks].sort((a, b) => a.sequence - b.sequence);
+
+        // El número de la parada es su lugar en la ruta, se pinte o no. Antes
+        // se numeraba sobre la lista ya filtrada, así que una parada sin
+        // coordenadas corría la numeración de todas las demás y el mapa no
+        // cuadraba con la lista de la ruta.
+        this.state.sinUbicacion = ordenadas
+            .filter((t) => !(t.latitude && t.longitude))
+            .map((t, i) => ({ nombre: t.name, posicion: ordenadas.indexOf(t) + 1 }));
+
+        ordenadas.forEach((task, index) => {
+            const numero = index + 1;
+            if (task.latitude && task.longitude) {
                 const color = TASK_COLORS[task.state] || TASK_COLORS.pending;
                 const marker = L.marker([task.latitude, task.longitude], {
-                    icon: stopIcon(index + 1, color),
+                    icon: stopIcon(numero, color),
                     title: task.name,
                 }).addTo(this.map);
-                marker.bindPopup(this.stopPopup(task, index + 1));
+                marker.bindPopup(this.stopPopup(task, numero));
                 this.stopMarkers.push(marker);
-            });
+            }
+            this.drawClosedPoint(task, numero);
+        });
+    }
+
+    /**
+     * Pinta dónde el piloto cerró la parada, cuando ese punto es distinto
+     * del planificado. Así queda constancia visible en el mapa de que ahí
+     * hubo una entrega — que era justo lo que faltaba al darle Completar.
+     */
+    drawClosedPoint(task, numero) {
+        if (!["completed", "failed"].includes(task.state)) {
+            return;
+        }
+        const lat = task.closed_latitude;
+        const lng = task.closed_longitude;
+        if (!lat || !lng) {
+            return;
+        }
+        const entregada = task.state === "completed";
+
+        let distancia = null;
+        if (task.latitude && task.longitude) {
+            distancia = metrosEntre(task.latitude, task.longitude, lat, lng);
+            // A menos de 30 m es el mismo lugar; dos marcadores encimados
+            // solo estorban.
+            if (distancia < 30) {
+                return;
+            }
+            const linea = L.polyline(
+                [[task.latitude, task.longitude], [lat, lng]],
+                { color: entregada ? TASK_COLORS.completed : TASK_COLORS.failed,
+                  weight: 2, opacity: 0.6, dashArray: "4, 6" }
+            ).addTo(this.map);
+            this.closedLines.push(linea);
+        }
+
+        const marker = L.marker([lat, lng], {
+            icon: closedIcon(entregada),
+            title: `${numero}. ${task.name}`,
+            zIndexOffset: 500,
+        }).addTo(this.map);
+        marker.bindPopup(this.closedPopup(task, numero, distancia));
+        this.closedMarkers.push(marker);
+    }
+
+    horaDe(iso) {
+        if (!iso) {
+            return "—";
+        }
+        return new Date(iso + "Z").toLocaleTimeString([], {
+            hour: "2-digit",
+            minute: "2-digit",
+        });
+    }
+
+    closedPopup(task, numero, distancia) {
+        const entregada = task.state === "completed";
+        const partes = [
+            `<div class="o_logistics_popup_title">${entregada ? "✓ Entregado aquí" : "✕ No se pudo entregar"}</div>`,
+            `<div>${numero}. ${escapeHtml(task.name)}</div>`,
+            `<div><strong>Hora:</strong> ${this.horaDe(task.actual_departure)}</div>`,
+        ];
+        if (entregada && task.signature_name) {
+            partes.push(`<div><strong>Recibió:</strong> ${escapeHtml(task.signature_name)}</div>`);
+        }
+        if (!entregada && task.failure_reason) {
+            partes.push(`<div><strong>Motivo:</strong> ${escapeHtml(task.failure_reason)}</div>`);
+        }
+        if (distancia !== null) {
+            partes.push(
+                `<div><strong>Del punto planificado:</strong> ${distancia} m</div>`
+            );
+        }
+        return `<div class="o_logistics_popup">${partes.join("")}</div>`;
     }
 
     stopPopup(task, position) {
         const escape = escapeHtml;
         const eta = task.estimated_arrival
-            ? new Date(task.estimated_arrival).toLocaleTimeString([], {
+            ? new Date(task.estimated_arrival + "Z").toLocaleTimeString([], {
                   hour: "2-digit",
                   minute: "2-digit",
               })
             : "—";
+        const prestada = task.coord_source && task.coord_source !== "parada"
+            ? `<div class="text-muted">Ubicación tomada ${
+                  task.coord_source === "cliente"
+                      ? "de la ficha del cliente"
+                      : "de la entrega anterior"
+              }</div>`
+            : "";
         return `
             <div class="o_logistics_popup">
                 <div class="o_logistics_popup_title">${position}. ${escape(task.name)}</div>
                 <div>${escape(task.address)}</div>
+                ${prestada}
                 <div><strong>Contacto:</strong> ${escape(task.contact_name) || "—"}
                      ${task.contact_phone ? " · " + escape(task.contact_phone) : ""}</div>
                 <div><strong>Llegada estimada:</strong> ${eta}</div>
@@ -247,7 +350,7 @@ export class LogisticsRouteMapWidget extends Component {
 
     // ── Acciones de la barra ──────────────────────────────────────────────
     fitAll() {
-        const layers = [...this.stopMarkers];
+        const layers = [...this.stopMarkers, ...this.closedMarkers];
         if (this.driverMarker) {
             layers.push(this.driverMarker);
         }
