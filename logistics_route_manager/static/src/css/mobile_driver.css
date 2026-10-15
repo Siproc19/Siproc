@@ -129,6 +129,13 @@ body {
     box-shadow: 0 4px 20px rgba(13,110,253,0.18);
 }
 
+/* Ya está parado en el sitio: se resalta distinto de «va en camino»,
+   pero sigue siendo la parada activa y conserva todos sus botones. */
+.task-card.arrived {
+    border-color: var(--warning, #ffc107);
+    box-shadow: 0 4px 20px rgba(255,193,7,0.22);
+}
+
 .task-card.done    { border-color: var(--success); opacity: 0.75; }
 .task-card.failed  { border-color: var(--danger);  opacity: 0.75; }
 
@@ -233,6 +240,15 @@ body {
 .action-btn:active { transform: scale(0.96); }
 
 .arrived-btn  { background: #fff3cd; color: #664d03; border: 2px solid #ffc107; }
+
+/* Llegada ya registrada: queda a la vista como constancia, apagado. */
+.arrived-btn.is-done {
+    background: #e9ecef;
+    color: #6c757d;
+    border: 2px solid #ced4da;
+    cursor: default;
+}
+.arrived-btn.is-done:active { transform: none; }
 .complete-btn { background: #d1e7dd; color: #0a3622; border: 2px solid #28a745; }
 .fail-btn     { background: #f8d7da; color: #58151c; border: 2px solid #dc3545; }
 

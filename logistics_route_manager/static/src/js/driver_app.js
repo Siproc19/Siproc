@@ -63,19 +63,27 @@ class DriverApp {
         container.innerHTML = "";
 
         this.tasks.forEach((task, index) => {
-            const isActive = task.state === "in_transit";
+            // Una parada está «en mano» mientras el piloto va hacia ella Y
+            // mientras ya está parado ahí. Antes solo contaba 'in_transit':
+            // al marcar «Llegué» la tarjeta perdía los botones y el piloto
+            // se quedaba sin poder completar ni reportar problema — justo
+            // en el momento en que los necesita. Con el geofence era peor:
+            // la parada se marcaba sola al acercarse y se bloqueaba sin que
+            // él tocara nada.
+            const enMano   = task.state === "in_transit" || task.state === "arrived";
+            const yaLlego  = task.state === "arrived";
             const isDone   = task.state === "completed";
             const isFailed = task.state === "failed";
 
             const el = document.createElement("div");
-            el.className = `task-card ${isActive ? "active" : ""} ${isDone ? "done" : ""} ${isFailed ? "failed" : ""}`;
+            el.className = `task-card ${enMano ? "active" : ""} ${yaLlego ? "arrived" : ""} ${isDone ? "done" : ""} ${isFailed ? "failed" : ""}`;
             el.dataset.taskId = task.id;
             el.dataset.index  = index;
 
             const typeIcon = { delivery: "📦", purchase: "🛒", errand: "📋", bank: "🏦" }[task.task_type] || "📍";
             const stateLabel = {
                 pending: "Pendiente", in_transit: "En camino",
-                arrived: "Llegué", completed: "✅ Completado", failed: "❌ Fallido",
+                arrived: "📍 En el lugar", completed: "✅ Completado", failed: "❌ Fallido",
             }[task.state] || task.state;
 
             const eta = task.estimated_arrival
@@ -96,7 +104,7 @@ class DriverApp {
                         <div class="task-state-badge state-${task.state}">${stateLabel}</div>
                     </div>
                 </div>
-                ${isActive ? this._renderActiveTaskButtons(task) : ""}
+                ${enMano ? this._renderActiveTaskButtons(task, yaLlego) : ""}
             `;
 
             el.addEventListener("click", () => this._openTask(task, index));
@@ -104,7 +112,17 @@ class DriverApp {
         });
     }
 
-    _renderActiveTaskButtons(task) {
+    _renderActiveTaskButtons(task, yaLlego = false) {
+        // Si ya marcó llegada, el botón se queda a la vista pero apagado:
+        // sirve de constancia de que quedó registrada, y de paso no se
+        // vuelve a marcar por error.
+        const botonLlegue = yaLlego
+            ? `<button class="action-btn arrived-btn is-done" disabled="disabled">
+                        📍 Llegada registrada
+                    </button>`
+            : `<button class="action-btn arrived-btn" onclick="driverApp.markArrived(${task.id}); event.stopPropagation();">
+                        📍 Llegué
+                    </button>`;
         return `
             <div class="active-task-actions">
                 <div class="nav-buttons">
@@ -118,9 +136,7 @@ class DriverApp {
                     </button>
                 </div>
                 <div class="action-buttons">
-                    <button class="action-btn arrived-btn" onclick="driverApp.markArrived(${task.id}); event.stopPropagation();">
-                        📍 Llegué
-                    </button>
+                    ${botonLlegue}
                     <button class="action-btn complete-btn" onclick="driverApp.openCompleteModal(${task.id}); event.stopPropagation();">
                         ✅ Completar
                     </button>
