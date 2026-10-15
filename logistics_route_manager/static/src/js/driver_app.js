@@ -110,6 +110,8 @@ class DriverApp {
             el.addEventListener("click", () => this._openTask(task, index));
             container.appendChild(el);
         });
+
+        this._actualizarBotonFinalizar();
     }
 
     _renderActiveTaskButtons(task, yaLlego = false) {
@@ -478,6 +480,7 @@ class DriverApp {
                 const speedEl = document.getElementById("driver-speed");
                 if (speedEl) speedEl.textContent = `${pos.speed} km/h`;
             },
+            onRegresoABase: (data) => this._llegoALaBase(data),
             onGeofenceTrigger: (data) => {
                 this._showToast(`📍 Llegaste a: ${data.task_name}`, "info");
                 this._updateTaskState(data.task_id, "arrived");
@@ -564,7 +567,116 @@ class DriverApp {
         });
     }
 
+    /**
+     * El servidor detectó que el piloto volvió a entrar al radio de la
+     * bodega. No se cierra la ruta sola —eso lo decide él— pero se le pone
+     * el botón enfrente para que no tenga que acordarse.
+     */
+    _llegoALaBase(data) {
+        if (this._yaAvisadoDeLaBase) return;
+        this._yaAvisadoDeLaBase = true;
+
+        this._nombreBase = data.base || "la base";
+        this._showToast(`🏠 Llegaste a ${this._nombreBase}`, "success");
+        this._actualizarBotonFinalizar();
+
+        const boton = document.getElementById("finish-route-btn");
+        if (boton) {
+            // De contorno pasa a sólido: a esta hora ya es la acción del día.
+            boton.style.background = "linear-gradient(135deg,#4a5b25,#63783a)";
+            boton.style.color = "#ffffff";
+            boton.style.border = "none";
+            boton.scrollIntoView({ behavior: "smooth", block: "center" });
+        }
+    }
+
+    // ── Finalizar la ruta al regresar a SIPROC ────────────────────────────────
+
+    /** Paradas que todavía no se cierran. */
+    _paradasAbiertas() {
+        return this.tasks.filter(
+            (t) => ["pending", "in_transit", "arrived"].includes(t.state));
+    }
+
+    /** Pone al día el letrero de arriba del botón de finalizar. */
+    _actualizarBotonFinalizar() {
+        const pista = document.getElementById("finish-route-hint");
+        if (!pista) return;
+        const abiertas = this._paradasAbiertas().length;
+        const base = this._nombreBase;   // llega cuando el GPS lo detecta
+
+        if (abiertas === 0) {
+            pista.textContent = base
+                ? `Ya está en ${base} y no falta ninguna parada. Puede cerrar la ruta.`
+                : "Todas las paradas están cerradas.";
+            pista.style.color = "#2f6b3a";
+            return;
+        }
+        const cuantas = abiertas === 1 ? "1 parada" : `${abiertas} paradas`;
+        pista.textContent = base
+            ? `Ya está en ${base}, pero faltan ${cuantas} por cerrar.`
+            : (abiertas === 1 ? "Falta 1 parada por cerrar."
+                              : `Faltan ${abiertas} paradas por cerrar.`);
+        pista.style.color = "#9a6d05";
+    }
+
+    async finalizarRuta(boton, confirmado = false) {
+        if (!this.routeId) return;
+
+        const abiertas = this._paradasAbiertas().length;
+        if (abiertas && !confirmado) {
+            const pregunta = abiertas === 1
+                ? "Falta 1 parada por cerrar. ¿Finalizar la ruta de todos modos?"
+                : `Faltan ${abiertas} paradas por cerrar. ¿Finalizar la ruta de todos modos?`;
+            if (!window.confirm(pregunta)) return;
+            confirmado = true;
+        }
+
+        const etiqueta = boton ? boton.textContent : "";
+        if (boton) { boton.disabled = true; boton.textContent = "Finalizando…"; }
+        const restaurar = () => {
+            if (boton) { boton.disabled = false; boton.textContent = etiqueta; }
+        };
+
+        const params = { token: this.token, confirmado: confirmado || abiertas === 0 };
+        // Desde dónde la cerró: normalmente ya de regreso en SIPROC.
+        const aqui = this._posicionActual();
+        if (aqui) {
+            params.latitude = aqui.latitude;
+            params.longitude = aqui.longitude;
+        }
+
+        try {
+            const res = await fetch(`/logistics/route/${this.routeId}/finish`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ jsonrpc: "2.0", method: "call", params }),
+            });
+            const data = await res.json();
+            if (data.result?.success) {
+                // Ya no hay nada que rastrear: se apaga para no gastar
+                // batería ni datos el resto de la tarde.
+                if (this.gpsTracker) this.gpsTracker.stop();
+                this._showToast("🏁 Ruta finalizada", "success");
+                setTimeout(() => window.location.reload(), 1200);
+                return;
+            }
+            if (data.result?.requiere_confirmacion) {
+                restaurar();
+                return this.finalizarRuta(boton, true);
+            }
+            restaurar();
+            this._showToast(data.result?.error || "No se pudo finalizar la ruta.", "danger");
+        } catch (e) {
+            restaurar();
+            this._showToast("Sin conexión. Inténtelo de nuevo.", "warning");
+        }
+    }
+
     _bindEvents() {
+        document.getElementById("finish-route-btn")?.addEventListener("click",
+            (ev) => this.finalizarRuta(ev.currentTarget));
+
         document.getElementById("start-route-btn")?.addEventListener("click", async (ev) => {
             const boton = ev.currentTarget;
             if (!this.routeId) return;

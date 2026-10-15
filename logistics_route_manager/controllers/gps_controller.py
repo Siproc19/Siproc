@@ -56,11 +56,13 @@ class LogisticsGpsController(http.Controller):
 
             # Verificar geofence: ¿llegó a alguna parada?
             geofence_result = _check_geofence(driver, latitude, longitude)
+            regreso = _revisar_regreso_a_base(driver, latitude, longitude)
 
             return {
                 'success': True,
                 'driver_id': driver.id,
                 'geofence_triggered': geofence_result,
+                'regreso_a_base': regreso,
             }
         except Exception as e:
             _logger.error(f"Error actualizando GPS: {e}")
@@ -122,6 +124,10 @@ class LogisticsGpsController(http.Controller):
             if 0 <= nivel <= 100:
                 piloto.sudo().battery_level = int(nivel)
             _check_geofence(piloto, latitud, longitud)
+            # El rastreador de segundo plano también sirve para detectar el
+            # regreso: con él el aviso llega aunque el piloto traiga la app
+            # cerrada y el teléfono en la bolsa.
+            _revisar_regreso_a_base(piloto, latitud, longitud)
         except Exception as e:
             _logger.exception("Error guardando posición por token. piloto=%s", piloto.id)
             return responder('error', 500)
@@ -180,6 +186,22 @@ class LogisticsGpsController(http.Controller):
             'gps_interval': int(request.env['ir.config_parameter'].sudo().get_param('logistics.gps_interval', 15) or 15),
         }
         return request.make_response(json.dumps(payload), headers=[('Content-Type', 'application/json')])
+
+
+def _revisar_regreso_a_base(driver, latitude, longitude):
+    """¿El piloto ya volvió a la bodega? Avisa una sola vez por ruta.
+
+    Nunca puede tumbar el guardado de la posición: si algo falla aquí, se
+    anota y la posición del piloto igual queda registrada.
+    """
+    ruta = driver.current_route_id
+    if not ruta:
+        return None
+    try:
+        return ruta.revisar_regreso_a_base(latitude, longitude)
+    except Exception:
+        _logger.exception("Error revisando el regreso a base. ruta=%s", ruta.id)
+        return None
 
 
 def _check_geofence(driver, latitude, longitude):

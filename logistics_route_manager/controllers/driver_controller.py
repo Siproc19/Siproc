@@ -125,6 +125,52 @@ class DriverAppController(http.Controller):
             _logger.exception("Error al iniciar la ruta. route_id=%s", route_id)
             return {'success': False, 'error': str(e)}
 
+    @http.route('/logistics/route/<int:route_id>/finish', type='jsonrpc', auth='public', methods=['POST'])
+    def finish_route(self, route_id, token=None, **kwargs):
+        """El piloto regresó a SIPROC y tocó «Finalizar Ruta».
+
+        Antes la ruta solo se podía cerrar desde Odoo, así que se quedaba
+        «en progreso» hasta que alguien de oficina se acordaba: el piloto
+        seguía contando como en ruta en la Torre y el rastreo seguía
+        encendido toda la tarde.
+
+        Si quedan paradas sin cerrar no se bloquea —a veces una entrega se
+        reprograma— pero se exige que el piloto lo confirme desde la app, y
+        queda anotado en la ruta cuáles quedaron pendientes.
+        """
+        try:
+            data = kwargs
+            piloto = piloto_de_la_peticion(token)
+            if not piloto:
+                return {'success': False, 'error': 'No identificado.'}
+
+            route = request.env['logistics.route'].sudo().browse(route_id)
+            if not route.exists() or route.driver_id != piloto:
+                return {'success': False, 'error': 'Esta ruta no está asignada a usted.'}
+
+            if route.state == 'done':
+                return {'success': True, 'state': route.state, 'ya_estaba': True}
+            if route.state != 'in_progress':
+                return {'success': False,
+                        'error': 'La ruta todavía no está iniciada.'}
+
+            abiertas = route.paradas_abiertas()
+            if abiertas and not data.get('confirmado'):
+                return {
+                    'success': False,
+                    'requiere_confirmacion': True,
+                    'paradas_abiertas': len(abiertas),
+                    'error': 'Todavía hay paradas sin cerrar.',
+                }
+
+            route.action_complete_route(
+                latitud=data.get('latitude'), longitud=data.get('longitude'))
+            return {'success': True, 'state': route.state,
+                    'paradas_abiertas': len(abiertas)}
+        except Exception as e:
+            _logger.exception("Error al finalizar la ruta. route_id=%s", route_id)
+            return {'success': False, 'error': str(e)}
+
     @http.route('/logistics/task/<int:task_id>/arrived', type='jsonrpc', auth='public', methods=['POST'])
     def mark_task_arrived(self, task_id, token=None, **kwargs):
         """El piloto marcó que llegó a la parada."""

@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+from markupsafe import Markup
 from odoo import models, fields, api, _
 from odoo.exceptions import UserError
 from datetime import datetime, timedelta
@@ -100,6 +101,18 @@ class LogisticsRoute(models.Model):
     # ── Tiempos ───────────────────────────────────────────────────────────────
     actual_start_time = fields.Datetime(string='Inicio Real', readonly=True)
     actual_end_time = fields.Datetime(string='Fin Real', readonly=True)
+
+    # Dónde estaba el piloto al cerrar la ruta. Normalmente es el regreso a
+    # SIPROC, y sirve para saber a qué hora y desde dónde la cerró.
+    end_latitude = fields.Float(
+        string='Latitud de Cierre', digits=(10, 7), readonly=True, copy=False)
+    end_longitude = fields.Float(
+        string='Longitud de Cierre', digits=(10, 7), readonly=True, copy=False)
+
+    base_arrival_time = fields.Datetime(
+        string='Regresó a la Base', readonly=True, copy=False,
+        help='Hora en que el GPS del piloto volvió a entrar al radio de la '
+             'bodega. Se detecta solo, sin que él tenga que apretar nada.')
     estimated_distance_km = fields.Float(string='Distancia Estimada (km)')
     estimated_duration_min = fields.Float(string='Duración Estimada (min)')
 
@@ -175,19 +188,169 @@ class LogisticsRoute(models.Model):
                 first_task.state = 'in_transit'
             rec.message_post(body=_('🚗 Ruta iniciada. Rastreo GPS activado.'))
 
-    def action_complete_route(self):
-        """Cierra la ruta como completada."""
+    def paradas_abiertas(self):
+        """Paradas que el piloto todavía no cerró."""
+        self.ensure_one()
+        return self.task_ids.filtered(
+            lambda t: t.state in ('pending', 'in_transit', 'arrived'))
+
+    # ── Regreso a la base ─────────────────────────────────────────────────
+
+    @api.model
+    def datos_de_la_base(self):
+        """Dónde queda la bodega y hasta dónde llega su radio.
+
+        Devuelve `None` si todavía nadie la configuró — sin coordenadas no
+        hay nada que detectar, y es mejor no avisar que avisar mal.
+        """
+        p = self.env['ir.config_parameter'].sudo()
+
+        def numero(clave, por_defecto=0.0):
+            try:
+                return float(p.get_param(clave, por_defecto) or por_defecto)
+            except (TypeError, ValueError):
+                return por_defecto
+
+        lat = numero('logistics.base_latitude')
+        lon = numero('logistics.base_longitude')
+        if not lat or not lon:
+            return None
+        if not (-90.0 <= lat <= 90.0) or not (-180.0 <= lon <= 180.0):
+            return None
+        radio = int(numero('logistics.base_radius', 200)) or 200
+        return {
+            'nombre': p.get_param('logistics.base_name') or 'la base',
+            'latitud': lat,
+            'longitud': lon,
+            'radio': radio,
+        }
+
+    def revisar_regreso_a_base(self, latitud, longitud):
+        """¿El piloto ya volvió a la bodega?
+
+        Se llama con cada posición que manda el teléfono. La primera vez
+        que entra al radio queda anotada la hora y se avisa al jefe
+        responsable; de ahí en adelante ya no vuelve a avisar, aunque el
+        GPS siga reportando desde el parqueo.
+        """
+        self.ensure_one()
+        if self.state != 'in_progress' or self.base_arrival_time:
+            return None
+        base = self.datos_de_la_base()
+        if not base:
+            return None
+
+        metros = haversine_km(
+            latitud, longitud, base['latitud'], base['longitud']) * 1000.0
+        if metros > base['radio']:
+            return None
+
+        self.sudo().base_arrival_time = fields.Datetime.now()
+        abiertas = self.paradas_abiertas()
+        self._avisar_regreso_a_base(base, abiertas)
+        return {
+            'base': base['nombre'],
+            'metros': round(metros),
+            'paradas_abiertas': len(abiertas),
+        }
+
+    def _avisar_regreso_a_base(self, base, abiertas):
+        """Le avisa a la oficina que el piloto ya volvió."""
+        self.ensure_one()
+        activo = self.env['ir.config_parameter'].sudo().get_param(
+            'logistics.notify_base_return', 'True')
+        if activo in ('False', 'false', '0'):
+            return
+
+        # El cuerpo va como Markup: si se manda texto plano, Odoo escapa
+        # las etiquetas y el chatter muestra un «<br/>» literal.
+        cuerpo = Markup('<p>%s</p>') % _(
+            '🏠 %(piloto)s regresó a %(base)s. %(hechas)s de %(total)s paradas '
+            'completadas.',
+            piloto=self.driver_id.name or '',
+            base=base['nombre'],
+            hechas=self.completed_tasks,
+            total=self.total_tasks,
+        )
+        if abiertas:
+            cuerpo += Markup('<p>%s</p>') % _(
+                'Ojo: quedó %(cuantas)s sin cerrar (%(cuales)s).',
+                cuantas=_('1 parada') if len(abiertas) == 1
+                        else _('%s paradas', len(abiertas)),
+                cuales=', '.join(abiertas.mapped('name')),
+            )
+        else:
+            cuerpo += Markup('<p>%s</p>') % _('La ruta ya se puede cerrar.')
+
+        destinatarios = self.responsible_id.partner_id
+        try:
+            self.sudo().message_post(
+                body=cuerpo,
+                subject=_('%(piloto)s regresó a %(base)s',
+                          piloto=self.driver_id.name or '', base=base['nombre']),
+                partner_ids=destinatarios.ids,
+                subtype_xmlid='mail.mt_note',
+            )
+        except Exception as error:
+            _logger.warning(
+                "No se pudo avisar el regreso a base de la ruta %s: %s",
+                self.id, error)
+
+        try:
+            self.env['bus.bus']._sendone(
+                f'logistics_route_{self.id}', 'driver_back_at_base',
+                {'route_id': self.id, 'driver_name': self.driver_id.name},
+            )
+        except Exception:
+            # El aviso en vivo es un extra; si falla, el mensaje ya quedó.
+            pass
+
+    def action_complete_route(self, latitud=None, longitud=None):
+        """Cierra la ruta como completada.
+
+        Las coordenadas son opcionales: cuando el cierre viene del teléfono
+        del piloto, dicen desde dónde la cerró — normalmente ya de regreso
+        en SIPROC.
+        """
+        def valida(lat, lon):
+            try:
+                lat, lon = float(lat), float(lon)
+            except (TypeError, ValueError):
+                return None
+            if not lat or not lon:
+                return None
+            if not (-90.0 <= lat <= 90.0) or not (-180.0 <= lon <= 180.0):
+                return None
+            return lat, lon
+
+        punto = valida(latitud, longitud)
         for rec in self:
-            rec.write({
+            vals = {
                 'state': 'done',
                 'actual_end_time': fields.Datetime.now(),
-            })
-            rec.message_post(
-                body=_(
-                    '✅ Ruta completada. %s/%s tareas realizadas.',
-                    rec.completed_tasks, rec.total_tasks
-                )
+            }
+            if punto:
+                vals['end_latitude'], vals['end_longitude'] = punto
+            elif rec.driver_id.current_latitude and rec.driver_id.current_longitude:
+                vals['end_latitude'] = rec.driver_id.current_latitude
+                vals['end_longitude'] = rec.driver_id.current_longitude
+            rec.write(vals)
+
+            abiertas = rec.paradas_abiertas()
+            cuerpo = Markup('<p>%s</p>') % _(
+                '✅ Ruta completada. %s/%s tareas realizadas.',
+                rec.completed_tasks, rec.total_tasks
             )
+            if abiertas:
+                # Quedan paradas sin cerrar: se dejan como están, pero la
+                # ruta lo dice para que Bodega sepa qué reprogramar.
+                cuerpo += Markup('<p>%s</p>') % _(
+                    'Quedó %(cuantas)s sin cerrar: %(cuales)s',
+                    cuantas=_('1 parada') if len(abiertas) == 1
+                            else _('%s paradas', len(abiertas)),
+                    cuales=', '.join(abiertas.mapped('name')),
+                )
+            rec.message_post(body=cuerpo)
 
     def action_cancel(self):
         """Cancela la ruta."""
@@ -586,7 +749,21 @@ class LogisticsRoute(models.Model):
                 'next_task_lng': next_task.longitude if next_task else 0.0,
                 'deviation_km': round(km, 2),
                 'deviated': deviated,
+                'en_base': bool(route.base_arrival_time),
+                'base_arrival_time': (route.base_arrival_time.isoformat()
+                                      if route.base_arrival_time else None),
             })
+
+            if route.base_arrival_time and route.state == 'in_progress':
+                alerts.append({
+                    'type': 'base_return',
+                    'route_id': route.id,
+                    'driver_name': driver.name,
+                    'message': _(
+                        '%(driver)s ya regresó a la base. La ruta sigue abierta.',
+                        driver=driver.name or '',
+                    ),
+                })
 
             if deviated:
                 alerts.append({

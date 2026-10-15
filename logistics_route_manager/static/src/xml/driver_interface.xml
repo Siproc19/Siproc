@@ -69,6 +69,18 @@
                     </t>
                 </div>
 
+                <!-- Finalizar la ruta: al regresar a SIPROC.
+                     Va hasta abajo, después de todas las paradas, para que
+                     no quede al alcance del dedo a media jornada. -->
+                <t t-if="route and route.state == 'in_progress'">
+                    <div id="finish-route-wrap" style="padding:16px 16px 40px;">
+                        <div id="finish-route-hint" style="text-align:center; font-size:14px; color:#6c757d; margin-bottom:10px;"/>
+                        <button id="finish-route-btn" style="width:100%; padding:18px; background:#ffffff; color:#4a5b25; border:2px solid #4a5b25; border-radius:14px; font-size:18px; font-weight:800; cursor:pointer;">
+                            🏁 FINALIZAR RUTA
+                        </button>
+                    </div>
+                </t>
+
                 <!-- Toast container -->
                 <div id="toast-container"/>
 

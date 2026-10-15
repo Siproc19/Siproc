@@ -18,6 +18,9 @@ class LogisticsGpsTracker {
         this.offlineQueue = this._loadOfflineQueue();
         this.onPositionUpdate = options.onPositionUpdate || null;
         this.onGeofenceTrigger = options.onGeofenceTrigger || null;
+        // El servidor avisa, con la posición, cuando el piloto vuelve a
+        // entrar al radio de la bodega.
+        this.onRegresoABase = options.onRegresoABase || null;
         this.onError = options.onError || null;
         // Avisos de lo que pasa con cada envío al servidor.
         this.onSent = options.onSent || null;
@@ -250,6 +253,10 @@ class LogisticsGpsTracker {
             }
 
             if (this.onSent) this.onSent(data);
+
+            if (result.result?.regreso_a_base && this.onRegresoABase) {
+                this.onRegresoABase(result.result.regreso_a_base);
+            }
 
             if (result.result?.geofence_triggered) {
                 if (this.onGeofenceTrigger) {

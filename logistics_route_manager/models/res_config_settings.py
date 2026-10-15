@@ -33,6 +33,41 @@ class ResConfigSettings(models.TransientModel):
         default=50,
         help='Cuando el piloto esté a esta distancia de una parada, se marcará como "Llegó" automáticamente.',
     )
+
+    # ── La base: de dónde sale y a dónde regresa el piloto ────────────────
+    logistics_base_name = fields.Char(
+        string='Nombre de la Base',
+        config_parameter='logistics.base_name',
+        default='SIPROC',
+        help='Cómo se llama el lugar al que regresa el piloto al terminar. '
+             'Aparece en el aviso de regreso.',
+    )
+    logistics_base_latitude = fields.Float(
+        string='Latitud de la Base', digits=(10, 7),
+        config_parameter='logistics.base_latitude',
+        help='Coordenadas de la bodega. La forma más fácil de sacarlas: '
+             'abra Google Maps, mantenga apretado sobre el portón de la '
+             'bodega y copie los dos números que aparecen.',
+    )
+    logistics_base_longitude = fields.Float(
+        string='Longitud de la Base', digits=(10, 7),
+        config_parameter='logistics.base_longitude',
+    )
+    logistics_base_radius = fields.Integer(
+        string='Radio de la Base (metros)',
+        config_parameter='logistics.base_radius',
+        default=200,
+        help='A esta distancia de la bodega se da por regresado al piloto. '
+             '200 metros cubre la cuadra y el parqueo sin dispararse cuando '
+             'solo va pasando por el bulevar.',
+    )
+    logistics_notify_base_return = fields.Boolean(
+        string='Avisar cuando el Piloto regresa a la Base',
+        config_parameter='logistics.notify_base_return',
+        default=True,
+        help='Manda un aviso al jefe responsable de la ruta en cuanto el '
+             'piloto vuelve a entrar al radio de la bodega.',
+    )
     logistics_auto_validate_picking = fields.Boolean(
         string='Validar la Transferencia al Entregar',
         config_parameter='logistics.auto_validate_picking',

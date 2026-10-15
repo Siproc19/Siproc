@@ -74,6 +74,8 @@
                             <field name="estimated_duration_min" string="Duración Est. (min)"/>
                             <field name="actual_start_time" readonly="1"/>
                             <field name="actual_end_time" readonly="1"/>
+                            <field name="base_arrival_time" readonly="1"
+                                   invisible="not base_arrival_time"/>
                             <field name="traffic_updated_at" readonly="1" string="Tráfico actualizado"/>
                             <field name="driver_is_online" readonly="1" string="Piloto en línea"/>
                             <field name="driver_last_gps_update" readonly="1" string="Último GPS"/>

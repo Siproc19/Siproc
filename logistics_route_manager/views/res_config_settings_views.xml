@@ -52,6 +52,42 @@
                         </setting>
 
                     </block>
+
+                    <block title="La Base" name="logistics_base"
+                           help="El lugar del que sale el piloto y al que regresa. Con las coordenadas puestas, el sistema avisa solo en cuanto el GPS del piloto vuelve a entrar al radio — él no tiene que apretar nada.">
+
+                        <setting string="Nombre de la Base"
+                                 help="Como lo va a leer la gente en el aviso: SIPROC, Bodega Central, etc.">
+                            <field name="logistics_base_name"/>
+                        </setting>
+
+                        <setting string="Coordenadas de la Base"
+                                 help="Ábralas en Google Maps: mantenga apretado sobre el portón de la bodega y copie los dos números que salen arriba.">
+                            <div class="content-group">
+                                <div class="row mt8">
+                                    <label for="logistics_base_latitude" string="Latitud"
+                                           class="col-lg-4 o_light_label"/>
+                                    <field name="logistics_base_latitude"/>
+                                </div>
+                                <div class="row">
+                                    <label for="logistics_base_longitude" string="Longitud"
+                                           class="col-lg-4 o_light_label"/>
+                                    <field name="logistics_base_longitude"/>
+                                </div>
+                            </div>
+                        </setting>
+
+                        <setting string="Radio de la Base (metros)"
+                                 help="A esta distancia se da por regresado al piloto. 200 metros cubre la cuadra y el parqueo sin dispararse cuando solo va pasando.">
+                            <field name="logistics_base_radius"/>
+                        </setting>
+
+                        <setting string="Avisar cuando el Piloto regresa"
+                                 help="Manda el aviso al jefe responsable de la ruta en cuanto el piloto entra al radio de la bodega.">
+                            <field name="logistics_notify_base_return"/>
+                        </setting>
+
+                    </block>
                 </app>
             </xpath>
         </field>
