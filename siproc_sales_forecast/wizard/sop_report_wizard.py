@@ -5,7 +5,7 @@ from dateutil.relativedelta import relativedelta
 
 from odoo import api, fields, models
 from odoo.exceptions import UserError
-from odoo.modules.module import get_module_resource
+from odoo.modules.module import get_resource_path
 
 import openpyxl
 
@@ -189,7 +189,7 @@ class SiprocSopReportWizard(models.TransientModel):
 
     # ------------------------------------------------------------ excel desde la plantilla
     def _ruta_plantilla(self):
-        ruta = get_module_resource('siproc_sales_forecast', 'static', 'plantilla', 'sop_template.xlsx')
+        ruta = get_resource_path('siproc_sales_forecast', 'static', 'plantilla', 'sop_template.xlsx')
         if not ruta:
             raise UserError('No se encontró la plantilla sop_template.xlsx dentro del módulo.')
         return ruta
