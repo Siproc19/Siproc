@@ -1,0 +1,100 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="siproc_sales_forecast_line_view_list" model="ir.ui.view">
+        <field name="name">siproc.sales.forecast.line.list</field>
+        <field name="model">siproc.sales.forecast.line</field>
+        <field name="arch" type="xml">
+            <list string="Líneas SOP" editable="bottom">
+                <field name="sequence" widget="handle"/>
+                <field name="partner_id"/>
+                <field name="codigo_cliente" optional="show"/>
+                <field name="proyecto"/>
+                <field name="product_id"/>
+                <field name="codigo_material" optional="show"/>
+                <field name="uom_id"/>
+                <field name="cantidad_mes1"/>
+                <field name="cantidad_mes2"/>
+                <field name="cantidad_mes3"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="siproc_sales_forecast_view_form" model="ir.ui.view">
+        <field name="name">siproc.sales.forecast.form</field>
+        <field name="model">siproc.sales.forecast</field>
+        <field name="arch" type="xml">
+            <form string="SOP · Pronóstico de ventas">
+                <header>
+                    <button name="action_descargar_excel" type="object" string="Descargar Excel"
+                            class="btn-primary"/>
+                </header>
+                <sheet>
+                    <div class="oe_title">
+                        <h1><field name="name" readonly="1"/></h1>
+                    </div>
+                    <group>
+                        <group>
+                            <field name="user_id"/>
+                            <field name="company_id" groups="base.group_multi_company"/>
+                        </group>
+                        <group>
+                            <field name="mes_inicio"/>
+                            <label for="nombre_mes1" string="Meses del SOP"/>
+                            <div>
+                                <field name="nombre_mes1" readonly="1" class="oe_inline"/> /
+                                <field name="nombre_mes2" readonly="1" class="oe_inline"/> /
+                                <field name="nombre_mes3" readonly="1" class="oe_inline"/>
+                            </div>
+                        </group>
+                    </group>
+                    <notebook>
+                        <page string="Clientes / Materiales">
+                            <field name="line_ids"/>
+                        </page>
+                    </notebook>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <record id="siproc_sales_forecast_view_list" model="ir.ui.view">
+        <field name="name">siproc.sales.forecast.list</field>
+        <field name="model">siproc.sales.forecast</field>
+        <field name="arch" type="xml">
+            <list string="SOP · Pronóstico de ventas">
+                <field name="name"/>
+                <field name="user_id" widget="many2one_avatar_user"/>
+                <field name="mes_inicio"/>
+                <field name="line_count"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="siproc_sales_forecast_view_search" model="ir.ui.view">
+        <field name="name">siproc.sales.forecast.search</field>
+        <field name="model">siproc.sales.forecast</field>
+        <field name="arch" type="xml">
+            <search>
+                <field name="user_id"/>
+                <field name="mes_inicio"/>
+                <filter string="Mis SOP" name="mios" domain="[('user_id', '=', uid)]"/>
+                <separator/>
+                <filter string="Mes inicio" name="groupby_mes" context="{'group_by': 'mes_inicio'}"/>
+                <filter string="Vendedor" name="groupby_vendedor" context="{'group_by': 'user_id'}"/>
+            </search>
+        </field>
+    </record>
+
+    <record id="action_siproc_sales_forecast" model="ir.actions.act_window">
+        <field name="name">SOP · Pronóstico de ventas</field>
+        <field name="res_model">siproc.sales.forecast</field>
+        <field name="view_mode">list,form</field>
+        <field name="search_view_id" ref="siproc_sales_forecast_view_search"/>
+        <field name="context">{'search_default_mios': 1}</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">Todavía no hay ningún SOP capturado</p>
+            <p>Crea un SOP por trimestre con tus clientes, materiales y cantidades proyectadas,
+               y descarga el Excel con el mismo formato de siempre.</p>
+        </field>
+    </record>
+</odoo>

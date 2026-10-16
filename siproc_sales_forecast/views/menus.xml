@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <menuitem id="menu_siproc_sop_root" name="SOP" parent="sale.sale_menu_root" sequence="25"/>
+    <menuitem id="menu_siproc_sop_forecast" name="Pronóstico de ventas (SOP)" parent="menu_siproc_sop_root"
+              action="action_siproc_sales_forecast" sequence="1"/>
+    <menuitem id="menu_siproc_sop_wizard" name="Descargar Excel" parent="menu_siproc_sop_root"
+              action="action_siproc_sop_report_wizard" sequence="2"/>
+</odoo>
