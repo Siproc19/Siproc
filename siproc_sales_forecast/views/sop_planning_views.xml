@@ -1,0 +1,132 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="siproc_sop_planning_line_view_list" model="ir.ui.view">
+        <field name="name">siproc.sop.planning.line.list</field>
+        <field name="model">siproc.sop.planning.line</field>
+        <field name="arch" type="xml">
+            <list string="Líneas de planificación" editable="bottom">
+                <field name="sequence" widget="handle"/>
+                <field name="partner_id"/>
+                <field name="proyecto"/>
+                <field name="product_id"/>
+                <field name="codigo_material" optional="show"/>
+                <field name="uom_id"/>
+                <field name="cantidad_mes1"/>
+                <field name="cantidad_mes2"/>
+                <field name="cantidad_mes3"/>
+                <field name="cantidad_mes4"/>
+                <field name="cantidad_mes5"/>
+                <field name="cantidad_mes6"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="siproc_sop_planning_view_form" model="ir.ui.view">
+        <field name="name">siproc.sop.planning.form</field>
+        <field name="model">siproc.sop.planning</field>
+        <field name="arch" type="xml">
+            <form string="SOP · Planificación manual">
+                <header>
+                    <button name="action_descargar_excel" type="object" string="Exportar SOP a Excel"
+                            class="btn-primary"/>
+                </header>
+                <sheet>
+                    <div class="oe_title">
+                        <h1><field name="name" readonly="1"/></h1>
+                    </div>
+                    <group>
+                        <group>
+                            <field name="user_id"/>
+                            <field name="company_id" groups="base.group_multi_company"/>
+                        </group>
+                        <group>
+                            <field name="mes_inicio"/>
+                            <label for="nombre_mes1" string="Meses del SOP"/>
+                            <div>
+                                <field name="nombre_mes1" readonly="1" class="oe_inline"/>,
+                                <field name="nombre_mes2" readonly="1" class="oe_inline"/>,
+                                <field name="nombre_mes3" readonly="1" class="oe_inline"/>,
+                                <field name="nombre_mes4" readonly="1" class="oe_inline"/>,
+                                <field name="nombre_mes5" readonly="1" class="oe_inline"/>,
+                                <field name="nombre_mes6" readonly="1" class="oe_inline"/>
+                            </div>
+                        </group>
+                    </group>
+                    <notebook>
+                        <page string="Clientes / Materiales">
+                            <field name="line_ids"/>
+                        </page>
+                    </notebook>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <record id="siproc_sop_planning_view_list" model="ir.ui.view">
+        <field name="name">siproc.sop.planning.list</field>
+        <field name="model">siproc.sop.planning</field>
+        <field name="arch" type="xml">
+            <list string="SOP · Planificación manual">
+                <field name="name"/>
+                <field name="user_id" widget="many2one_avatar_user"/>
+                <field name="mes_inicio"/>
+                <field name="line_count"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="siproc_sop_planning_view_search" model="ir.ui.view">
+        <field name="name">siproc.sop.planning.search</field>
+        <field name="model">siproc.sop.planning</field>
+        <field name="arch" type="xml">
+            <search>
+                <field name="user_id"/>
+                <field name="mes_inicio"/>
+                <filter string="Mis planificaciones" name="mias" domain="[('user_id', '=', uid)]"/>
+                <separator/>
+                <filter string="Mes inicial" name="groupby_mes" context="{'group_by': 'mes_inicio'}"/>
+                <filter string="Vendedor" name="groupby_vendedor" context="{'group_by': 'user_id'}"/>
+            </search>
+        </field>
+    </record>
+
+    <record id="action_siproc_sop_planning" model="ir.actions.act_window">
+        <field name="name">SOP · Planificación manual</field>
+        <field name="res_model">siproc.sop.planning</field>
+        <field name="view_mode">list,form</field>
+        <field name="search_view_id" ref="siproc_sop_planning_view_search"/>
+        <field name="context">{'search_default_mias': 1}</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">Todavía no hay ninguna planificación capturada</p>
+            <p>Crea una planificación de 6 meses por vendedor, con sus clientes, materiales (variantes) y
+               cantidades proyectadas, y expórtala con el mismo formato de siempre. Esta planificación es
+               editable y no modifica pedidos, cotizaciones, entregas ni facturas.</p>
+        </field>
+    </record>
+
+    <record id="siproc_sop_classification_view_list" model="ir.ui.view">
+        <field name="name">siproc.sop.classification.list</field>
+        <field name="model">siproc.sop.classification</field>
+        <field name="arch" type="xml">
+            <list string="SOP · Clasificación BASE/NUEVO" editable="bottom">
+                <field name="company_id" groups="base.group_multi_company"/>
+                <field name="partner_id"/>
+                <field name="product_id"/>
+                <field name="clasificacion"/>
+                <field name="nota" optional="show"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="action_siproc_sop_classification" model="ir.actions.act_window">
+        <field name="name">SOP · Clasificación BASE/NUEVO</field>
+        <field name="res_model">siproc.sop.classification</field>
+        <field name="view_mode">list</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">Todavía no hay ninguna clasificación</p>
+            <p>Define aquí, cliente por cliente y material por material, cuáles son BASE (consumo recurrente
+               ya establecido) y cuáles son NUEVO (proyecto/oportunidad nueva). Esta clasificación se usa en
+               las columnas "PROYECTO / CLIENTE" del reporte de ventas y cotizaciones; nunca se asigna sola.</p>
+        </field>
+    </record>
+</odoo>

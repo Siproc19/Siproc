@@ -1,30 +1,48 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
     <data noupdate="1">
-        <record id="rule_sop_salesman_own" model="ir.rule">
-            <field name="name">SOP: vendedor solo sus propios SOP</field>
-            <field name="model_id" ref="model_siproc_sales_forecast"/>
+        <!-- Planificación: vendedor solo ve/edita la suya; gerencia ve/edita todas -->
+        <record id="rule_sop_planning_salesman_own" model="ir.rule">
+            <field name="name">SOP Planificación: vendedor solo sus propias planificaciones</field>
+            <field name="model_id" ref="model_siproc_sop_planning"/>
             <field name="groups" eval="[(4, ref('sales_team.group_sale_salesman'))]"/>
             <field name="domain_force">[('user_id', '=', user.id)]</field>
         </record>
-        <record id="rule_sop_manager_all" model="ir.rule">
-            <field name="name">SOP: gerencia ve todos los SOP</field>
-            <field name="model_id" ref="model_siproc_sales_forecast"/>
+        <record id="rule_sop_planning_manager_all" model="ir.rule">
+            <field name="name">SOP Planificación: gerencia ve todas</field>
+            <field name="model_id" ref="model_siproc_sop_planning"/>
             <field name="groups" eval="[(4, ref('sales_team.group_sale_manager'))]"/>
             <field name="domain_force">[(1, '=', 1)]</field>
+        </record>
+        <record id="rule_sop_planning_multicompany" model="ir.rule">
+            <field name="name">SOP Planificación: multi-compañía</field>
+            <field name="model_id" ref="model_siproc_sop_planning"/>
+            <field name="domain_force">[('company_id', 'in', company_ids)]</field>
         </record>
 
-        <record id="rule_sop_line_salesman_own" model="ir.rule">
-            <field name="name">SOP: vendedor solo sus propias líneas</field>
-            <field name="model_id" ref="model_siproc_sales_forecast_line"/>
+        <record id="rule_sop_planning_line_salesman_own" model="ir.rule">
+            <field name="name">SOP Planificación: vendedor solo sus propias líneas</field>
+            <field name="model_id" ref="model_siproc_sop_planning_line"/>
             <field name="groups" eval="[(4, ref('sales_team.group_sale_salesman'))]"/>
             <field name="domain_force">[('user_id', '=', user.id)]</field>
         </record>
-        <record id="rule_sop_line_manager_all" model="ir.rule">
-            <field name="name">SOP: gerencia ve todas las líneas</field>
-            <field name="model_id" ref="model_siproc_sales_forecast_line"/>
+        <record id="rule_sop_planning_line_manager_all" model="ir.rule">
+            <field name="name">SOP Planificación: gerencia ve todas las líneas</field>
+            <field name="model_id" ref="model_siproc_sop_planning_line"/>
             <field name="groups" eval="[(4, ref('sales_team.group_sale_manager'))]"/>
             <field name="domain_force">[(1, '=', 1)]</field>
+        </record>
+        <record id="rule_sop_planning_line_multicompany" model="ir.rule">
+            <field name="name">SOP Planificación líneas: multi-compañía</field>
+            <field name="model_id" ref="model_siproc_sop_planning_line"/>
+            <field name="domain_force">[('company_id', 'in', company_ids)]</field>
+        </record>
+
+        <!-- Clasificación BASE/NUEVO: visible para todo el equipo, editable solo por gerencia -->
+        <record id="rule_sop_classification_multicompany" model="ir.rule">
+            <field name="name">SOP Clasificación: multi-compañía</field>
+            <field name="model_id" ref="model_siproc_sop_classification"/>
+            <field name="domain_force">[('company_id', 'in', company_ids)]</field>
         </record>
     </data>
 </odoo>

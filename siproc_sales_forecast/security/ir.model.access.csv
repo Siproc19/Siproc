@@ -1,7 +1,9 @@
 id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
-access_siproc_sales_forecast_user,siproc.sales.forecast.user,model_siproc_sales_forecast,sales_team.group_sale_salesman,1,1,1,1
-access_siproc_sales_forecast_manager,siproc.sales.forecast.manager,model_siproc_sales_forecast,sales_team.group_sale_manager,1,1,1,1
-access_siproc_sales_forecast_line_user,siproc.sales.forecast.line.user,model_siproc_sales_forecast_line,sales_team.group_sale_salesman,1,1,1,1
-access_siproc_sales_forecast_line_manager,siproc.sales.forecast.line.manager,model_siproc_sales_forecast_line,sales_team.group_sale_manager,1,1,1,1
+access_siproc_sop_planning_user,siproc.sop.planning.user,model_siproc_sop_planning,sales_team.group_sale_salesman,1,1,1,1
+access_siproc_sop_planning_manager,siproc.sop.planning.manager,model_siproc_sop_planning,sales_team.group_sale_manager,1,1,1,1
+access_siproc_sop_planning_line_user,siproc.sop.planning.line.user,model_siproc_sop_planning_line,sales_team.group_sale_salesman,1,1,1,1
+access_siproc_sop_planning_line_manager,siproc.sop.planning.line.manager,model_siproc_sop_planning_line,sales_team.group_sale_manager,1,1,1,1
+access_siproc_sop_classification_user,siproc.sop.classification.user,model_siproc_sop_classification,sales_team.group_sale_salesman,1,0,0,0
+access_siproc_sop_classification_manager,siproc.sop.classification.manager,model_siproc_sop_classification,sales_team.group_sale_manager,1,1,1,1
 access_siproc_sop_report_wizard_user,siproc.sop.report.wizard.user,model_siproc_sop_report_wizard,sales_team.group_sale_salesman,1,1,1,1
 access_siproc_sop_report_wizard_manager,siproc.sop.report.wizard.manager,model_siproc_sop_report_wizard,sales_team.group_sale_manager,1,1,1,1

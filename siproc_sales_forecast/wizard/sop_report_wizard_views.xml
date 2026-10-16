@@ -4,24 +4,42 @@
         <field name="name">siproc.sop.report.wizard.form</field>
         <field name="model">siproc.sop.report.wizard</field>
         <field name="arch" type="xml">
-            <form string="Descargar SOP (Excel)">
-                <group>
-                    <label for="fecha_desde" string="Período"/>
-                    <div class="o_row">
-                        <field name="fecha_desde"/> <span>al</span> <field name="fecha_hasta"/>
-                    </div>
-                    <field name="user_ids" widget="many2many_tags"/>
+            <form string="SOP · Exportar reporte">
+                <group invisible="archivo">
+                    <group>
+                        <field name="company_id" groups="base.group_multi_company"/>
+                        <field name="modalidad"/>
+                        <field name="mes_inicio"/>
+                        <field name="fecha_criterio" invisible="modalidad == 'planificacion'"/>
+                        <field name="codigo_cliente_origen" invisible="modalidad == 'planificacion'"/>
+                    </group>
+                    <group>
+                        <field name="user_ids" widget="many2many_tags"/>
+                        <field name="partner_ids" widget="many2many_tags"/>
+                        <field name="product_ids" widget="many2many_tags"/>
+                    </group>
                 </group>
+                <div invisible="not archivo or not lineas_omitidas" class="alert alert-warning" role="alert">
+                    <field name="lineas_omitidas"/> línea(s) se excluyeron por no tener la fecha criterio
+                    definida (no se les asumió ninguna fecha). Ajusta esas cotizaciones/órdenes y vuelve a
+                    exportar si quieres incluirlas.
+                </div>
+                <div invisible="not archivo">
+                    <p>Archivo generado: <field name="archivo_nombre" readonly="1" class="oe_inline"/></p>
+                </div>
                 <footer>
-                    <button name="action_descargar" type="object" string="Descargar" class="btn-primary"/>
-                    <button string="Cancelar" class="btn-secondary" special="cancel"/>
+                    <button name="action_exportar" type="object" string="Exportar SOP a Excel"
+                            class="btn-primary" invisible="archivo"/>
+                    <button name="action_descargar" type="object" string="Descargar Excel"
+                            class="btn-primary" invisible="not archivo"/>
+                    <button string="Cerrar" class="btn-secondary" special="cancel"/>
                 </footer>
             </form>
         </field>
     </record>
 
     <record id="action_siproc_sop_report_wizard" model="ir.actions.act_window">
-        <field name="name">Descargar SOP (Excel)</field>
+        <field name="name">Exportar SOP a Excel</field>
         <field name="res_model">siproc.sop.report.wizard</field>
         <field name="view_mode">form</field>
         <field name="target">new</field>
