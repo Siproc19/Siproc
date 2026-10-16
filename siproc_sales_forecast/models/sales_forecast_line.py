@@ -19,9 +19,13 @@ class SiprocSalesForecastLine(models.Model):
     nombre_material = fields.Char(related='product_id.name', string='Nombre material', readonly=True)
     uom_id = fields.Many2one('uom.uom', string='Unidad de medida')
 
+    # Hasta 6 meses de proyección por línea (el SOP puede ir de 1 a 6 meses según "Del"/"Al")
     cantidad_mes1 = fields.Float(string='Cantidad mes 1')
     cantidad_mes2 = fields.Float(string='Cantidad mes 2')
     cantidad_mes3 = fields.Float(string='Cantidad mes 3')
+    cantidad_mes4 = fields.Float(string='Cantidad mes 4')
+    cantidad_mes5 = fields.Float(string='Cantidad mes 5')
+    cantidad_mes6 = fields.Float(string='Cantidad mes 6')
 
     user_id = fields.Many2one(related='forecast_id.user_id', store=True, string='Vendedor')
     company_id = fields.Many2one(related='forecast_id.company_id', store=True, string='Compañía')

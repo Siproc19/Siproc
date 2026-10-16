@@ -1,10 +1,11 @@
 import base64
+import calendar
 import io
 import re
 
 from dateutil.relativedelta import relativedelta
 
-from odoo import fields, models
+from odoo import api, fields, models
 
 try:
     import xlsxwriter
@@ -13,10 +14,20 @@ except ImportError:  # pragma: no cover
 
 MESES = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto',
          'septiembre', 'octubre', 'noviembre', 'diciembre']
-NUM_MESES = 3
+# Máximo de meses que puede cubrir un SOP (igual que en el modelo siproc.sales.forecast)
+MAX_MESES = 6
+MESES_DEFECTO = 6
 
 # Columnas fijas antes de los bloques mensuales, igual que la plantilla SOP original
 COLS_FIJAS = ['CODIGO CLIENTE', 'CLIENTE', 'VENDEDOR', 'CODIGO MATERIAL', 'NOMBRE MATERIAL', 'PROYECTO / CLIENTE']
+
+
+def _primer_dia(d):
+    return d.replace(day=1)
+
+
+def _ultimo_dia(d):
+    return d.replace(day=calendar.monthrange(d.year, d.month)[1])
 
 
 def _nombre_hoja(texto):
@@ -29,27 +40,47 @@ class SiprocSopReportWizard(models.TransientModel):
     _name = 'siproc.sop.report.wizard'
     _description = 'SOP · Descargar Excel de pronóstico de ventas'
 
-    mes_inicio = fields.Date(string='Mes inicio del trimestre', required=True,
-                             default=lambda self: fields.Date.context_today(self).replace(day=1))
+    fecha_desde = fields.Date(string='Del', required=True,
+                              default=lambda self: _primer_dia(fields.Date.context_today(self)))
+    fecha_hasta = fields.Date(string='Al', required=True,
+                              default=lambda self: _ultimo_dia(
+                                  _primer_dia(fields.Date.context_today(self))
+                                  + relativedelta(months=MESES_DEFECTO - 1)))
     user_ids = fields.Many2many('res.users', string='Vendedores',
-                                help='Déjalo vacío para incluir a todo el equipo con SOP en ese trimestre.')
+                                help='Déjalo vacío para incluir a todo el equipo con SOP en ese período.')
     archivo = fields.Binary(readonly=True, attachment=False)
     archivo_nombre = fields.Char(readonly=True)
 
+    @api.onchange('fecha_desde')
+    def _onchange_fecha_desde(self):
+        if self.fecha_desde and not self.fecha_hasta:
+            self.fecha_hasta = _ultimo_dia(_primer_dia(self.fecha_desde) + relativedelta(months=MESES_DEFECTO - 1))
+
+    def _meses_del_rango(self):
+        if not self.fecha_desde or not self.fecha_hasta:
+            return []
+        meses = []
+        actual = _primer_dia(self.fecha_desde)
+        fin = _primer_dia(self.fecha_hasta)
+        while actual <= fin:
+            meses.append(actual)
+            actual += relativedelta(months=1)
+        return meses
+
     def _nombres_meses(self):
-        return [MESES[(self.mes_inicio + relativedelta(months=i)).month - 1].capitalize()
-                for i in range(NUM_MESES)]
+        return [MESES[d.month - 1].capitalize() for d in self._meses_del_rango()[:MAX_MESES]]
 
     def _sops(self):
-        dom = [('mes_inicio', '=', self.mes_inicio)]
+        dom = [('fecha_desde', '=', self.fecha_desde), ('fecha_hasta', '=', self.fecha_hasta)]
         if self.user_ids:
             dom.append(('user_id', 'in', self.user_ids.ids))
         return self.env['siproc.sales.forecast'].search(dom)
 
     def _nombre_archivo(self):
         nombres = self._nombres_meses()
-        anio = self.mes_inicio.year
-        return 'SOP %s a %s %s.xlsx' % (nombres[0], nombres[-1], anio)
+        if not nombres:
+            return 'SOP.xlsx'
+        return 'SOP %s %s a %s %s.xlsx' % (nombres[0], self.fecha_desde.year, nombres[-1], self.fecha_hasta.year)
 
     def _construir_xlsx(self):
         sops = self._sops()
@@ -70,7 +101,8 @@ class SiprocSopReportWizard(models.TransientModel):
 
         if not sops:
             ws = wb.add_worksheet('SOP')
-            ws.write(1, 1, 'No hay SOP capturados para ese trimestre.', st['val'])
+            ws.write(1, 1, 'No hay SOP capturados para ese período (%s al %s).'
+                     % (self.fecha_desde, self.fecha_hasta), st['val'])
             wb.close()
             return buf.getvalue()
 
@@ -88,9 +120,11 @@ class SiprocSopReportWizard(models.TransientModel):
             # Fila 1: Nombre ejecutivo
             ws.write(0, 1, 'NOMBRE EJECUTIVO:', st['etq'])
             ws.write(0, 2, sop.user_id.name or '', st['val'])
-            # Fila 2: Mes
-            ws.write(1, 1, 'MES', st['etq'])
-            ws.write(1, 2, nombres_meses[0].upper(), st['val'])
+            # Fila 2: Período
+            ws.write(1, 1, 'DEL', st['etq'])
+            ws.write(1, 2, self.fecha_desde.strftime('%d/%m/%Y'), st['val'])
+            ws.write(1, 3, 'AL', st['etq'])
+            ws.write(1, 4, self.fecha_hasta.strftime('%d/%m/%Y'), st['val'])
 
             # Fila 3: nombres de los meses, cada uno ocupando 2 columnas (UM + Cantidad)
             fila_meses = 3
@@ -111,7 +145,7 @@ class SiprocSopReportWizard(models.TransientModel):
                 col += 2
 
             # Anchos de columna
-            anchos = [14, 24, 14, 16, 34, 18] + [14, 10] * NUM_MESES
+            anchos = [14, 24, 14, 16, 34, 18] + [14, 10] * len(nombres_meses)
             for c, w in enumerate(anchos):
                 ws.set_column(c, c, w)
             ws.freeze_panes(fila_datos, 2)
@@ -126,7 +160,8 @@ class SiprocSopReportWizard(models.TransientModel):
                 ws.write(r, 4, linea.nombre_material or '', st['txt'])
                 ws.write(r, 5, linea.proyecto or '', st['txt'])
                 col = 6
-                for cantidad in (linea.cantidad_mes1, linea.cantidad_mes2, linea.cantidad_mes3):
+                for i in range(len(nombres_meses)):
+                    cantidad = getattr(linea, 'cantidad_mes%d' % (i + 1))
                     ws.write(r, col, linea.uom_id.name or '', st['txt'])
                     if cantidad:
                         ws.write_number(r, col + 1, cantidad, st['n'])

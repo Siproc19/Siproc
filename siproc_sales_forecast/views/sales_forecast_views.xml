@@ -15,6 +15,9 @@
                 <field name="cantidad_mes1"/>
                 <field name="cantidad_mes2"/>
                 <field name="cantidad_mes3"/>
+                <field name="cantidad_mes4" column_invisible="parent.num_meses &lt; 4"/>
+                <field name="cantidad_mes5" column_invisible="parent.num_meses &lt; 5"/>
+                <field name="cantidad_mes6" column_invisible="parent.num_meses &lt; 6"/>
             </list>
         </field>
     </record>
@@ -26,8 +29,8 @@
             <form string="SOP · Pronóstico de ventas">
                 <header>
                     <button name="action_cargar_desde_ventas" type="object"
-                            string="Cargar desde cotizaciones/ventas del trimestre anterior"
-                            confirm="Esto agrega una línea por cada cliente/material cotizado o vendido por este vendedor en el trimestre anterior, con la cantidad promedio mensual de ese trimestre como proyección inicial. No se tocan las líneas que ya existan. ¿Continuar?"/>
+                            string="Cargar desde cotizaciones/ventas del período anterior"
+                            confirm="Esto agrega una línea por cada cliente/material cotizado o vendido por este vendedor en el período inmediatamente anterior (misma duración que 'Del'/'Al'), con la cantidad promedio mensual de ese período como proyección inicial. No se tocan las líneas que ya existan. ¿Continuar?"/>
                     <button name="action_descargar_excel" type="object" string="Descargar Excel"
                             class="btn-primary"/>
                 </header>
@@ -41,12 +44,24 @@
                             <field name="company_id" groups="base.group_multi_company"/>
                         </group>
                         <group>
-                            <field name="mes_inicio"/>
+                            <field name="num_meses" invisible="1"/>
+                            <label for="fecha_desde" string="Período a proyectar"/>
+                            <div class="o_row">
+                                <field name="fecha_desde"/> <span>al</span> <field name="fecha_hasta"/>
+                            </div>
                             <label for="nombre_mes1" string="Meses del SOP"/>
                             <div>
-                                <field name="nombre_mes1" readonly="1" class="oe_inline"/> /
-                                <field name="nombre_mes2" readonly="1" class="oe_inline"/> /
-                                <field name="nombre_mes3" readonly="1" class="oe_inline"/>
+                                <field name="nombre_mes1" readonly="1" class="oe_inline"/>
+                                <field name="nombre_mes2" readonly="1" class="oe_inline"
+                                       invisible="num_meses &lt; 2"/>
+                                <field name="nombre_mes3" readonly="1" class="oe_inline"
+                                       invisible="num_meses &lt; 3"/>
+                                <field name="nombre_mes4" readonly="1" class="oe_inline"
+                                       invisible="num_meses &lt; 4"/>
+                                <field name="nombre_mes5" readonly="1" class="oe_inline"
+                                       invisible="num_meses &lt; 5"/>
+                                <field name="nombre_mes6" readonly="1" class="oe_inline"
+                                       invisible="num_meses &lt; 6"/>
                             </div>
                         </group>
                     </group>
@@ -67,7 +82,8 @@
             <list string="SOP · Pronóstico de ventas">
                 <field name="name"/>
                 <field name="user_id" widget="many2one_avatar_user"/>
-                <field name="mes_inicio"/>
+                <field name="fecha_desde"/>
+                <field name="fecha_hasta"/>
                 <field name="line_count"/>
             </list>
         </field>
@@ -79,10 +95,10 @@
         <field name="arch" type="xml">
             <search>
                 <field name="user_id"/>
-                <field name="mes_inicio"/>
+                <field name="fecha_desde"/>
                 <filter string="Mis SOP" name="mios" domain="[('user_id', '=', uid)]"/>
                 <separator/>
-                <filter string="Mes inicio" name="groupby_mes" context="{'group_by': 'mes_inicio'}"/>
+                <filter string="Fecha desde" name="groupby_fecha" context="{'group_by': 'fecha_desde'}"/>
                 <filter string="Vendedor" name="groupby_vendedor" context="{'group_by': 'user_id'}"/>
             </search>
         </field>
