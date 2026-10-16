@@ -25,6 +25,9 @@
         <field name="arch" type="xml">
             <form string="SOP · Pronóstico de ventas">
                 <header>
+                    <button name="action_cargar_desde_ventas" type="object"
+                            string="Cargar desde cotizaciones/ventas del trimestre anterior"
+                            confirm="Esto agrega una línea por cada cliente/material cotizado o vendido por este vendedor en el trimestre anterior, con la cantidad promedio mensual de ese trimestre como proyección inicial. No se tocan las líneas que ya existan. ¿Continuar?"/>
                     <button name="action_descargar_excel" type="object" string="Descargar Excel"
                             class="btn-primary"/>
                 </header>

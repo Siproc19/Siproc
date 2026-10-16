@@ -1,6 +1,7 @@
 from dateutil.relativedelta import relativedelta
 
 from odoo import api, fields, models
+from odoo.exceptions import UserError
 
 MESES = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto',
          'septiembre', 'octubre', 'noviembre', 'diciembre']
@@ -61,3 +62,59 @@ class SiprocSalesForecast(models.Model):
             'mes_inicio': self.mes_inicio,
             'user_ids': [(6, 0, [self.user_id.id])],
         }).action_descargar()
+
+    # ------------------------------------------------------------ histórico
+    def _rango_trimestre_anterior(self):
+        """(desde, hasta) del trimestre inmediatamente anterior a mes_inicio."""
+        self.ensure_one()
+        hasta = self.mes_inicio - relativedelta(days=1)  # último día antes del SOP
+        desde = self.mes_inicio - relativedelta(months=NUM_MESES)
+        return desde, hasta
+
+    def action_cargar_desde_ventas(self):
+        """Propone líneas de cliente/material a partir de las cotizaciones y órdenes de venta
+        (cualquier estado salvo cancelada) del vendedor en el trimestre anterior al del SOP.
+        La cantidad proyectada = promedio mensual de lo vendido/cotizado ese trimestre; no
+        duplica líneas que ya existan para el mismo cliente/material."""
+        self.ensure_one()
+        desde, hasta = self._rango_trimestre_anterior()
+        desde_dt = fields.Datetime.to_datetime(desde)
+        hasta_dt = fields.Datetime.to_datetime(hasta) + relativedelta(days=1)
+        ordenes = self.env['sale.order'].search([
+            ('user_id', '=', self.user_id.id),
+            ('company_id', '=', self.company_id.id),
+            ('date_order', '>=', desde_dt),
+            ('date_order', '<', hasta_dt),
+            ('state', '!=', 'cancel'),
+        ])
+        lineas_venta = ordenes.order_line.filtered(lambda l: l.product_id and not l.display_type)
+
+        agrupado = {}
+        for linea in lineas_venta:
+            cliente = linea.order_id.partner_id.commercial_partner_id
+            clave = (cliente.id, linea.product_id.id)
+            datos = agrupado.setdefault(clave, {'cantidad': 0.0, 'uom_id': linea.product_uom.id})
+            datos['cantidad'] += linea.product_uom_qty
+
+        existentes = {(l.partner_id.id, l.product_id.id) for l in self.line_ids}
+        nuevas = []
+        for (partner_id, product_id), datos in agrupado.items():
+            if (partner_id, product_id) in existentes:
+                continue
+            promedio_mensual = datos['cantidad'] / NUM_MESES
+            nuevas.append((0, 0, {
+                'partner_id': partner_id,
+                'product_id': product_id,
+                'uom_id': datos['uom_id'],
+                'proyecto': 'BASE',
+                'cantidad_mes1': promedio_mensual,
+                'cantidad_mes2': promedio_mensual,
+                'cantidad_mes3': promedio_mensual,
+            }))
+
+        if not nuevas:
+            raise UserError(
+                'No se encontraron cotizaciones ni órdenes de venta de %s entre %s y %s.'
+                % (self.user_id.name, desde, hasta))
+        self.line_ids = nuevas
+        return True
