@@ -93,7 +93,7 @@ class SiprocSalesForecast(models.Model):
         for linea in lineas_venta:
             cliente = linea.order_id.partner_id.commercial_partner_id
             clave = (cliente.id, linea.product_id.id)
-            datos = agrupado.setdefault(clave, {'cantidad': 0.0, 'uom_id': linea.product_uom.id})
+            datos = agrupado.setdefault(clave, {'cantidad': 0.0, 'uom_id': linea.product_uom_id.id})
             datos['cantidad'] += linea.product_uom_qty
 
         existentes = {(l.partner_id.id, l.product_id.id) for l in self.line_ids}
